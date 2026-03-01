@@ -12,7 +12,7 @@ urlpatterns = [
      # The SECOND "doesnt require separate file on kwikschools domain"   
      path('', page_views.landing_page, name='schoolly-home'), 
 
-    #  path('dashboard/', page_views.dashboard, name="portal-home"),     
+     path('dashboard/', page_views.dashboard, name="portal-home"),     
     #  path('help-center/', page_views.help_center, name='help-center'),
     #  path('support-info/', page_views.support_info, name='support_info'),
     #  path('lock-screen/', page_views.lock_screen, name='lock-screen'),

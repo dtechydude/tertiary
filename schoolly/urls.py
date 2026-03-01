@@ -28,6 +28,13 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('pages.urls', namespace='pages')),
     path('users/', include('users.urls')),
+    # path('students/', include('students.urls', namespace='students')), 
+    # path('staff/', include('staff.urls', namespace='staff')),
+    path('curriculum/', include('curriculum.urls', namespace='curriculum')),
+
+
+
+    
 
      # Add this line below to fix the NoReverseMatch error
     path("ckeditor5/", include('django_ckeditor_5.urls'), name="ck_editor_5_upload_file"),

@@ -31,8 +31,8 @@ from django.shortcuts import render
 def landing_page(request):
     return render(request, 'pages/landingpage.html')
 
-# # def dashboard(request):
-# #     return render(request, 'pages/portal_home.html')
+def dashboard(request):
+    return render(request, 'pages/portal_home.html')
 
 # # Portal Home
 # @login_required
