@@ -41,6 +41,8 @@ INSTALLED_APPS = [
 
     # My portal apps
     'users.apps.UsersConfig',
+    'pages.apps.PagesConfig',
+    'curriculum.apps.CurriculumConfig',
 
 
 
