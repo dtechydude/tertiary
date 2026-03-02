@@ -7,8 +7,8 @@ from django.contrib import messages # Import messages for error handling
 from .models import Attendance
 from students.models import Student
 from datetime import date, timedelta # Make sure to import these!
-from staff.models import Teacher
-from curriculum.models import Session, Term
+from staff.models import Lecturer
+from curriculum.models import Session, Semester
 from decimal import Decimal
 from .forms import AttendanceDateForm, AttendanceForm, AttendanceReportForm # Import new forms
 import json
@@ -19,18 +19,18 @@ import logging
 
 
 
-# Helper to get teacher profile, handles not found case
-def get_teacher_profile(user):
+# Helper to get lecturer profile, handles not found case
+def get_lecturer_profile(user):
     try:
-        return user.teacher
-    except Teacher.DoesNotExist:
+        return user.lecturer
+    except Lecturer.DoesNotExist:
         return None
 
 @login_required
 def take_daily_attendance(request):
-    teacher = get_teacher_profile(request.user)
-    if not teacher:
-        messages.error(request, "You are not authorized to view this page as a teacher.")
+    lecturer = get_lecturer_profile(request.user)
+    if not lecturer:
+        messages.error(request, "You are not authorized to view this page as a lecturer.")
         return redirect('/dashboard/') # Redirect to a safe page or login
 
     # Initialize the date form
@@ -39,7 +39,7 @@ def take_daily_attendance(request):
     if date_form.is_valid():
         selected_date = date_form.cleaned_data['date']
 
-    students = Student.objects.filter(form_teacher=teacher).order_by('first_name', 'last_name')
+    students = Student.objects.filter(form_lecturer=lecturer).order_by('first_name', 'last_name')
 
     initial_data = []
     for student in students:
@@ -91,7 +91,7 @@ def take_daily_attendance(request):
         'date_form': date_form, # Pass the date form to the template
         'formset': formset,
         'selected_date': selected_date, # Pass the selected date for display
-        'teacher': teacher,
+        'lecturer': lecturer,
     }
     return render(request, 'attendance/test2_take_attendance.html', context)
 
@@ -102,17 +102,17 @@ login_required
 def attendance_report(request):
     # ... (initial setup remains unchanged) ...
     current_user = request.user
-    teacher = None
+    lecturer = None
 
     is_superuser = current_user.is_superuser
 
     if not is_superuser:
         try:
-            teacher = Teacher.objects.get(user=current_user)
-        except Teacher.DoesNotExist:
+            lecturer = Lecturer.objects.get(user=current_user)
+        except Lecturer.DoesNotExist:
             pass
     
-    report_form = AttendanceReportForm(request.GET or None, teacher=teacher, is_superuser=is_superuser)
+    report_form = AttendanceReportForm(request.GET or None, lecturer=lecturer, is_superuser=is_superuser)
     
     attendance_data = {}
     student_attendance_summary = {} 
@@ -145,13 +145,13 @@ def attendance_report(request):
             date__range=(context_start_date, context_end_date)
         )
         
-        # Determine the base set of students to report on (Teacher/Superuser/Selected Student)
+        # Desemesterine the base set of students to report on (lecturer/Superuser/Selected Student)
         students_to_report = Student.objects.all()
 
         if selected_student:
             students_to_report = students_to_report.filter(pk=selected_student.pk)
-        elif not is_superuser and teacher:
-            students_to_report = students_to_report.filter(form_teacher=teacher)
+        elif not is_superuser and lecturer:
+            students_to_report = students_to_report.filter(form_lecturer=lecturer)
 
         # NEW: Apply the class filter to the student set
         if selected_class:
@@ -185,7 +185,7 @@ def attendance_report(request):
         'selected_student_id': selected_student_id,
         'start_date': context_start_date,
         'end_date': context_end_date,
-        'teacher': teacher,
+        'lecturer': lecturer,
         'is_superuser': is_superuser,
         'student_attendance_summary': student_attendance_summary,
     }
@@ -208,7 +208,7 @@ def get_current_student(user):
 
 def is_authorized_to_view_student(user, student_id):
     """
-    Checks if the user is authorized (Staff, Form Teacher, or the Student themselves) 
+    Checks if the user is authorized (Staff, Form lecturer, or the Student themselves) 
     to view the specified student's records.
     """
     if not user.is_authenticated:
@@ -219,15 +219,15 @@ def is_authorized_to_view_student(user, student_id):
         return True
     
     try:
-        # Check student access (either form teacher or student themselves)
-        student_profile = Student.objects.select_related('form_teacher__user').get(pk=student_id)
+        # Check student access (either form lecturer or student themselves)
+        student_profile = Student.objects.select_related('form_lecturer__user').get(pk=student_id)
         
         # 2. Allow the Student themselves (Self-View)
         if hasattr(student_profile, 'user') and student_profile.user == user:
             return True
             
-        # 3. Allow the Form Teacher
-        if student_profile.form_teacher and student_profile.form_teacher.user == user:
+        # 3. Allow the Form lecturer
+        if student_profile.form_lecturer and student_profile.form_lecturer.user == user:
             return True
             
     except Student.DoesNotExist:
@@ -236,7 +236,7 @@ def is_authorized_to_view_student(user, student_id):
     return False
 
 # =========================================================================
-# 1. STUDENT LIST VIEW (Roster for Staff/Teachers)
+# 1. STUDENT LIST VIEW (Roster for Staff/lecturers)
 # =========================================================================
 
 @login_required
@@ -253,18 +253,18 @@ def student_list_view(request):
         students = Student.objects.select_related('current_class').all().order_by('current_class__name', 'first_name')
         title = "All Students Attendance Records"
     
-    # 2. Teacher/Student View (Filtered)
+    # 2. lecturer/Student View (Filtered)
     else:
         try:
-            # Check if user is a Teacher/Form Teacher
-            teacher_profile = Teacher.objects.get(user=user)
+            # Check if user is a lecturer/Form lecturer
+            lecturer_profile = Lecturer.objects.get(user=user)
             
-            # Filter students where the form_teacher is the logged-in user's Teacher profile
-            students = Student.objects.filter(form_teacher=teacher_profile).select_related('current_class').order_by('current_class__name', 'first_name')
+            # Filter students where the form_lecturer is the logged-in user's lecturer profile
+            students = Student.objects.filter(form_lecturer=lecturer_profile).select_related('current_class').order_by('current_class__name', 'first_name')
             title = f"Your Assigned Class Attendance"
             
-        except Teacher.DoesNotExist:
-            # If not a recognized Teacher profile, check if they are a Student viewing themselves
+        except Lecturer.DoesNotExist:
+            # If not a recognized lecturer profile, check if they are a Student viewing themselves
             try:
                 # FIX: Corrected Student.objects.objects to Student.objects
                 students = Student.objects.filter(user=user).select_related('current_class')
@@ -283,7 +283,7 @@ def student_list_view(request):
 
 
 # =========================================================================
-# 2. STAFF/TEACHER: ATTENDANCE SUMMARY VIEW (Uses student_id from URL)
+# 2. STAFF/lecturer: ATTENDANCE SUMMARY VIEW (Uses student_id from URL)
 # =========================================================================
 
 @login_required
@@ -299,15 +299,15 @@ def student_attendance_summary(request, student_id):
     current_student = get_object_or_404(Student, pk=student_id)
 
     try:
-        # 2. Get the current active Session and Term
+        # 2. Get the current active Session and semester
         current_session = Session.objects.get(is_current=True)
-        current_term = Term.objects.get(is_current=True) 
+        current_semester = Semester.objects.get(is_current=True) 
         
-        # 3. Filter Attendance Records using the date range of the current Term
+        # 3. Filter Attendance Records using the date range of the current semester
         attendance_records = Attendance.objects.filter(
             student=current_student,
-            date__gte=current_term.start_date, 
-            date__lte=current_term.end_date 
+            date__gte=current_semester.start_date, 
+            date__lte=current_semester.end_date 
         )
         
         # 4. Calculate Summary (relies on 'present' boolean field in Attendance model)
@@ -327,12 +327,12 @@ def student_attendance_summary(request, student_id):
             'days_absent': days_absent,
             'total_days': total_days,
             'current_session': current_session,
-            'current_term': current_term,
+            'current_semester': current_semester,
             'percent_present': percent_present,
         })
         
-    except (Session.DoesNotExist, Term.DoesNotExist):
-        context['error'] = "No current school session or term found for reporting."
+    except (Session.DoesNotExist, Semester.DoesNotExist):
+        context['error'] = "No current school session or semester found for reporting."
     except Exception as e:
         context['error'] = f"An unexpected error occurred: {e}"
 
@@ -340,13 +340,13 @@ def student_attendance_summary(request, student_id):
 
 
 # =========================================================================
-# 3. STAFF/TEACHER: ATTENDANCE DETAIL VIEW (Uses student_id from URL)
+# 3. STAFF/lecturer: ATTENDANCE DETAIL VIEW (Uses student_id from URL)
 # =========================================================================
 
 @login_required
 def student_attendance_detail(request, student_id):
     """
-    Displays a calendar view of the student's attendance records for the term.
+    Displays a calendar view of the student's attendance records for the semester.
     """
     # 1. AUTHORIZATION CHECK: SECURITY FIRST
     if not is_authorized_to_view_student(request.user, student_id):
@@ -356,15 +356,15 @@ def student_attendance_detail(request, student_id):
     current_student = get_object_or_404(Student, pk=student_id)
     
     try:
-        # 2. Get the current active Session and Term
+        # 2. Get the current active Session and semester
         current_session = Session.objects.get(is_current=True)
-        current_term = Term.objects.get(is_current=True) 
+        current_semester = Semester.objects.get(is_current=True) 
 
-        # 3. Fetch all attendance records for the term
+        # 3. Fetch all attendance records for the semester
         attendance_records = Attendance.objects.filter(
             student=current_student,
-            date__gte=current_term.start_date, 
-            date__lte=current_term.end_date 
+            date__gte=current_semester.start_date, 
+            date__lte=current_semester.end_date 
         ).order_by('date')
 
         # 4. Prepare data for JavaScript: { "YYYY-MM-DD": "Present" / "Absent" }
@@ -379,13 +379,13 @@ def student_attendance_detail(request, student_id):
         context.update({
             'student': current_student,
             'current_session': current_session,
-            'current_term': current_term,
+            'current_semester': current_semester,
             # Pass the map as a JSON string for safe use in JavaScript
             'attendance_data_json': json.dumps(attendance_map) 
         })
         
-    except (Session.DoesNotExist, Term.DoesNotExist):
-        context['error'] = "No current school session or term found for reporting."
+    except (Session.DoesNotExist, Semester.DoesNotExist):
+        context['error'] = "No current school session or semester found for reporting."
     except Exception as e:
         context['error'] = f"An unexpected error occurred: {e}"
     
@@ -412,15 +412,15 @@ def self_attendance_summary(request):
     context = {}
 
     try:
-        # 1. Get the current active Session and Term
+        # 1. Get the current active Session and semester
         current_session = Session.objects.get(is_current=True)
-        current_term = Term.objects.get(is_current=True) 
+        current_semester = Semester.objects.get(is_current=True) 
         
-        # 2. Filter Attendance Records using the date range of the current Term
+        # 2. Filter Attendance Records using the date range of the current semester
         attendance_records = Attendance.objects.filter(
             student=current_student,
-            date__gte=current_term.start_date, 
-            date__lte=current_term.end_date 
+            date__gte=current_semester.start_date, 
+            date__lte=current_semester.end_date 
         )
         
         # 3. Calculate Summary (relies on 'present' boolean field in Attendance model)
@@ -440,12 +440,12 @@ def self_attendance_summary(request):
             'days_absent': days_absent,
             'total_days': total_days,
             'current_session': current_session,
-            'current_term': current_term,
+            'current_semester': current_semester,
             'percent_present': percent_present,
         })
         
-    except (Session.DoesNotExist, Term.DoesNotExist):
-        context['error'] = "No current school session or term found for reporting."
+    except (Session.DoesNotExist, Semester.DoesNotExist):
+        context['error'] = "No current school session or semester found for reporting."
     except Exception as e:
         context['error'] = f"An unexpected error occurred: {e}"
 
@@ -471,15 +471,15 @@ def self_attendance_detail(request):
     context = {}
     
     try:
-        # 1. Get the current active Session and Term
+        # 1. Get the current active Session and semester
         current_session = Session.objects.get(is_current=True)
-        current_term = Term.objects.get(is_current=True) 
+        current_semester = Semester.objects.get(is_current=True) 
 
-        # 2. Fetch all attendance records for the term
+        # 2. Fetch all attendance records for the semester
         attendance_records = Attendance.objects.filter(
             student=current_student,
-            date__gte=current_term.start_date, 
-            date__lte=current_term.end_date 
+            date__gte=current_semester.start_date, 
+            date__lte=current_semester.end_date 
         ).order_by('date')
 
         # 3. Prepare data for JavaScript: { "YYYY-MM-DD": "Present" / "Absent" }
@@ -493,13 +493,13 @@ def self_attendance_detail(request):
         context.update({
             'student': current_student,
             'current_session': current_session,
-            'current_term': current_term,
+            'current_semester': current_semester,
             # Pass the map as a JSON string for safe use in JavaScript
             'attendance_data_json': json.dumps(attendance_map) 
         })
         
-    except (Session.DoesNotExist, Term.DoesNotExist):
-        context['error'] = "No current school session or term found for reporting."
+    except (Session.DoesNotExist, Semester.DoesNotExist):
+        context['error'] = "No current school session or semester found for reporting."
     except Exception as e:
         context['error'] = f"An unexpected error occurred: {e}"
     

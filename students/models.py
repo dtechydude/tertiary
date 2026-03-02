@@ -82,11 +82,8 @@ class Student(models.Model):
 
     # Academic Placement
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name="students")
-
     programme = models.ForeignKey(Programme, on_delete=models.SET_NULL, null=True)
-
     level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True )
-
     date_admitted = models.DateField()
 
     # -------------------------
@@ -99,7 +96,7 @@ class Student(models.Model):
     ]
 
     gender = models.CharField( max_length=10, choices=GENDER_CHOICES)
-    date_of_birth = models.DateField()
+    DOB = models.DateField(default='1998-01-01')
     # -------------------------
     # MEDICAL INFORMATION
     # -------------------------
@@ -141,9 +138,7 @@ class Student(models.Model):
     ]
 
     student_status = models.CharField( max_length=20, choices=STATUS_CHOICES, default="active")
-
     fee_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
@@ -173,48 +168,13 @@ class Student(models.Model):
 
 
 class GraduationRecord(models.Model):
-
-    student = models.ForeignKey(
-        Student,
-        on_delete=models.CASCADE,
-        related_name="graduation_records"
-    )
-
-    session = models.ForeignKey(
-        Session,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        help_text="Session student completed programme"
-    )
-
-    programme = models.ForeignKey(
-        Programme,
-        on_delete=models.SET_NULL,
-        null=True
-    )
-
-    department = models.ForeignKey(
-        Department,
-        on_delete=models.SET_NULL,
-        null=True
-    )
-
-    level_completed = models.ForeignKey(
-        Level,
-        on_delete=models.SET_NULL,
-        null=True,
-        help_text="Final level completed (e.g. OND 2, HND 2)"
-    )
-
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="graduation_records")
+    session = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True, blank=True, help_text="Session student completed programme")
+    programme = models.ForeignKey(Programme, on_delete=models.SET_NULL, null=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True)
+    level_completed = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, help_text="Final level completed (e.g. OND 2, HND 2)")
     date_graduated = models.DateField()
-
-    remarks = models.CharField(
-        max_length=200,
-        blank=True,
-        help_text="Optional remarks (Distinction, Upper Credit, etc.)"
-    )
-
+    remarks = models.CharField(max_length=200, blank=True, help_text="Optional remarks (Distinction, Upper Credit, etc.)")
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

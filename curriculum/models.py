@@ -134,6 +134,19 @@ class Semester(models.Model):
     ]
 
     name = models.CharField(max_length=20, choices=SEMESTER_CHOICES)
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='terms')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_current = models.BooleanField(default=False, help_text='check the box if the term is current term in the current session')
+
+    class Meta:
+        # Ensures that "First Term" doesn't appear twice within the same session
+        unique_together = ('name', 'session')
+        ordering = ['session', 'start_date']
+
+    def __str__(self):
+        return f"{self.name} ({self.session.name})"    
+
 
     def __str__(self):
         return self.name

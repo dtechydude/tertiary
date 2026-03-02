@@ -88,7 +88,7 @@ class StudentEnrollmentForm(forms.ModelForm):
         model = Student
         fields = [
             'matric_number', 'middle_name',
-            'gender', 'date_of_birth', 'blood_group', 'genotype', 
+            'gender', 'DOB', 'blood_group', 'genotype', 
             'health_remark', 
             'date_admitted',  
             'guardian_name', 'guardian_address', 'guardian_phone', 
@@ -102,7 +102,7 @@ class StudentEnrollmentForm(forms.ModelForm):
         super(StudentEnrollmentForm, self).__init__(*args, **kwargs)
 
         # Add custom IDs to date fields for Tempus Dominus
-        self.fields['date_of_birth'].widget.attrs.update({'id': 'id_date_of_birth'})
+        self.fields['DOB'].widget.attrs.update({'id': 'id_DOB'})
         self.fields['date_admitted'].widget.attrs.update({'id': 'id_date_admitted'})
 
         # Add Bootstrap classes for styling

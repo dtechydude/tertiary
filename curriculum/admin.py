@@ -12,6 +12,14 @@ from import_export.admin import ImportExportModelAdmin
 from .models import Faculty, Department, Programme, Level, Course, Session, Semester, CourseAssignment
 
 
+
+@admin.register(Session)
+class SessionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'start_date', 'end_date', 'is_current')
+    exclude = ['slug']
+    # ADDED: This fixes the autocomplete error.
+    search_fields = ['name',]
+
 @admin.register(Faculty)
 class FacultyAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')

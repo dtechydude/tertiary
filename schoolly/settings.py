@@ -47,6 +47,9 @@ INSTALLED_APPS = [
     'students.apps.StudentsConfig',
     'events.apps.EventsConfig',
     'attendance.apps.AttendanceConfig',
+    'cbt.apps.CbtConfig',
+    'results.apps.ResultsConfig',
+    'tickets.apps.TicketsConfig',
 
 
 

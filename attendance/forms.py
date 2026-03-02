@@ -2,8 +2,8 @@
 from django import forms
 from .models import Attendance, Student # Assuming Student and Attendance models are correctly imported
 from django.utils import timezone # For initial date values
-from staff.models import Teacher # Make sure Teacher is imported if form_teacher links to it
-from curriculum.models import Standard
+from staff.models import Lecturer # Make sure lecturer is imported if form_lecturer links to it
+from curriculum.models import Department
 # --- Form for taking attendance on a specific date ---
 class AttendanceDateForm(forms.Form):
     # Use DateInput widget for a calendar picker in most browsers
@@ -50,7 +50,7 @@ class AttendanceForm(forms.ModelForm):
 class AttendanceReportForm(forms.Form):
     # ... (existing student, start_date, end_date fields remain unchanged) ...
     student = forms.ModelChoiceField(
-        queryset=Student.objects.none(), # Will be populated in the view based on teacher
+        queryset=Student.objects.none(), # Will be populated in the view based on lecturer
         required=False,
         label="Select Student (Optional)",
         empty_label="All Students",
@@ -77,7 +77,7 @@ class AttendanceReportForm(forms.Form):
     
     # NEW: Class Filter Field
     current_class = forms.ModelChoiceField(
-        queryset=Standard.objects.all().order_by('name'), # Default to all, but restricted in __init__
+        queryset=Department.objects.all().order_by('name'), # Default to all, but restricted in __init__
         required=False,
         label="Filter by Class (Optional)",
         empty_label="All Classes",
@@ -85,28 +85,28 @@ class AttendanceReportForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        teacher = kwargs.pop('teacher', None)
+        lecturer = kwargs.pop('lecturer', None)
         is_superuser = kwargs.pop('is_superuser', False)
         super().__init__(*args, **kwargs)
 
         # 1. Filter Student Field
-        if not is_superuser and teacher:
+        if not is_superuser and lecturer:
             self.fields['student'].queryset = Student.objects.filter(
-                form_teacher=teacher
+                form_lecturer=lecturer
             ).order_by('last_name', 'first_name')
             
             # 2. Filter Class Field (Non-Superuser Logic)
-            # Restrict class choices to only those classes that have students assigned to this teacher
-            # teacher_classes = Standard.objects.filter(student__form_teacher=teacher).distinct().order_by('name') OLD LOGIC
-            teacher_classes = Standard.objects.filter(students__form_teacher=teacher).distinct().order_by('name')
-            self.fields['current_class'].queryset = teacher_classes
+            # Restrict class choices to only those classes that have students assigned to this lecturer
+            # lecturer_classes = Standard.objects.filter(student__form_lecturer=lecturer).distinct().order_by('name') OLD LOGIC
+            lecturer_classes = Department.objects.filter(students__form_lecturer=lecturer).distinct().order_by('name')
+            self.fields['current_class'].queryset = lecturer_classes
 
         elif is_superuser:
             self.fields['student'].queryset = Student.objects.all().order_by('last_name', 'first_name')
             # Superuser gets all classes by default (from field definition)
         else:
             self.fields['student'].queryset = Student.objects.none()
-            self.fields['current_class'].queryset = Standard.objects.none() # No class access
+            self.fields['current_class'].queryset = Department.objects.none() # No class access
             
     # ... (clean method remains unchanged) ...
     def clean(self):
