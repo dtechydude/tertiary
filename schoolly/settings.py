@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'curriculum.apps.CurriculumConfig',
     'staff.apps.StaffConfig',
     'students.apps.StudentsConfig',
+    'events.apps.EventsConfig',
+    'attendance.apps.AttendanceConfig',
 
 
 

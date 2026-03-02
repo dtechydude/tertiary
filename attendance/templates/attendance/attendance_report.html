@@ -1,0 +1,133 @@
+{% load attendance_filters %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Report</title>
+    <link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .present { color: green; font-weight: bold; }
+        .absent { color: red; font-weight: bold; }
+        .no-data { color: grey; font-style: italic; }
+        th, td { text-align: center; vertical-align: middle!important; }
+        th:first-child, td:first-child { text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div style="text-align: center;"> <img src="{% static 'pages/images/kwikschool_logo.png' %}" alt="" style="width: 10%; height: 10%;"></div>
+        <h5 class="mb-4">Attendance Report for Teacher: <span style="color:brown; font-size: 16px;">{{ teacher.first_name }} {{ teacher.last_name }}</span></h5>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card mb-4">
+            <div class="card-header">Report Filters</div>
+            <div class="card-body">
+                <form method="get" class="form-row">
+                    <div class="form-group col-md-4">
+                        {{ report_form.student.label_tag }}
+                        {{ report_form.student }}
+                        {% if report_form.student.errors %}
+                            <div class="invalid-feedback d-block">{{ report_form.student.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group col-md-3">
+                        {{ report_form.start_date.label_tag }}
+                        {{ report_form.start_date }}
+                        {% if report_form.start_date.errors %}
+                            <div class="invalid-feedback d-block">{{ report_form.start_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group col-md-3">
+                        {{ report_form.end_date.label_tag }}
+                        {{ report_form.end_date }}
+                        {% if report_form.end_date.errors %}
+                            <div class="invalid-feedback d-block">{{ report_form.end_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary btn-block">Generate Report</button>
+                    </div>
+                </form>
+            </div>
+            {% if report_form.non_field_errors %}
+                <div class="alert alert-danger mt-3">
+                    {% for error in report_form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        {% if report_form.is_valid and attendance_data %}
+            {% with start_date=report_form.cleaned_data.start_date end_date=report_form.cleaned_data.end_date %}
+            <h4 class="mb-3">
+                Report for
+                {% if report_form.cleaned_data.student %}
+                    {{ report_form.cleaned_data.student.get_full_name }}
+                {% else %}
+                    All Students
+                {% endif %}
+                from {{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }}
+            </h4>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Student Name</th>
+                            {% for n in start_date|timesince_range:end_date %}
+                                <th>{{ n|date:"M d" }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student, daily_records in attendance_data.items %}
+                            <tr>
+                                <td>{{ student.get_full_name }}</td>
+                                {% for n in start_date|timesince_range:end_date %}
+                                    {% if n in daily_records %}
+
+                                    <td>marked</td>                                    
+                                     {% comment %}<td class="{% if daily_records[n].present %}present{% else %}absent{% endif %}"> 
+                                            {% if daily_records[n].present %}P{% else %}A{% endif %}
+                                        </td> {% endcomment %}
+                                    {% else %}
+                                        <td class="no-data">-</td> {# No record for this date #}
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endwith %}
+        {% elif report_form.is_valid %}
+             <div class="alert alert-info">No attendance records found for the selected criteria.</div>
+        {% else %}
+            <div class="alert alert-info">Please select report criteria and click "Generate Report".</div>
+        {% endif %}
+
+        <hr>
+        <div><p><a href="/dashboard/">Back to DASHBOARD</a></p></div>
+    </div>
+     
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

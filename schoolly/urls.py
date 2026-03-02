@@ -31,6 +31,8 @@ urlpatterns = [
     # path('students/', include('students.urls', namespace='students')), 
     # path('staff/', include('staff.urls', namespace='staff')),
     path('curriculum/', include('curriculum.urls', namespace='curriculum')),
+    path('events/', include('events.urls', namespace='events')),
+
 
 
 

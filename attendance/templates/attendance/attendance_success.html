@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Saved</title>
+    <link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
+
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="alert alert-success" role="alert">
+            <h4 class="alert-heading">Attendance Saved Successfully!</h4>
+            <p>Your daily attendance records have been updated.</p>
+            <hr>
+            <p class="mb-0"><a href="{% url 'attendance:take_daily_attendance' %}" class="btn btn-success">Take Attendance Again</a></p>
+        </div>
+    </div>
+</body>
+</html>
