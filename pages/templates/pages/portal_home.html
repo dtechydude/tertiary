@@ -1,0 +1,1422 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	{% block htmlhead %}
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="keywords" content="" />
+	<meta name="author" content="" />
+	<meta name="robots" content="" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="KwikSchools : KwikSchools Management Software" />
+	<meta property="og:title" content="KwikSchools : KwikSchools Software" />
+	<meta property="og:description" content="KwikSchools : KwikSchools Management Software" />
+	<!-- <meta property="og:image" content="https://travl.dexignlab.com/xhtml/social-image.png" /> -->
+	<meta name="format-detection" content="telephone=no">
+	{% endblock htmlhead %}
+	
+	<!-- PAGE TITLE HERE -->
+	{% block title %}
+	<title>KwikSchools Users Dashboard</title>
+	{% endblock title %}
+	
+	<!-- FAVICONS ICON -->
+	
+	<link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
+	{% block favicon %}
+	<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
+	<link href="{% static 'pages/vendor/owl-carousel/owl.carousel.css' %}" rel="stylesheet">
+	<link href="{% static 'pages/vendor/bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css' %}" rel="stylesheet">
+	
+	{% endblock favicon %}
+
+	<!-- Style css -->
+	{% block style %}
+	<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+	{% endblock style %}
+</head>
+<body>
+    
+	<!--*******************
+		Preloader start
+	********************-->
+	{% block preloader %}
+	<div id="preloader">
+		<div class="lds-ripple">
+			<div></div>
+			<div></div>
+		</div>
+	</div>
+	{% endblock preloader %}
+	<!--*******************
+		Preloader end
+	********************-->
+
+	<!--**********************************
+		Main wrapper start
+	***********************************-->
+	<div id="main-wrapper">
+
+		<!--**********************************
+			Nav header start
+		***********************************-->
+       
+		{% block navheader %}
+		<div class="nav-header">
+			<a href="/" class="brand-logo">
+				
+				<!-- <img src="{% static 'pages/images/logo-full1.png' %}" alt="" width="80px" height="80px"> -->
+				<img src="{{ school_info.logo.url }}" alt="kwikschools" width="80px" height="auto">
+
+				
+			</a>
+			<div class="nav-control">
+				<div class="hamburger">
+					<span class="line"></span><span class="line"></span><span class="line"></span>
+				</div>
+			</div>
+		</div>
+		{% endblock navheader %}
+		<!-- 
+		**********************************
+			Nav header end
+		*********************************** -->
+		
+		<!--**********************************
+			Chat box start
+		***********************************-->
+		{% block chatbox %}		
+<div class="chatbox">
+    <div class="chatbox-close"></div>
+    <div class="custom-tab-1">	
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#alerts">Alerts</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#others">Others</a>
+            </li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane fade active show" id="alerts" role="tabpanel">
+                <div class="card mb-sm-3 mb-md-0 contacts_card">
+                    <div class="card-header chat-list-header text-center">
+                        <a href="javascript:void(0);">
+                            <i class="fas fa-bell"></i>
+                        </a>
+                        <div>
+                            <h6 class="mb-1">Notifications</h6>
+                            <p class="mb-0">
+                                {% if unread_count > 0 %}
+                                    You have **{{ unread_count }}** new ticket(s) 🚀
+                                {% else %}
+                                    No new tickets.
+                                {% endif %}
+                            </p>
+                        </div>
+                        <a href="{% url 'tickets:ticket_list' %}">
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div class="card-body contacts_body p-0 dlab-scroll" id="DLAB_W_Contacts_Body1">
+                        <ul class="contacts">
+                            <li class="name-first-letter">NEW TICKETS</li>
+                            <li>
+                                <div class="d-flex bd-highlight">
+                                    <div class="img_cont primary">
+                                        <i class="fas fa-ticket-alt"></i>
+                                    </div>
+                                    <div class="user_info">
+                                        <span>New Ticket Submissions</span>
+                                        <p>
+                                            <a href="{% url 'tickets:ticket_list' %}" class="text-primary">View All Tickets</a>
+                                        </p>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-footer"></div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="others" role="tabpanel">
+                <div class="card mb-sm-3 mb-md-0 contacts_card">
+                    <div class="card-header chat-list-header text-center">
+                        <div>
+                            <h6 class="mb-1">Other Alerts</h6>
+                            <p class="mb-0">You're all caught up!</p>
+                        </div>
+                    </div>
+                    <div class="card-body contacts_body p-0 dlab-scroll" id="DLAB_W_Contacts_Body2">
+                        <ul class="contacts">
+                            <li>
+                                <div class="d-flex bd-highlight justify-content-center">
+                                    <p class="mt-3">No new notifications.</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-footer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+		{% endblock chatbox %}
+		<!--**********************************
+			Chat box End
+		***********************************-->
+		
+		<!--**********************************
+			Header start
+		***********************************-->
+		{% block header %}
+		<div class="header">
+			<div class="header-content">
+				<nav class="navbar navbar-expand">
+					<div class="collapse navbar-collapse justify-content-between">
+						<div class="header-left">
+							<div class="dashboard_bar">
+								<!-- Dashboard -->
+								{% if user.is_authenticated and user.is_superuser %}
+								Admin SuperUser Dashboard
+								{% elif user.is_authenticated and user.is_staff %}
+								Admin Role Dashboard
+								{% elif user.is_authenticated and user.staff %}
+								Staff Dashboard
+								{% elif user.is_authenticated and user.teacher %}
+								Teacher Dashboard
+								{% elif user.is_authenticated and user.student %}
+								Student Dashboard
+								{% elif user.is_authenticated and user.parent %}
+								PARENTS DASHBOARD								
+								{% else %}
+								User Dashboard
+								{% endif%}
+							</div>
+						</div>
+						<div class="nav-item d-flex align-items-center">
+							<div class="input-group search-area">
+								<input type="text" class="form-control" placeholder="">
+								<span class="input-group-text"><a href="javascript:void(0)"><i class="flaticon-381-search-2"></i></a></span>
+							</div>
+						</div>
+						
+						<ul class="navbar-nav header-right">				
+															
+							<li class="nav-item dropdown notification_dropdown">
+							<a class="nav-link" href="{% url 'tickets:ticket_list' %}">
+								<i class="fas fa-bell"></i>
+								{% if unread_count > 0 %}
+								<span class="badge badge-warning navbar-badge" id="unread-count">{{ unread_count }}</span>
+								{% endif %}
+							</a>
+						</li>	
+							<li class="nav-item dropdown notification_dropdown">
+								<a class="nav-link bell-link " href="javascript:void(0);">
+								<svg xmlns="http://www.w3.org/2000/svg" width="26.667" height="24" viewBox="0 0 26.667 24">
+								  <g id="_014-mail" data-name="014-mail" transform="translate(0 -21.833)">
+									<path id="Path_1962" data-name="Path 1962" d="M26.373,26.526A6.667,6.667,0,0,0,20,21.833H6.667A6.667,6.667,0,0,0,.293,26.526,6.931,6.931,0,0,0,0,28.5V39.166a6.669,6.669,0,0,0,6.667,6.667H20a6.669,6.669,0,0,0,6.667-6.667V28.5A6.928,6.928,0,0,0,26.373,26.526ZM6.667,24.5H20a4.011,4.011,0,0,1,3.947,3.36L13.333,33.646,2.72,27.86A4.011,4.011,0,0,1,6.667,24.5ZM24,39.166a4.012,4.012,0,0,1-4,4H6.667a4.012,4.012,0,0,1-4-4V30.873L12.693,36.34a1.357,1.357,0,0,0,1.28,0L24,30.873Z" transform="translate(0 0)" fill="#135846"/>
+								  </g>
+								</svg>
+									<span class="badge light text-white bg-primary rounded-circle">2</span>
+								</a>
+							</li>	
+								<div class="dropdown-menu dropdown-menu-end">
+									<div id="DZ_W_Notification1" class="widget-media dlab-scroll p-3" style="height:380px;">
+										<ul class="timeline">
+											<li>
+												<div class="timeline-panel">
+													<div class="media me-2 media-info">
+														DS
+													</div>
+													<div class="media-body">
+														<h6 class="mb-1">AI for educators</h6>
+														<small class="d-block">15 Sept 2025 - 02:26 PM</small>
+													</div>
+												</div>
+											</li>
+											<li>
+												<div class="timeline-panel">
+													<div class="media me-2 media-info">
+														KG
+													</div>
+													<div class="media-body">
+														<h6 class="mb-1">Sch, Reports</h6>
+														<small class="d-block">29 July 2025 - 02:26 PM</small>
+													</div>
+												</div>
+											</li>
+											<li>
+												<div class="timeline-panel">
+													<div class="media me-2 media-success">
+														<i class="fa fa-home"></i>
+													</div>
+													<div class="media-body">
+														<h6 class="mb-1">Onboarding!</h6>
+														<small class="d-block">31st Aug 2025 - 02:26 PM</small>
+													</div>
+												</div>
+											</li>
+											 <li>
+												<div class="timeline-panel">
+													<div class="media me-2 media-info">
+														GS
+													</div>
+													<div class="media-body">
+														<h6 class="mb-1">GoldenCitadel Sch.</h6>
+														<small class="d-block">29 Aug 2025 - 02:26 PM</small>
+													</div>
+												</div>
+											</li>
+											<li>
+												<div class="timeline-panel">
+													<div class="media me-2 media-danger">
+														KG
+													</div>
+													<div class="media-body">
+														<h6 class="mb-1">Batch Newsletter</h6>
+														<small class="d-block">31 Aug 2025 - 02:26 PM</small>
+													</div>
+												</div>
+											</li>
+											
+										</ul>
+									</div>
+									<a class="all-notification" href="javascript:void(0);">See all notifications <i class="ti-arrow-end"></i></a>
+								</div>
+							</li>
+							<li class="nav-item dropdown notification_dropdown">
+								<a class="nav-link " href="javascript:void(0);" data-bs-toggle="dropdown">
+									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="21.6" viewBox="0 0 24 21.6">
+									  <g id="_008-chat" data-name="008-chat" transform="translate(-250.397 -62.547)">
+										<path id="Path_1956" data-name="Path 1956" d="M274.4,67.347a4.8,4.8,0,0,0-4.8-4.8H255.2a4.8,4.8,0,0,0-4.8,4.8v15.6a1.2,1.2,0,0,0,2.048.848l3.746-3.745a2.4,2.4,0,0,1,1.7-.7H269.6a4.8,4.8,0,0,0,4.8-4.8Zm-2.4,0a2.4,2.4,0,0,0-2.4-2.4H255.2a2.4,2.4,0,0,0-2.4,2.4v12.7l1.7-1.7a4.8,4.8,0,0,1,3.395-1.406H269.6a2.4,2.4,0,0,0,2.4-2.4Zm-15.6,7.2H266a1.2,1.2,0,1,0,0-2.4h-9.6a1.2,1.2,0,0,0,0,2.4Zm0-4.8h12a1.2,1.2,0,1,0,0-2.4h-12a1.2,1.2,0,0,0,0,2.4Z" fill="#135846" fill-rule="evenodd"/>
+									  </g>
+									</svg>
+									<span class="badge light text-white bg-primary rounded-circle"></span>
+								</a>
+								<div class="dropdown-menu dropdown-menu-end">
+									<div id="DZ_W_TimeLine02" class="widget-timeline dlab-scroll style-1 ps ps--active-y p-3 height370">
+									<ul class="timeline">
+										<li>
+											<div class="timeline-badge primary"></div>
+											<a class="timeline-panel text-muted" href="javascript:void(0);">
+												<span>10 minutes ago</span>
+												<h6 class="mb-0">KwikSchools Youtube <strong class="text-primary">###</strong>.</h6>
+											</a>
+										</li>
+										<li>
+											<div class="timeline-badge info">
+											</div>
+											<a class="timeline-panel text-muted" href="javascript:void(0);">
+												<span>20 minutes ago</span>
+												<h6 class="mb-0">New order placed <strong class="text-info">#XF-2356.</strong></h6>
+												<p class="mb-0">Many Schools Digitalized...</p>
+											</a>
+										</li>
+										<li>
+											<div class="timeline-badge danger">
+											</div>
+											<a class="timeline-panel text-muted" href="javascript:void(0);">
+												<span>30 minutes ago</span>
+												<h6 class="mb-0">ADSS <strong class="text-warning">###</strong></h6>
+											</a>
+										</li>
+										<li>
+											<div class="timeline-badge success">
+											</div>
+											<a class="timeline-panel text-muted" href="javascript:void(0);">
+												<span>15 minutes ago</span>
+												<h6 class="mb-0">ICHS Onboarded. </h6>
+											</a>
+										</li>
+										<li>
+											<div class="timeline-badge warning">
+											</div>
+											<a class="timeline-panel text-muted" href="javascript:void(0);">
+												<span>20 minutes ago</span>
+												<h6 class="mb-0">Annies Comp. Schools goes live.</h6>
+											</a>
+										</li>
+										<li>
+											<div class="timeline-badge dark">
+											</div>
+											<a class="timeline-panel text-muted" href="javascript:void(0);">
+												<span>20 minutes ago</span>
+												<h6 class="mb-0">CISS, new website goes live.</h6>
+											</a>
+										</li>
+									</ul>
+								</div>
+								</div>
+							</li>
+							<li class="nav-item dropdown header-profile">
+								<a class="nav-link" href="/dashboard/" role="button" data-bs-toggle="dropdown">
+								{% if user.profile.image and user.profile.image.name %}
+									<img src="{{ user.profile.image.url }}" width="20" alt="Profile"/>
+								{% else %}
+									<img src="{% static 'pages/images/default.jpg' %}" width="20" alt="Profile"/>
+								{% endif %}
+								</a>
+								<div class="dropdown-menu dropdown-menu-end">
+									<a href="/dashboard/" class="dropdown-item ai-icon">
+										<svg id="icon-user2" xmlns="http://www.w3.org/2000/svg" class="text-primary" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+										<span class="ms-2">{{user.first_name}} {{ user.last_name }} </span>
+									</a>
+									{% if user.teacher %}
+									<a href="{% url 'staff:teacher-self-detail' %}" class="dropdown-item ai-icon">
+										{% elif user.student %}
+										<a href="{% url 'students:student-self-detail' %}" class="dropdown-item ai-icon">
+										{% elif user.staff %}
+										<a href="{% url 'staff:staff-self-detail' %}" class="dropdown-item ai-icon">
+										{% else %}
+										<a href="/dashboard/" class="dropdown-item ai-icon">								
+										{% endif %}
+										<i class="fas fa-user text-danger" width="18" height="18"></i><span class="ms-2">My Profile </span></a>
+									<a href="{% url 'user_logout' %}" class="dropdown-item ai-icon">
+										<svg  xmlns="http://www.w3.org/2000/svg" class="text-danger" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+										<span class="ms-2">Logout </span>
+									</a>
+								</div>
+							</li>
+						</ul>
+					</div>
+				</nav>
+			</div>
+		</div>
+		{% endblock header %}
+		<!--**********************************
+			Header end ti-comment-alt
+		***********************************-->
+
+		<!--**********************************
+			Sidebar start
+		***********************************-->
+		{% block sidebar %}	
+
+		<div class="dlabnav">
+			<div class="dlabnav-scroll">
+				<ul class="metismenu" id="menu">					
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-025-dashboard"></i>
+									
+							<span class="nav-text">DASHBOARD</span>
+						</a>
+						<ul aria-expanded="false">
+
+							<li><a href="{% url 'pages:portal-home' %}">Dashboard HOME</a></li>
+							
+							{% if user.is_superuser or user.is_staff %}
+							<li><a href="/admin/" target="_blank">Main Settings (ADMIN PANEL)</a></li>
+							<li><a href="{% url 'events:event_new' %}">Add New Event</a></li>							
+							<li><a href="{% url 'all_users' %}">All Registered Users</a></li>
+							<li><a href="{% url 'students:student_search_list' %}">Search Students</a></li>
+							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
+
+							{% endif %}		
+	
+							{% if user.is_authenticated and user.student %}
+							<li><a href="{% url 'students:student-self-detail' %}">My Profile</a></li>							
+							{% endif %}
+							{% if user.teacher %}
+							<li><a href="{% url 'staff:teacher_id_card' user.teacher.id %}"> My ID Card</a></li>			
+							<li><a href="{% url 'staff:teacher-self-detail' %}">My Profile</a></li>
+							{% endif %}
+
+							<li><a href="{% url 'events:calendar' %}">School Events Calendar</a></li>
+							
+						</ul>
+					</li>						
+					{% if user.is_authenticated and not user.parent %}
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">STUDENT MGT.</span>
+						</a>
+						<ul aria-expanded="false">
+							{% if user.is_superuser or user.is_staff %}
+							<li><a href="{% url 'enroll_student' %}">Enroll Student</a></li>
+							<li><a href="{% url 'students:student-list' %}">All CURRENT Students</a></li>
+							<li><a href="{% url 'students:bulk_student_id_cards' %}">Print Bulk Students ID</a></li>
+							<li><a href="{% url 'students:boarder-list' %}">All Boarders</a></li>
+							<li><a href="{% url 'students:student-in-class' %}">No. In Class</a></li>
+							<li><a href="{% url 'students:assign_classgroup_to_students' %}">Assign Students To ClassGroup</a></li>
+							<li><a href="{% url 'students:parent_list' %}">PARENTS LIST</a></li>	
+							<li><a href="{% url 'students:parent-dashboard' %}">PARENTS DASHBOARD</a></li>
+							<li><a href="{% url 'students:graduate_students' %}">Move Students To Alumni</a></li>
+							<li><a href="{% url 'students:alumni_list' %}">GRADUATE/ALUMNI List</a></li>
+							
+							{% elif user.teacher %}		
+							<li><a href="{% url 'students:student-list' %}">My Students</a></li>
+							<li><a href="{% url 'staff:my_assignments' %}">My Assigned Classes</a></li>
+							<li><a href="{% url 'students:upcoming_birthdays' %}">My Students Birthday</a></li>	
+							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>																	
+							
+							{% elif user.student %}	
+							<li><a href="{% url 'students:student_id_card' student.id %}"> My ID Card</a></li>	
+							<li><a href="{% url 'attendance:self-attendance-summary' %}">Attendance Summary</a></li>	
+							<li><a href="{% url 'attendance:self-attendance-detail' %}">Attendance Detail</a></li>							
+							<li><a href="{% url 'staff:my_teacher_view' %}">My Teacher</a></li>
+							<li><a href="{% url 'students:my_classmates' %}">My Class Mates</a></li>
+							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
+
+							{% else %}
+							<li>No Access</li>
+							{% endif %}					
+						</ul>
+					</li>
+
+					{% endif %}
+					{% if user.is_authenticated and not user.parent %}
+					{% if user.is_superuser or user.is_staff or user.teacher %}
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">ATTENDANCE</span>
+						</a>
+						<ul aria-expanded="false">
+							{% if user.is_superuser or user.is_staff %}
+							<li><a href="/admin/attendance/attendance/" target="_blank">Take Attendance-MANUAL</a></li>
+							<li><a href="{% url 'attendance:attendance_scanner' %}"><i class="fas fa-qrcode"></i><span>Take Attendance-SCANNING</span></a>
+							</li>
+							{% elif user.teacher %}
+							<li><a href="{% url 'attendance:take_daily_attendance' %}">Mark Attendance</a></li>
+							{% endif %}							
+							<li><a href="{% url 'attendance:attendance_report' %}">Attendance Report</a></li>
+							<li><a href="{% url 'attendance:attendance-student-list' %}">Attendance List</a></li>
+							
+							</ul>
+						{% endif %}
+					</li>
+					{% endif %}
+
+					{% if user.is_authenticated and not user.parent %}
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">EXAMS & RESULTS</span>
+						</a>
+						<ul aria-expanded="false">
+							{% if user.is_superuser or user.is_staff %}	
+							<li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>
+							<li><a href="{% url 'results:score_entry' %}">Enter End-Of-Term Scores</a></li>
+							<li><a href="{% url 'results:student_midterm_list' %}">View Mid-Term Results</a></li>
+							<li><a href="{% url 'results:report_card_list' %}">View Termly Results</a></li>
+							<li><a href="{% url 'results:session_report_card_list' %}">View Session Results</a></li>
+						
+							<li><a href="{% url 'results:ranking_list' %}">Student's Exam Ranking</a></li>
+							<li><a href="{% url 'results:result_publications_list' %}">PUBLISH TERM RESULTS</a></li>
+							<li><a href="{% url 'results:session_pub_control' %}">PUBLISH SESSION RESULTS</a></li>
+
+							<li><a href="{% url 'results:broadsheet_select' %}">Exam BROADSHEET</a></li>
+							<li><a href="{% url 'students:promote_students' %}">Promote Students (Batch) </a></li>
+							<li><a href="{% url 'students:promote_individual_students' %}">Promote Students (Individual)</a></li>
+							
+							
+							{% elif user.student %}
+							<li><a href="{% url 'results:student_dashboard' %}">Termly/Session Results</a></li>	
+							<li><a href="{% url 'results:student_midterm_list' %}">My Mid-Term Results</a></li>							
+
+							{% elif user.teacher %}	
+							<li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>											
+							<li><a href="{% url 'results:score_entry' %}">Enter CA & Term Scores</a></li>
+							<li><a href="{% url 'results:student_midterm_list' %}">View Mid-Term Results</a></li>
+							<li><a href="{% url 'results:report_card_list' %}">View Termly Results</a></li>
+							<li><a href="{% url 'results:session_report_card_list' %}">view Session Results</a></li>
+							<li><a href="{% url 'results:ranking_list' %}">Student's Exam Ranking</a></li>
+ 					
+							{% endif %}						
+
+						</ul>
+					</li>
+					{% endif %}
+
+					{% if user.is_superuser or user.is_staff %}
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">STAFF/TEACHERS</span>
+						</a>
+						<ul aria-expanded="false">
+							<li><a href="{% url 'staff:teacher_user_signup'%}">Signup Teacher</a></li>
+							<li><a href="{% url 'staff:teacher-list' %}">All Teachers</a></li>
+							<li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li> 
+							<li><a href="{% url 'staff:assign_form_teacher_to_classgroup' %}">Assign FormTeacher To CLASSGROUP</a></li>
+							<li><a href="{% url 'staff:teacher_assignments' %}">Teacher's Subj./Classes</a></li>
+							<li><a href="{% url 'staff:cbv_all_teachers_student_counts' %}">Teacher's Students Count</a></li>
+							<li><a href="{% url 'curriculum:form_teachers_head' %}">FormTeachers List</a></li>
+							<li><a href="{% url 'curriculum:classgroup_form_teachers' %}">ClassGroup FormTeachers</a></li>
+
+						</ul>
+					</li>
+					{% endif %}
+
+					{% if user.is_authenticated and user.is_superuser or user.is_staff or user.student or user.parent %}
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">PAYMENTS & FEES</span>
+						</a>					
+						<ul aria-expanded="false"> 
+							
+							{% if user.is_superuser or user.is_staff %}		
+							<li><a href="{% url 'payments:finance_dashboard' %}">Finance Dashboard</a></li>								
+							<li><a href="{% url 'payments:notification-list' %}">Payments Notifications </a></li>
+							<li><a href="{% url 'payments:payment_history' %}">Payments History</a></li>
+							<li><a href="{% url 'payments:total_payments_report' %}">Payments Summary</a></li>
+							<li><a href="{% url 'payments:debtors_report' %}">Debtors List</a></li>	
+							<li><a href="/admin/payments/payment/" target="_blank">Make Payment For Students</a></li>
+							<li><a href="/admin/payments/bankdetail/" target="_blank">Add/Edit BANK INFO</a></li>
+							<li><a href="/admin/payments/paymentcategory/" target="_blank">Add/Edit PAYMENT TYPE</a></li>
+															
+							{% endif %}							
+							{% if user.student or user.parent or user.is_superuser or user.is_staff %}	
+							<li><a href="{% url 'payments:payment_chart_list' %}">Fees Chart List</a></li>						
+							<li><a href="{% url 'pages:help-center' %}">Payment Instruction</a></li>
+							<li><a href="{% url 'pages:bank-detail' %}">School Account Details</a></li>
+							
+							{% endif %}
+							{% if user.student %}
+							<li><a href="{% url 'payments:student_invoice' %}">My Invoice</a></li>
+							<li><a href="{% url 'payments:payment_history' %}">My Payment History</a></li>	
+							<li><a href="{% url 'payments:notify_payment' %}">Make New Payment</a></li>
+							<li><a href="{% url 'payments:my-notifications' %}">My Payment Notifications</a></li>	
+																			
+							</li>		
+							{% endif %}						
+							
+						</ul>
+					</li>	
+					{% endif %}		
+					
+					{% if user.is_authenticated and not user.parent %}					
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">CBT</span>
+						</a>
+						<ul aria-expanded="false">	
+
+							{% if user.is_authenticated and user.is_superuser or user.is_staff %}
+							<li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
+							<li><a href="{% url 'cbt:cbt_teacher_order' %}">Teacher CBT Page</a></li>
+							<li><a href="{% url 'cbt:cbt_student_home' %}"> Student CBT Page</a></li>							
+							<li><a href="{% url 'cbt:teacher-results-view' %}"> Students CBT Scores</a></li>
+							<li><a href="{% url 'cbt:cbt-order' %}">customized CBT Platform</a></li>
+							<li><a href="{% url 'cbt:cbt-home' %}"> Current CBT Subscription</a></li>							
+
+							
+							{% elif user.is_authenticated and user.teacher or user.is_staff %}
+							<li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
+							<li><a href="{% url 'cbt:cbt_teacher_order' %}">Set CBT Exams</a></li>
+							<li><a href="{% url 'cbt:teacher-results-view' %}"> Students CBT Scores</a></li>							
+						
+							{% elif user.is_authenticated and user.student %}
+							<li><a href="{% url 'cbt:cbt_student_home' %}"> My CBT Exams</a></li>																			
+																
+							{% endif %}
+						</ul>					
+					</li>
+					
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">E-LEARNING</span>
+						</a>
+						<ul aria-expanded="false">							
+						
+							{% if user.is_authenticated and user.student %}
+							<li><a href="{% url 'curriculum:my-standard' %}">Learning Center</a></li>
+							
+							{% elif user.is_authenticated and user.teacher %}
+							<li><a href="{% url 'curriculum:standard_list' %}">E-Class List</a></li>
+							
+							{% elif user.is_authenticated and user.is_superuser or user.is_staff %}
+							<li><a href="/admin/curriculum/elearningsubject/" target="_blank">Add Subjects & Lessons </a></li>
+							<li><a href="{% url 'curriculum:standard_list' %}">E-Class List</a></li>										
+																
+							{% endif %}
+						</ul>					
+					</li>
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+						<span class="nav-text">SCHOOL BUS</span>
+					</a>
+					<ul aria-expanded="false">
+						<li><a href="{% url 'transport:bus_route_list' %}">Bus Route/Fare</a></li>
+						{% if user.student %}						
+						{% comment %}<li><a href="{% url 'transport:create_bus_signup' %}">SignUp For Bus</a></li>{% endcomment %}
+						<li><a href="{% url 'transport:student_own_route_detail' %}">My Route Details</a></li>						
+						<li><a href="{% url 'transport:signup' %}">Signup For Bus</a></li>
+						<li><a href="{% url 'transport:my_pass' %}">My Bus Pass</a></li>
+						
+
+						{% endif %}
+						{% if user.is_superuser or user.is_staff %}
+						<li><a href="/admin/transport/route/" target="_blank">Set/Edit Route</a></li>
+						<li><a href="/admin/transport/studentonroute/" target="_blank">Add Student To Route</a></li>
+						<li><a href="{% url 'transport:staff_signup' %}">Singup Student On Bus</a></li>	
+						<li><a href="{% url 'transport:bus_signup_list' %}">Students In Route</a></li>
+						<li><a href="{% url 'transport:enrollment_list' %}">Bus Enrollment List</a></li>
+						<li><a href="{% url 'transport:payment_report' %}">Bus Payment Report</a></li>					
+					
+						{% endif %}						
+					</ul>
+					</li>
+						{% endif %}
+
+						{% if user.is_authenticated and user.is_superuser or user.is_staff %}
+						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-013-checkmark"></i>
+								<span class="nav-text">INTEGRATIONS</span>
+							</a>
+							<ul aria-expanded="false">
+								<li><a href="#">Integration Page</a></li>								
+							</ul>
+						</li>
+						{% endif %}
+						{% if user.is_authenticated and user.is_superuser or user.is_staff or user.student or user.teacher %}
+						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+								<i class="flaticon-013-checkmark"></i>
+									<span class="nav-text">AI TOOLS</span>
+								</a>
+								{% endif %}	
+								{% if user.is_authenticated and user.is_superuser or user.is_staff %}
+								<ul aria-expanded="false">
+									<li><a href="#">School AI Tools</a></li>
+									{% if user.is_authenticated and user.is_superuser or user.student %}					
+									<li><a href="#">Student AI Tools</a></li>
+									{% endif %}	
+									{% if user.is_authenticated and user.is_superuser or user.teacher %}
+									<li><a href="#">Teachers AI Tools</a></li>
+									{% endif %}			
+								</ul>
+							</li>
+							{% endif %}
+					
+						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-013-checkmark"></i>
+								<span class="nav-text">HELP CENTER</span>
+							</a>
+							<ul aria-expanded="false">
+								<li><a href="{% url 'pages:video-guides' %}">Video Guide</a></li>
+								<li><a href="{% url 'pages:help-center' %}">FAQ</a></li>
+								<li><a href="{% url 'pages:support_info' %}">Support Center</a></li>
+							</ul>
+					</li>		
+						{% if user.is_superuser or user.is_staff %}
+						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-013-checkmark"></i>
+								<span class="nav-text">INFO & RECORDS</span>
+							</a>
+							<ul aria-expanded="false">
+							<li><a href="{% url 'events:calendar' %}">School Events Calendar</a></li>
+							<li><a href="{% url 'students:upcoming_birthdays' %}">Students Birthday</a></li>
+							<li><a href="{% url 'pages:students_email_list' %}">Students Email List</a></li>
+							<li><a href="{% url 'pages:students_phone_list' %}">Students Phone List</a></li>
+							<li><a href="{% url 'pages:teachers_phone_list' %}">Teachers Phone List</a></li>
+							<li><a href="{% url 'pages:teachers_email_list' %}">Teachers Email List</a></li>
+
+							</ul>
+					</li>
+					{% endif %}							
+					
+						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-013-checkmark"></i>
+								<span class="nav-text">TICKETS</span>
+							</a>
+							
+							<ul aria-expanded="false">
+								<li class="nav-item dropdown notification_dropdown">
+								<li class="nav-item dropdown notification_dropdown">
+							<a class="nav-link" href="{% url 'tickets:ticket_list' %}">
+								<i class="fas fa-bell"></i>
+								{% if unread_count > 0 %}
+								<span class="badge badge-warning navbar-badge" id="unread-count">{{ unread_count }}</span>
+								{% endif %}
+							</a>
+       
+							{% if user.is_superuser or user.is_staff %}
+							<li><a href="{% url 'tickets:admin_ticket_list' %}">Ticket List</a></li>
+							<li><a href="{% url 'tickets:broadcast_ticket_create' %}">Send A Broadcast</a></li>
+
+							
+							{% else %}
+							<li><a href="{% url 'tickets:ticket_list' %}">My Tickets</a></li>
+							<li><a href="{% url 'tickets:create_ticket' %}">Submit New Ticket</a></li>
+								{% endif %}
+							</ul>							
+					</li>					
+					{% if user.is_authenticated and user.is_superuser or user.is_staff %}
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">ARCHIVES</span>
+						</a>
+						<ul aria-expanded="false">	
+												
+							<li><a href="{% url 'students:student_archive' %}">Old Students</a></li>							
+							{% comment %} <li><a href="{% url 'payments:archive_payment_chart_list' %}">Archived Fees Chart</a></li>	{% endcomment %}						
+									
+						</ul>
+
+						</li>
+						{% endif %}					
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">SETTINGS</span>
+						</a>
+						<ul aria-expanded="false">	
+							{% if user.teacher %}						
+							<li><a href="{% url 'staff:teacher-self-detail' %}">My Profile</a></li>
+							{% elif user.student %}
+							<li><a href="{% url 'students:student-self-detail' %}">My Profile</a></li>							
+							{% else %}
+							<li><a href="/dashboard/">My Profile</a></li>
+							{% endif %}
+							<li><a href="{% url 'password_reset' %}">Reset Password</a></li>							
+							<li><a href="{% url 'user_logout' %}">LogOut</a></li>				
+						</ul>
+					</li>
+				</ul>
+				<div class="dropdown header-profile2 ">
+					<div class="header-info2 text-center">
+						{% if user.profile.image and user.profile.image.name %}
+									<img src="{{ user.profile.image.url }}" width="20" alt="Profile"/>
+								{% else %}
+									<img src="{% static 'pages/images/default.jpg' %}" width="20" alt="Profile"/>
+								{% endif %}
+						<div class="sidebar-info">
+							<div>
+								<h5 class="font-w500 mb-0">{{user}}</h5>
+								<span class="fs-12">{{ user.email }}</span>
+							</div>	
+						</div>
+						<div>
+							<a href="{% url 'pages:portal-home' %}" class="btn btn-md text-secondary">DASHBOARD</a>
+						</div>
+					</div>
+				</div>
+				<div class="copyright">
+					<p class="text-center"><strong>KwikSchools</strong> &copy; {% now "Y" %} All Rights Reserved <br>
+					<span class="fs-12 text-center">By: <a href="https://fizcos.com">Fizcos Infotech Solutions</a></span> <br>
+					{% if user.is_authenticated and user.is_superuser %}
+					<span class="fs-12 text-center"> <a href="https://kwikschools.com/privacy-policy-service-terms/">Privacy Policy & Service Terms</a></span>
+						{% endif %}
+				</p>
+				</div>
+			</div>
+		</div>
+		{% endblock sidebar %}
+		<!--**********************************
+			Sidebar end
+		***********************************-->
+		
+		<!--**********************************
+			Content body start
+		***********************************-->
+		{% block content_body %}
+		<div class="content-body">
+			<!-- row -->
+			<div class="container-fluid">
+				<div class="row">
+					<div class="col-xl-12">
+						<div class="row">
+							<div class="col-xl-12">
+								<div class="row">
+									<div class="col-xl-3 col-sm-6">
+										<div class="card booking">
+											<div class="card-body">
+												<div class="booking-status d-flex align-items-center">
+													<span>
+														<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+															<path  data-name="Path 1957" d="M129.035,178.842v2.8a5.6,5.6,0,0,0,5.6,5.6h14a5.6,5.6,0,0,0,5.6-5.6v-16.8a5.6,5.6,0,0,0-5.6-5.6h-14a5.6,5.6,0,0,0-5.6,5.6v2.8a1.4,1.4,0,0,0,2.8,0v-2.8a2.8,2.8,0,0,1,2.8-2.8h14a2.8,2.8,0,0,1,2.8,2.8v16.8a2.8,2.8,0,0,1-2.8,2.8h-14a2.8,2.8,0,0,1-2.8-2.8v-2.8a1.4,1.4,0,0,0-2.8,0Zm10.62-7-1.81-1.809a1.4,1.4,0,1,1,1.98-1.981l4.2,4.2a1.4,1.4,0,0,1,0,1.981l-4.2,4.2a1.4,1.4,0,1,1-1.98-1.981l1.81-1.81h-12.02a1.4,1.4,0,1,1,0-2.8Z" transform="translate(-126.235 -159.242)" fill="var(--primary)" fill-rule="evenodd"/>
+														  </svg>
+													</span>
+													<div class="ms-4">
+														<h5 class="mb-0 font-w600">{{user.username}}</h5>
+														<p class="mb-0 text-nowrap">UserName</p>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="col-xl-3 col-sm-6">
+										<div class="card booking">
+											<div class="card-body">
+												<div class="booking-status d-flex align-items-center">
+													<span>
+														<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+															<path  data-name="Path 1957" d="M129.035,178.842v2.8a5.6,5.6,0,0,0,5.6,5.6h14a5.6,5.6,0,0,0,5.6-5.6v-16.8a5.6,5.6,0,0,0-5.6-5.6h-14a5.6,5.6,0,0,0-5.6,5.6v2.8a1.4,1.4,0,0,0,2.8,0v-2.8a2.8,2.8,0,0,1,2.8-2.8h14a2.8,2.8,0,0,1,2.8,2.8v16.8a2.8,2.8,0,0,1-2.8,2.8h-14a2.8,2.8,0,0,1-2.8-2.8v-2.8a1.4,1.4,0,0,0-2.8,0Zm10.62-7-1.81-1.809a1.4,1.4,0,1,1,1.98-1.981l4.2,4.2a1.4,1.4,0,0,1,0,1.981l-4.2,4.2a1.4,1.4,0,1,1-1.98-1.981l1.81-1.81h-12.02a1.4,1.4,0,1,1,0-2.8Z" transform="translate(-126.235 -159.242)" fill="var(--primary)" fill-rule="evenodd"/>
+														  </svg>
+													</span>
+													<div class="ms-4">
+														{% if user.is_superuser or user.is_staff %}
+														<h5 class="mb-0 font-w600">{{ student_num }}</h5>
+														<p class="mb-0 text-nowrap ">All-Time Enrollment</p>
+														{% elif user.is_authenticated and user.teacher %}
+														<h5 class="mb-0 font-w600">{{ user.teacher.date_employed }}</h5>
+														<p class="mb-0 text-nowrap ">Empl. Date</p>
+														{% elif user.is_authenticated and user.student %}
+														<h5 class="mb-0 font-w600">{{ user.student.student_status }}</h5>
+														<p class="mb-0 text-nowrap ">Status</p>
+														{% elif user.is_authenticated and user.parent %}
+														<h5 class="mb-0 font-w600"> <a href="{% url 'students:parent-dashboard' %}">My Chidren</a></h5>
+    													<i class="fas fa-hand-point-up" style="font-size: 2rem; color: red; cursor: pointer;"></i>
+
+														{% else %}
+														<h4 class="mb-0 font-w600">N/A</h4>
+														<p class="mb-0 text-nowrap ">No Info</p>
+														{% endif %}
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="col-xl-3 col-sm-6">
+										<div class="card booking">
+											<div class="card-body">
+												<div class="booking-status d-flex align-items-center">
+													<span>
+														<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+														  <path  data-name="Path 1957" d="M129.035,178.842v2.8a5.6,5.6,0,0,0,5.6,5.6h14a5.6,5.6,0,0,0,5.6-5.6v-16.8a5.6,5.6,0,0,0-5.6-5.6h-14a5.6,5.6,0,0,0-5.6,5.6v2.8a1.4,1.4,0,0,0,2.8,0v-2.8a2.8,2.8,0,0,1,2.8-2.8h14a2.8,2.8,0,0,1,2.8,2.8v16.8a2.8,2.8,0,0,1-2.8,2.8h-14a2.8,2.8,0,0,1-2.8-2.8v-2.8a1.4,1.4,0,0,0-2.8,0Zm10.62-7-1.81-1.809a1.4,1.4,0,1,1,1.98-1.981l4.2,4.2a1.4,1.4,0,0,1,0,1.981l-4.2,4.2a1.4,1.4,0,1,1-1.98-1.981l1.81-1.81h-12.02a1.4,1.4,0,1,1,0-2.8Z" transform="translate(-126.235 -159.242)" fill="var(--primary)" fill-rule="evenodd"/>
+														</svg>
+													</span>
+													<div class="ms-4">
+														{% if user.is_superuser or user.is_staff %}
+														<h5 class="mb-0 font-w600">{{ users_num }}</h5>
+														<p class="mb-0 text-nowrap ">Total Users</p>
+
+														{% elif user.is_authenticated and user.teacher %}
+														<h5 class="mb-0 font-w600">{{ user.teacher.dept }}</h5>
+														<p class="mb-0 text-nowrap ">Department</p>
+														{% elif user.is_authenticated and user.student %}
+														<h5 class="mb-0 font-w600">{{ user.student.current_class }}</h5>
+														<p class="mb-0 text-nowrap ">Current Class</p>
+														{% elif user.is_authenticated and user.parent %}
+														<a href="{% url 'pages:help-center' %}">
+														<h5 class="mb-0 font-w600">FAQ</h5>
+														<p class="mb-0 text-nowrap ">Help Center</p>
+														</a>
+														{% else %}
+														<h4 class="mb-0 font-w600">N/A</h4>
+														<p class="mb-0 text-nowrap ">No Info</p>
+														{% endif %}
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="col-xl-3 col-sm-6">
+										<div class="card booking">
+											<div class="card-body">
+												<div class="booking-status d-flex align-items-center">
+													<span>
+														<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+															<path  data-name="Path 1957" d="M129.035,178.842v2.8a5.6,5.6,0,0,0,5.6,5.6h14a5.6,5.6,0,0,0,5.6-5.6v-16.8a5.6,5.6,0,0,0-5.6-5.6h-14a5.6,5.6,0,0,0-5.6,5.6v2.8a1.4,1.4,0,0,0,2.8,0v-2.8a2.8,2.8,0,0,1,2.8-2.8h14a2.8,2.8,0,0,1,2.8,2.8v16.8a2.8,2.8,0,0,1-2.8,2.8h-14a2.8,2.8,0,0,1-2.8-2.8v-2.8a1.4,1.4,0,0,0-2.8,0Zm10.62-7-1.81-1.809a1.4,1.4,0,1,1,1.98-1.981l4.2,4.2a1.4,1.4,0,0,1,0,1.981l-4.2,4.2a1.4,1.4,0,1,1-1.98-1.981l1.81-1.81h-12.02a1.4,1.4,0,1,1,0-2.8Z" transform="translate(-126.235 -159.242)" fill="var(--primary)" fill-rule="evenodd"/>
+														  </svg>
+
+													</span>
+													<div class="ms-4">
+														{% if user.is_superuser or user.is_staff %}
+														<h5 class="mb-0 font-w600">{{ num_of_classes }}</h5>
+														<p class="mb-0 text-nowrap ">No. Of Class</p>
+
+														{% elif user.is_authenticated and user.teacher %}
+														<h5 class="mb-0 font-w600">{{ user.teacher.staff_role }}</h5>
+														<p class="mb-0 text-nowrap ">My Role</p>
+														{% elif user.is_authenticated and user.student %}
+														<a href="{% url 'results:student_dashboard' %}">
+														<h5 class="mb-0 font-w600">Check Results</h5>
+														<p class="mb-0 text-nowrap ">Termly/Session</p>
+													</a>														
+														{% elif user.is_authenticated and user.parent %}
+														<a href="{% url 'tickets:create_ticket' %}">
+														<h5 class="mb-0 font-w600">Ticket</h5>
+														<p class="mb-0 text-nowrap ">Submit Ticket</p>
+														</a>
+														{% else %}
+														<h4 class="mb-0 font-w600">N/A</h4>
+														<p class="mb-0 text-nowrap ">No Info</p>
+														{% endif %}
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="col-xl-12">
+								<div class="row">
+									<div class="col-xl-6">
+										<div class="card">																	
+											<!-- <div class="card-header border-0 pb-0">
+												<a href="{% url 'events:calendar' %}" class="btn btn-primary btn-sm">View School Events</a>
+											</div> -->
+											<div class="card-header border-0 pb-0 d-flex justify-content-center">
+											<a href="{% url 'events:calendar' %}" class="btn btn-primary btn-sm">
+												View School Events
+											</a>
+										</div>
+											<div class="card-body pb-2 loadmore-content" id="BookingContent">
+												<div class="text-center event-calender border-bottom booking-calender">
+													<input type='text' class="form-control d-none " id='datetimepicker1' />
+												</div>	
+												<div class="rooms mt-3 d-flex align-items-center justify-content-between flex-wrap">
+													<div class="d-flex align-items-center mb-3">
+														
+														<div class="ms-4 bed-text">
+															<h4>My Profile Details</h4>															
+															<div class="users d-flex align-items-center">																
+																<div>																
+															<ul class="list-unstyled">
+															<li class="mb-1"><span class="font-w500 me-2">NAME:</span> <strong>{{ user.first_name }} {% if user.student.middle_name %} {{ user.student.middle_name }} {% endif %}{{ user.last_name}}</strong></li>
+															<li class="mb-1"><span class="font-w500 me-2">EMAIL:</span> <span>{{ user.email }}</span></li>
+															<li class="mb-1"><span class="font-w500 me-2">PHONE:</span> <span>{{ user.profile.phone }}</span></li>
+															<li class="mb-1"><span class="font-w500 me-2">ROLE:</span>
+																{% if user.is_superuser %}
+																<span class="badge bg-primary">SUPERUSER</span>
+																{% elif user.student %}
+																<span class="badge bg-success">STUDENT</span>
+																{% elif user.teacher %}
+																<span class="badge bg-info">TEACHER</span>
+																{% elif user.parent %}
+																<span class="badge bg-secondary">GUARDIAN/PARENT</span>
+																{% else %}
+																<span class="badge bg-secondary">ADMIN</span>
+																{% endif %}
+															</li>
+															<li class="mb-1"><span class="font-w500 me-2">UPDATED:</span> <span class="text-muted">{{ user.profile.updated|date:"F j, Y" }}</span></li>
+														</ul>
+
+															</div>
+															</div>
+														</div>
+													</div>
+													<!-- <span class="date bg-secondary mb-3"><i class="fas fa-user"></i></span> -->
+													<span class="date bg-secondary mb-3">
+													{% if user.profile.image and user.profile.image.name %}
+														<img src="{{ user.profile.image.url }}" 
+															alt="Profile"
+															style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;"
+														/>
+													{% else %}
+														<img src="{% static 'pages/images/default.jpg' %}" 
+															alt="Profile"
+															style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;"
+														/>
+													{% endif %}
+												</span>
+												</div>
+											
+												<!-- <div class="rooms mt-3 d-flex align-items-center justify-content-between flex-wrap">
+													
+												</div> -->
+											</div>
+											
+										</div>
+									</div>
+									
+									<div class="col-xl-6">
+										<div class="row">
+											<div class="col-xl-12">
+												<div class="card">
+													<div class="card-header border-0 flex-wrap">
+														{% if user.is_authenticated and user.is_superuser or user.is_staff %}
+														<h4 class="fs-20">{% if school_info %}<i class="fas fa-school"></i> - {{ school_info.name }}{% endif %}</h4>
+														<div class="card-action coin-tabs">
+															<ul class="nav nav-tabs" role="tablist">
+																<li class="nav-item">
+																	<a class="nav-link " data-bs-toggle="tab" href="#Daily1" role="tab"> Report Stat.</a>
+																</li>															
+															</ul>
+														</div>
+													</div>
+													<div class="card-body pb-0">
+														<div class="d-flex flex-wrap">
+															<span class="me-sm-5 me-0 font-w500">
+																<svg class="me-1" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13">
+																  <rect  width="13" height="13" fill="#135846"/>
+																</svg>
+
+																Active Std
+															</span>
+															<span class="fs-16 font-w600 me-4">{{ active }} <small class="text-success fs-12 font-w400">+0.4%</small></span>
+															<span class="me-sm-5 ms-0 font-w500">
+																<svg class="me-1" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13">
+																  <rect  width="13" height="13" fill="#E23428"/>
+																</svg>
+																Dropped Students
+															</span>
+															<span class="fs-16 font-w600">{{ dropped }}</span>
+														</div>	
+														<div class="tab-content">
+															<div class="tab-pane fade show active" id="Daily1">															
+															</div>														
+															<div class="tab-pane fade show active" id="Daily1">
+																<h4 class="text-danger"> You Are Logged In As A Portal ADMIN!</h4>
+																<p>This portal enables you, as an administrator, to efficiently add, edit, and delete school information.
+																Please ensure that you:																
+																<ul>
+																<li> - Enter your <strong>school's name</strong> exactly as it should appear in official records.</li>
+																<li> - Upload the <strong>school logo</strong> (maximum: <strong>200 × 200 px</strong>; accepted formats: <code>.jpg</code>, <code>.png</code>).</li>
+																<li> - Provide the correct <strong>address, phone number,</strong> and <strong>email</strong>.</li>
+																<li> - Configure essential settings such as <strong>payments</strong>, <strong>departments</strong>, and <strong>user roles</strong>.</li>
+																</ul>
+																
+																</p>																												
+																</div>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="col-xl-6 col-sm-6">
+												<div class="card bg-primary">
+													<div class="card-body">
+														<div class="d-flex align-items-end pb-4 justify-content-between">
+															<span class="fs-14 font-w500 text-white">Graduated Students</span>
+															<span class="fs-20 font-w600 text-white"><span class="pe-2"></span>{{ graduated}}</span>
+														</div>
+														<div class="progress default-progress h-auto">
+															<div class="progress-bar bg-white progress-animated" style="width: 60%; height:13px;" role="progressbar">
+																<span class="sr-only">60% Complete</span>
+															</div>
+														</div>
+														
+													</div>
+												</div>
+											</div>
+											<div class="col-xl-6 col-sm-6">
+												<div class="card bg-secondary">
+													<div class="card-body">
+														<div class="d-flex align-items-end pb-4 justify-content-between">
+															<span class="fs-14 font-w500 text-white">Total Teachers</span>
+															<span class="fs-20 font-w600 text-white"><span class="pe-2"></span>{{ teacher_num }}</span>
+														</div>
+														<div class="progress default-progress h-auto">
+															<div class="progress-bar bg-white progress-animated" style="width: 30%; height:13px;" role="progressbar">
+																<span class="sr-only">90% Complete</span>
+															</div>
+														</div>
+														
+													</div>
+												</div>
+											</div>
+											<div class="col-xl-12">
+												<div class="card">
+													<div class="card-body">
+														<div class="row">
+															
+															<div class="col-xl-3 col-sm-3 col-6 mb-4 col-xxl-6">
+																<div class="text-center">
+																	<h5 class="fs-28 font-w600">{{ boarder_std}}</h5>
+																	<span class="fs-16">Boarding Students</span>
+																</div>
+															</div>
+															<div class="col-xl-3 col-sm-3 col-6 mb-4 col-xxl-6">
+																<div class="text-center">
+																	<h5 class="fs-28 font-w600">{{ day_std }}</h5>
+																	<span class="fs-16 wspace-no">Day Students</span>
+																</div>
+															</div>
+															
+															<div class="mb-5 mt-4 d-flex align-items-center">
+																<div>
+																	<a href="{% url 'pages:video-guides' %}" class="btn btn-primary mt-4">
+															<i class="fas fa-book me-2"></i> View Portal Manual
+																</a>
+																</div>
+															</div>
+														</div>
+														{% elif user.student %}													
+
+													<div class="mb-5 mt-4 d-flex align-items-center">
+													<div>
+														<h4 class="mb-3"><a href="javascript:void(0);" class="text-success">You Are Logged In As A STUDENT!</a></h4>
+														<div class="user-info">															
+															<p style="text-align: justify;">
+
+																<span><strong>Your Profile</strong> <br>
+																You can update your personal information at any time through the profile section. Keeping your details accurate helps with communication and official records.
+																</span> <br>
+																<span><strong>Password & Security</strong> <br>
+																All users receive a default password at registration. For your security, it is strongly recommended that you change your password immediately after your first login.
+																</span> <br>
+																<strong>Help & Support</strong><br>
+																If you encounter any issues or need assistance, please visit the Help Center via the support menu or contact the portal administrator.
+																You can use the internal “Ticket” communication tool to submit complaints, report issues, or request assistance.															</p>
+															</p>
+
+																<!-- For Students -->
+																<p style="text-align: justify;">																
+																<span><strong>Academic Records & Progress</strong> <br>
+																Students can access their grades, transcripts, attendance history, and overall academic performance in real time.
+																</span><br>
+																<span> <strong>E-Learning & CBT Access</strong> <br>
+																The portal provides an e-learning center where students can view class materials, participate in discussions, and access Computer-Based Tests (CBT) when assigned.
+																</span><br>
+																<span><strong>Payments & Billing</strong> <br>
+																All required payments can be made directly through the portal. A comprehensive fees chart is available for reference.
+																Please ensure that all payments are made using the correct official school account.
+																</span>
+															</p>						
+														</div>
+														<a href="{% url 'pages:video-guides' %}" class="btn btn-primary mt-4">
+															<i class="fas fa-book me-2"></i> View Portal Manual
+														</a>
+													</div>													
+												</div>												
+
+													{% elif user.teacher %}																								
+
+													<div class="mb-5 mt-4 d-flex align-items-center">
+													<div>
+														<h4 class="mb-3"><a href="javascript:void(0);" class="text-success">You Are Logged In As A TEACHER!</a></h4>
+														<div class="user-info">															
+															<p style="text-align: justify;">
+
+																<span><strong>Your Profile / Password & Security </strong> <br>
+																You can update your personal information at any time through the profile section. Keeping your details accurate helps with communication and official records.
+																All users receive a default password at registration. For your security, it is strongly recommended that you change your password immediately after your first login.
+																</span> <br>
+																<strong>Help & Support</strong><br>
+																If you encounter any issues or need assistance, please visit the Help Center via the support menu or contact the portal administrator.
+																You can use the internal “Ticket” communication tool to submit complaints, report issues, or request assistance.															</p>
+															</p>
+
+																<!-- For Teacher -->
+																<p style="text-align: justify;">	
+																<span><strong>Result Upload</strong> <br>
+																Teachers can upload academic results for their assigned subjects and classes, including Continuous Assessment (CA) and examination scores. 
+																Subject teachers can only enter results for the subjects they teach, while form teachers have broader access and may upload results for all students in their class.
+																</span><br>															
+																<span><strong>Attendance Management</strong> <br>
+																Teachers can take and update daily attendance for their classes using the attendance tools available in the portal.	</span><br>
+																<span> <strong>Student Information Access</strong> <br>
+																The portal allows teachers to view relevant student details for their assigned classes, enabling better communication and academic support.	</span><br>
+																<span><strong>Upload E-Learning Materials</strong> <br>
+																Teachers can upload notes, assignments, and other academic resources through the E-Learning menu to support digital learning.
+																</span>
+															</p>						
+														</div>
+														<a href="{% url 'pages:video-guides' %}" class="btn btn-primary mt-4">
+															<i class="fas fa-book me-2"></i> View Portal Manual
+														</a>
+													</div>													
+												</div>	
+												
+														{% elif user.parent %}																									
+												<div class="mb-5 mt-4 d-flex align-items-center">
+													<div>
+														<h4 class="mb-3"><a href="javascript:void(0);" class="text-secondary">You Are Logged In As A PARENT!</a></h4>
+														<div class="user-info">															
+															<p style="text-align: justify;">
+
+																<span><strong>Your Profile</strong> <br>
+																You can update your personal information at any time through the profile section. Keeping your details accurate helps with communication and official records.
+																</span> <br>
+																<span><strong>Password & Security</strong> <br>
+																All users receive a default password at registration. For your security, it is strongly recommended that you change your password immediately after your first login.
+																</span> <br>
+																<strong>Help & Support</strong><br>
+																If you encounter any issues or need assistance, please visit the Help Center via the support menu or contact the portal administrator.
+																You can use the internal “Ticket” communication tool to submit complaints, report issues, or request assistance.															</p>
+
+																<!-- For Parent -->
+																<p style="text-align: justify;">	
+																<span><strong>Parents Role</strong> <br>
+																As a parent, you can use the portal to monitor your ward’s academic progress, including viewing results, attendance, and overall performance. 
+																You can also make required school payments on their behalf and communicate directly with the school through the portal’s messaging or support features.
+																</span><br>															
+																
+															</p>						
+														</div>
+														<a href="{% url 'pages:video-guides' %}" class="btn btn-primary mt-4">
+															<i class="fas fa-book me-2"></i> View Portal Manual
+														</a>
+													</div>													
+												</div>	
+														{% endif %}
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+							
+							<div class="col-xl-12">
+								<div class="card">
+									<div class="card-header border-0 pb-0">
+										<h4 class="fs-20">KwikSchools Info Corner</h4>
+									</div>
+									<div class="card-body pt-0">
+										<div class="front-view-slider owl-carousel owl-carousel owl-loaded owl-drag owl-dot">
+											<div class="items">
+												<div class="customers border">
+													<p class="fs-16"><b>Results Tracking, Fees Payment, Attendance...</b><br />
+														Both parents and teachers enjoy the flexibilities of the interface to performance tasks with easily accessible buttons. download features and perform query</p>
+													<div class="d-flex justify-content-between align-items-center mt-4">
+														<div class="customer-profile d-flex ">
+														<div class="ms-3">
+															<h5 class="mb-0"><a href="javascript:void(0);">KwikSchools</a></h5>
+															<span>45m ago</span>
+														</div>
+														</div>
+														<div class="customer-button text-nowrap">
+															<a href="javascript:void(0);"><i class="far fa-check-circle text-success"></i></a>
+															<a href="javascript:void(0);"><i class="far fa-times-circle text-danger"></i></a>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="items">
+												<div class="customers border">
+													<p class="fs-16"><b>Real Time School Management</b><br />
+														Features to manage and track the progress of your school from anywhere accross different device. View and download progress reports with nice reporting features.</p>
+													<div class="d-flex justify-content-between align-items-center mt-4">
+														<div class="customer-profile d-flex ">
+														<div class="ms-3">
+															<h5 class="mb-0"><a href="javascript:void(0);">KwikSchools</a></h5>
+															<span>3days ago</span>
+														</div>
+														</div>
+														<div class="customer-button text-nowrap">
+															<a href="javascript:void(0);"><i class="far fa-check-circle text-success"></i></a>
+															<a href="javascript:void(0);"><i class="far fa-times-circle text-danger"></i></a>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		{% endblock content_body %}
+        
+		<!--**********************************
+			Content body end
+		***********************************-->
+		
+		
+		
+		<!--**********************************
+			Footer start
+		***********************************-->
+		{% block footer %}
+		<div class="footer">
+			<div class="copyright">
+				<p>Developed by:  <a href="https://kwikschools.com/" target="_blank">KwikSchools</a> &copy; {% now "Y" %} All Rights Reserved <br>
+				{% if user.is_authenticated and user.is_superuser %}
+					<span class="fs-12 text-center"> <a href="https://kwikschools.com/privacy-policy-service-terms/">Privacy Policy & Service Terms</a></span>
+						{% endif %}
+				</p>
+			</div>
+		</div>
+		{% endblock footer %}
+		<!--**********************************
+			Footer end
+		***********************************-->
+
+		<!--**********************************
+		   Support ticket button start
+		***********************************-->
+		
+		<!--**********************************
+		   Support ticket button end
+		***********************************-->
+
+
+	</div>
+	<!--**********************************
+		Main wrapper end
+	***********************************-->
+
+	<!--**********************************
+		Scripts
+	***********************************-->
+	{% block scripts %}
+	<script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
+
+	<script src="{% static 'pages/vendor/jquery-nice-select/js/jquery.nice-select.min.js' %}"></script>
+	
+	<!-- Apex Chart -->
+	
+	<script src="{% static 'pages/vendor/apexchart/apexchart.js' %}"></script>
+	
+	
+	<!-- Chart piety plugin files -->
+	
+	
+	<!-- Dashboard 1 -->
+	<script src="{% static 'pages/js/dashboard/dashboard-1.js' %}"></script>
+	
+	<script src="{% static 'pages/vendor/owl-carousel/owl.carousel.js' %}"></script>
+	<script src="{% static 'pages/vendor/bootstrap-datetimepicker/js/moment.js' %}"></script>
+	<script src="{% static 'pages/vendor/bootstrap-datetimepicker/js/bootstrap-datetimepicker.min.js' %}"></script>
+	
+	<script src="{% static 'pages/js/custom.min.js' %}"></script>
+	<script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
+	<script src="{% static 'pages/js/demo.js' %}"></script>
+	<script src="{% static 'pages/js/styleSwitcher.js' %}"></script>
+	<script>
+		function TravlCarousel()
+			{
+
+				/*  testimonial one function by = owl.carousel.js */
+				jQuery('.front-view-slider').owlCarousel({
+					loop:false,
+					margin:15,
+					nav:true,
+					autoplaySpeed: 3000,
+					navSpeed: 3000,
+					paginationSpeed: 3000,
+					slideSpeed: 3000,
+					smartSpeed: 3000,
+					autoplay: false,
+					animateOut: 'fadeOut',
+					dots:true,
+					navText: ['<i class="fas fa-arrow-left"></i>', '<i class="fas fa-arrow-right"></i>'],
+					responsive:{
+						0:{
+							items:1
+						},
+						
+						768:{
+							items:2
+						},			
+						
+						1400:{
+							items:2
+						},
+						1600:{
+							items:3
+						},
+						1750:{
+							items:3
+						}
+					}
+				})
+			}
+
+			jQuery(window).on('load',function(){
+				setTimeout(function(){
+					TravlCarousel();
+				}, 1000); 
+			});
+	</script>
+	<script>
+		$(function () {
+			$('#datetimepicker').datetimepicker({
+				inline: true,
+			});
+		});
+		
+		$(document).ready(function(){
+			$(".booking-calender .fa.fa-clock-o").removeClass(this);
+			$(".booking-calender .fa.fa-clock-o").addClass('fa-clock');
+		});
+	</script>
+	{% endblock scripts %}
+</body>
+</html>

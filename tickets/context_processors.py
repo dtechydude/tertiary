@@ -1,5 +1,4 @@
 # tickets/context_processors.py
-
 from .models import Ticket, TicketReadStatus
 from django.db.models import Q
 

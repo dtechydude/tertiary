@@ -53,7 +53,6 @@ genotype = [
 
 ]
 
-
 # Create your models here.
 
 #parent Model

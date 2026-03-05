@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 # Assuming your curriculum app exists for Department/Session
-from curriculum.models import Department, Session, Course, Programme
+from curriculum.models import Department, Session, Course, Programme, Level
 from results.models import Examination
 from django.utils import timezone
 from datetime import timedelta
@@ -17,7 +17,7 @@ class Quiz(models.Model):
     number_of_questions = models.IntegerField(default=0)
     time = models.IntegerField(help_text="Duration in minutes")
     required_score_to_pass = models.IntegerField(help_text="Percentage (e.g., 50)")
-    programme = models.ForeignKey(Programme, on_delete=models.CASCADE, related_name='cbt_exams')
+    level = models.ForeignKey(Level, on_delete=models.CASCADE, related_name='cbt_exams')
     active = models.BooleanField(default=False)
 
     # 🔹 NEW FIELDS (availability control)
@@ -50,11 +50,11 @@ class Quiz(models.Model):
         return self.course.name if self.course else "Unnamed Course"
 
     # @property
-    # def programme_name(self):
-    #     return self.programme.name if self.programme else "Unnamed programme"
+    # def level_name(self):
+    #     return self.level.name if self.level else "Unnamed level"
 
     def __str__(self):
-        return f"{self.exam_name} - {self.course_name} - {self.programme.name}"
+        return f"{self.exam_name} - {self.course_name} - {self.level.name}"
 
     def get_questions(self):
         import random
@@ -119,7 +119,7 @@ class Question(models.Model):
     )
 
     def __str__(self):
-        return f"{self.quiz.exam_name} - {self.quiz.programme.name} - {self.content[:50]}"
+        return f"{self.quiz.exam_name} - {self.quiz.level.name} - {self.content[:50]}"
 
     @property
     def direct_image_url(self):

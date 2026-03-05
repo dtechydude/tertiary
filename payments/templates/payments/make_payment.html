@@ -1,0 +1,256 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+
+
+<head>
+    <meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="keywords" content="" />
+	<meta name="author" content="" />
+	<meta name="robots" content="" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="KwikSchools : KwikSchools-School Mgt System" />
+	<meta property="og:title" content="KwikSchools: KwikSchools-School Mgt System" />
+	<meta property="og:description" content="KwikSchools : KwikSchools-School Mgt System" />
+	<!-- <meta property="og:image" content="https://travl.dexignlab.com/xhtml/social-image.png" /> -->
+	<meta name="format-detection" content="telephone=no">
+	
+	<!-- PAGE TITLE HERE -->
+	<title>Create New Payment</title>
+	
+	<!-- FAVICONS ICON -->
+	<link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png'%} " />
+    <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+</head>
+
+{% block content %}
+<body class="vh-100">
+    <div class="authincation h-100">
+<div class="container h-100">
+    <div class="row justify-content-center h-100 align-items-center">
+        <div class="col-md-8">
+    <div class="authincation-content">
+    <div class="row no-gutters">
+        <div class="col-xl-12">
+            <div class="auth-form">
+                <div class="text-center mb-3">
+                    <a href=""><img src="{% static 'pages/images/kwikschool_logo.png' %}" width='80px' height="80px"></a>
+                </div>                
+
+        {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                    <div class="p-3 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            {# Display non-field errors #}
+            {% if form.non_field_errors %}
+                <div class="mb-4 p-3 rounded-md bg-red-100 text-red-700">
+                    <h4 class="font-semibold">Form Errors:</h4>
+                    <ul class="list-disc list-inside">
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {# Display student name if it's a student user, as the field is hidden in the form #}
+            {% if request.user.is_authenticated and request.user.student %}          
+            
+            <p>Making payment for: {{ request.user.student.first_name }} {{ request.user.student.last_name }}</p>
+              
+            {% endif %}
+
+            {% for field in form %}
+                {# Conditionally hide the div for installment fields initially #}
+                <div class="mb-4" id="div-{{ field.id_for_label }}"
+                    {% if field.field.widget.input_type == 'hidden' %}style="display:none;"
+                    {% elif field.name == 'installment_number' or field.name == 'total_installments' %}style="display:none;"{% endif %}>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% if field.errors %}
+                        <ul class="text-red-600 text-sm mt-1 list-none p-0">
+                            {% for error in field.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <div class="flex justify-center">
+              <button type="submit" class="btn btn-primary btn-block">Record Payment</button>
+             
+                    <p>Back To: <a class="text-primary" href="{% url 'pages:portal-home' %}">DASHBOARD - </a></p>
+
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    </div>
+
+            
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+    {% endblock content %}
+
+    <!--**********************************
+        Scripts
+    ***********************************-->
+    <!-- Required vendors -->
+    {% block script %}
+    <script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
+    <script src="{% static 'pages/js/custom.min.js' %}"></script>
+    <script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
+	<script src="{% static 'pages/js/styleSwitcher.js' %}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const isInstallmentCheckbox = document.getElementById('id_is_installment');
+        const installmentNumberField = document.getElementById('id_installment_number');
+        const totalInstallmentsField = document.getElementById('id_total_installments');
+
+        const installmentNumberDiv = document.getElementById('div-id_installment_number');
+        const totalInstallmentsDiv = document.getElementById('div-id_total_installments');
+
+        console.log('DOM Content Loaded. Checking elements:');
+        console.log('isInstallmentCheckbox:', isInstallmentCheckbox);
+        console.log('installmentNumberField:', installmentNumberField);
+        console.log('totalInstallmentsField:', totalInstallmentsField);
+        console.log('installmentNumberDiv:', installmentNumberDiv);
+        console.log('totalInstallmentsDiv:', totalInstallmentsDiv);
+
+
+        function toggleInstallmentFields() {
+            if (isInstallmentCheckbox.checked) {
+                console.log('Checkbox checked. Showing installment fields.');
+                if (installmentNumberDiv) installmentNumberDiv.style.display = 'block';
+                if (totalInstallmentsDiv) totalInstallmentsDiv.style.display = 'block';
+                // Make required true only if elements exist
+                if (installmentNumberField) installmentNumberField.required = true;
+                if (totalInstallmentsField) totalInstallmentsField.required = true;
+            } else {
+                console.log('Checkbox unchecked. Hiding installment fields.');
+                if (installmentNumberDiv) installmentNumberDiv.style.display = 'none';
+                if (totalInstallmentsDiv) totalInstallmentsDiv.style.display = 'none';
+                // Make required false and clear values only if elements exist
+                if (installmentNumberField) {
+                    installmentNumberField.required = false;
+                    installmentNumberField.value = '';
+                }
+                if (totalInstallmentsField) {
+                    totalInstallmentsField.required = false;
+                    totalInstallmentsField.value = '';
+                }
+            }
+        }
+
+        // Initial call to set visibility based on initial checkbox state
+        toggleInstallmentFields();
+
+        // Add event listener for changes to the checkbox
+        if (isInstallmentCheckbox) { // Ensure checkbox exists before adding listener
+            isInstallmentCheckbox.addEventListener('change', toggleInstallmentFields);
+        }
+
+
+        // --- AJAX to fetch CategoryFee details for students ---
+        const categoryFeeSelect = document.getElementById('id_category_fee');
+        const originalAmountDisplay = document.createElement('p'); // Create a new element for Expected Amount
+        originalAmountDisplay.id = 'original_amount_display';
+        originalAmountDisplay.className = 'mt-1 text-sm text-gray-600 font-semibold';
+
+        const remainingBalanceDisplay = document.createElement('p'); // New element for Remaining Balance
+        remainingBalanceDisplay.id = 'remaining_balance_display';
+        remainingBalanceDisplay.className = 'mt-1 text-sm text-blue-700 font-bold';
+
+        // Find the div of category_fee and append the display elements
+        const categoryFeeDiv = document.getElementById('div-id_category_fee');
+        if (categoryFeeDiv) {
+            categoryFeeDiv.appendChild(originalAmountDisplay);
+            categoryFeeDiv.appendChild(remainingBalanceDisplay); // Append new element
+        }
+
+        // Get the URL for the AJAX endpoint using Django's {% comment %}{% url %} {% endcomment %} tag
+        const getCategoryFeeDetailsUrl = "{% url 'payments:get_category_fee_details' %}";
+
+        function fetchOriginalAmount() {
+            if (categoryFeeSelect && categoryFeeSelect.value) {
+                const categoryFeeId = categoryFeeSelect.value;
+                // Use the Django-generated URL
+                fetch(`${getCategoryFeeDetailsUrl}?category_fee_id=${categoryFeeId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.amount_due) {
+                            originalAmountDisplay.innerText = `Expected Amount: $${data.amount_due}`;
+                            originalAmountDisplay.style.display = 'block'; // Show it
+
+                            // Display remaining balance
+                            if (data.balance_remaining !== undefined) {
+                                remainingBalanceDisplay.innerText = `Remaining Balance: $${data.balance_remaining}`;
+                                remainingBalanceDisplay.style.display = 'block';
+                            } else {
+                                remainingBalanceDisplay.innerText = '';
+                                remainingBalanceDisplay.style.display = 'none';
+                            }
+
+                        } else {
+                            originalAmountDisplay.innerText = '';
+                            originalAmountDisplay.style.display = 'none';
+                            remainingBalanceDisplay.innerText = '';
+                            remainingBalanceDisplay.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching fee details:', error);
+                        originalAmountDisplay.innerText = 'Error fetching fee details.';
+                        originalAmountDisplay.style.display = 'block';
+                        remainingBalanceDisplay.innerText = '';
+                        remainingBalanceDisplay.style.display = 'none';
+                    });
+            } else {
+                originalAmountDisplay.innerText = '';
+                originalAmountDisplay.style.display = 'none';
+                remainingBalanceDisplay.innerText = '';
+                remainingBalanceDisplay.style.display = 'none';
+            }
+        }
+
+        // Add event listener for changes to the category_fee select
+        if (categoryFeeSelect) {
+            categoryFeeSelect.addEventListener('change', fetchOriginalAmount);
+            // Also call on load if a value is already selected (e.g., on form re-render after error)
+            if (categoryFeeSelect.value) {
+                fetchOriginalAmount();
+            }
+        }
+    });
+</script>
+    {% endblock script %}
+</body>
+</html>

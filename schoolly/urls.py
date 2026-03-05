@@ -20,6 +20,8 @@ urlpatterns = [
     path('cbt/', include('cbt.urls', namespace='cbt')),
     path('tickets/', include('tickets.urls', namespace='tickets')),
     path('events/', include('events.urls', namespace='events')),
+    path('payments/', include('payments.urls', namespace='payments')),
+
 
 
 

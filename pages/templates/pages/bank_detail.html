@@ -1,0 +1,68 @@
+{% extends 'pages/portal_home.html'%}
+{% load static %}
+{% block title %}<title>KwikSchools - Bank Details </title>{% endblock title %}
+
+{% block content_body %}
+ <div class="content-body">
+            <div class="container-fluid">
+				<div class="row page-titles">
+					<ol class="breadcrumb">
+						<li class="breadcrumb-item active"><a href="javascript:void(0)">BANK</a></li>
+						<li class="breadcrumb-item"><a href="javascript:void(0)">Information</a></li>
+					</ol>
+                </div>
+                <!-- row -->
+                <div class="row">
+					<div class="col-xl-4 col-xxl-6 col-lg-6">
+                        <div class="card">
+                            <div class="card-header border-0 pb-0">
+                                <h4 class="card-title">Payment Instruction</h4>
+                            </div>
+                            <div class="card-body">
+                                <div id="DZ_W_TimeLine" class="widget-timeline dlab-scroll height270">
+                                    <ul class="timeline">
+                                        <li>
+                                            <div class="timeline-badge primary"></div>
+                                            <a class="timeline-panel text-muted" href="#">
+                                                <span>Payment Instruction:</span>
+                                                <h6 class="mb-0">Your payment submission is subject to verification by the admin.
+                                                    You can contact the admin by mail or phone if you have queries about payments <strong class="text-primary">-</strong>.</h6>
+                                            </a>
+                                        </li>                               
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+					</div>
+					<div class="col-xl-4 col-xxl-6 col-lg-6">
+                        <div class="card">
+                            <div class="card-header border-0 pb-0">
+                                <h4 class="card-title">Bank Details</h4>
+                            </div>
+                            <div class="card-body">
+                                <div id="DZ_W_TimeLine11" class="widget-timeline dlab-scroll style-1 height270">
+                                    <ul class="timeline">
+                                        <li> {% for b in bank_detail %}
+                                            <div class="timeline-badge primary"></div>
+                                            <a class="timeline-panel text-muted" href="#">
+                                                <span>Account Information</span>
+                                                <h6 class="mb-0">Acc. Name: {{b.acc_name }} <br> Bank Name: {{b.bank_name}} <br><strong class="text-primary"> ACC. Number: {{b.acc_number}}</strong>.</h6>
+                                            </a>
+                                            {% endfor %}
+                                        </li>                                    
+                                                                           
+                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+					</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content_body %}

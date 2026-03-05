@@ -69,68 +69,16 @@ class Session(models.Model):
         self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
-
-# Tertiary Logic
-# Faculty
-class Faculty(models.Model):
-    name = models.CharField(max_length=150, unique=True)
-    slug = models.SlugField(blank=True, null=True)
-
-    def __str__(self):
-        return self.name
-
-
-# Department
-class Department(models.Model):
-    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE)
-    name = models.CharField(max_length=150)
-
-    hod = models.ForeignKey(
-        "staff.Lecturer",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="heading_department"
-    )
-
-    def __str__(self):
-        return self.name
-
-# Program
-class Programme(models.Model):
-    OND = "OND"
-    HND = "HND"
-
-    PROGRAMME_TYPES = [
-        (OND, "OND"),
-        (HND, "HND"),
-    ]
-
-    name = models.CharField(max_length=10, choices=PROGRAMME_TYPES)
-
-    def __str__(self):
-        return self.name
-
-# Level
-class Level(models.Model):
-    programme = models.ForeignKey(
-        Programme,
-        on_delete=models.CASCADE,
-        related_name="levels"
-    )
-    name = models.CharField(max_length=20)  # OND 1, OND 2, HND 1, HND 2
-
-    def __str__(self):
-        return self.name
-
 #Semester
 class Semester(models.Model):
     FIRST = "First"
     SECOND = "Second"
+    THIRD = "Third"
 
     SEMESTER_CHOICES = [
         (FIRST, "First Semester"),
         (SECOND, "Second Semester"),
+        (THIRD, "Third Semester"),
     ]
 
     name = models.CharField(max_length=20, choices=SEMESTER_CHOICES)
@@ -150,6 +98,52 @@ class Semester(models.Model):
 
     def __str__(self):
         return self.name
+ 
+# Tertiary Logic
+# Faculty
+class Faculty(models.Model):
+    name = models.CharField(max_length=150, unique=True)
+    slug = models.SlugField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+# Department
+class Department(models.Model):
+    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE)
+    name = models.CharField(max_length=150)
+    hod = models.ForeignKey("staff.Lecturer", on_delete=models.SET_NULL, null=True, blank=True, related_name="heading_department")
+
+    def __str__(self):
+        return self.name
+
+# Program
+class Programme(models.Model):
+    OND = "OND"
+    HND = "HND"
+    CERTIFICATE = "CERTIFICATE"
+    OTHERS = "OTHERS"
+
+    PROGRAMME_TYPES = [
+        (OND, "OND"),
+        (HND, "HND"),
+        (CERTIFICATE, "CERTIFICATE"),
+        (OTHERS, "OTHERS"),
+    ]
+
+    name = models.CharField(max_length=20, choices=PROGRAMME_TYPES)
+
+    def __str__(self):
+        return self.name
+
+# Level
+class Level(models.Model):
+    programme = models.ForeignKey(Programme, on_delete=models.CASCADE, related_name="levels")
+    name = models.CharField(max_length=20)  # OND 1, OND 2, HND 1, HND 2
+
+    def __str__(self):
+        return self.name
 
 
 # courses
@@ -163,44 +157,18 @@ class Course(models.Model):
     course_code = models.CharField(max_length=20)
     credit_unit = models.PositiveIntegerField(default=2)
 
-    lecturer = models.ForeignKey(
-        "staff.Lecturer",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="courses"
-    )
+    lecturer = models.ForeignKey("staff.Lecturer", on_delete=models.SET_NULL,  null=True, blank=True, related_name="courses")
 
     def __str__(self):
         return f"{self.course_code} - {self.title}"
 
 
 class CourseAssignment(models.Model):
-
-    lecturer = models.ForeignKey(
-        'staff.Lecturer',
-        on_delete=models.CASCADE,
-        related_name="course_assignments"
-    )
-
-    course = models.ForeignKey(
-        Course,
-        on_delete=models.CASCADE,
-        related_name="assignments"
-    )
-
-    session = models.ForeignKey(
-        Session,
-        on_delete=models.CASCADE
-    )
-
-    semester = models.ForeignKey(
-        Semester,
-        on_delete=models.CASCADE
-    )
-
+    lecturer = models.ForeignKey('staff.Lecturer', on_delete=models.CASCADE, related_name="course_assignments")
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="assignments")
+    session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
     is_course_adviser = models.BooleanField(default=False)
-
     assigned_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:

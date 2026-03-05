@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'cbt.apps.CbtConfig',
     'results.apps.ResultsConfig',
     'tickets.apps.TicketsConfig',
+    'payments.apps.PaymentsConfig',
 
 
 

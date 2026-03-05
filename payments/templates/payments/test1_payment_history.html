@@ -1,0 +1,279 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment History</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        .text-orange {
+            color: #ff8c00;
+        }
+        .btn-outline-primary {
+            border-color: #043d92;
+            color: #0d6efd;
+        }
+        .btn-outline-primary:hover {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            color: #fff;
+        }
+        .card-header h4, .h5 {
+            color: #064097;
+            font-weight: bold;
+        }
+        .table thead th {
+            background-color: #CC3333;
+            color: white;
+        }
+        @media (max-width: 767.98px) {
+            .table-responsive .table {
+                width: 100%;
+                min-width: 700px;
+            }
+        }
+        /* Custom footer styles */
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 0;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+        }
+        .footer a {
+            color: #0d6efd;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container text-center pt-4 pb-2">
+    <img src="{% static 'pages/images/kwikschool_logo.png' %}" alt="School Logo" class="img-fluid" style="max-height: 80px;">
+</div>
+
+<div class="container text-center my-3">
+    <a href="/dashboard" class="btn btn-primary"><i class="fas fa-arrow-left me-2"></i>Back to Dashboard</a>
+</div>
+
+<div class="container-fluid mt-3 mb-5">
+    <div class="row">
+        <div class="col-xl-10 mx-auto">
+            <div class="card shadow-lg rounded-3 border-0">
+                <div class="card-header bg-white border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h4 class="card-title mb-0">Payment History</h4>
+                    {% if is_staff_user %}
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-filter me-1"></i> Filters
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end p-3" style="width: 300px;">
+                                <form id="filter-form" action="{% url 'payments:payment_history' %}" method="get">
+                                    <div class="mb-3">
+                                        <label for="student_search" class="form-label">Student Search</label>
+                                        <input type="search" class="form-control" name="student_search" id="student_search" placeholder="Search by name or ID" value="{{ student_search_query }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="term" class="form-label">Term</label>
+                                        <select class="form-select" name="term" id="term">
+                                            <option value="">All</option>
+                                            {% for term in terms %}
+                                            <option value="{{ term.id }}" {% if selected_term_id == term.id|stringformat:"s" %}selected{% endif %}>
+                                                {{ term.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="session" class="form-label">Session</label>
+                                        <select class="form-select" name="session" id="session">
+                                            <option value="">All</option>
+                                            {% for session in sessions %}
+                                            <option value="{{ session.id }}" {% if selected_session_id == session.id|stringformat:"s" %}selected{% endif %}>
+                                                {{ session.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="category" class="form-label">Category</label>
+                                        <select class="form-select" name="category" id="category">
+                                            <option value="">All</option>
+                                            {% for category in categories %}
+                                            <option value="{{ category.id }}" {% if selected_category_id == category.id|stringformat:"s" %}selected{% endif %}>
+                                                {{ category.name }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="is_installment" class="form-label">Type</label>
+                                        <select class="form-select" name="is_installment" id="is_installment">
+                                            <option value="">All</option>
+                                            <option value="true" {% if selected_is_installment == 'true' %}selected{% endif %}>Installment</option>
+                                            <option value="false" {% if selected_is_installment == 'false' %}selected{% endif %}>Full Payment</option>
+                                        </select>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <a href="{% url 'payments:payment_history' %}" class="btn btn-outline-secondary">Reset Filters</a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <h5 class="mt-4 mb-3">Combined Payment Summary</h5>
+                    <div class="table-responsive mb-5 rounded-3 shadow-sm border">
+                        <table class="table table-striped table-hover payment-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Category</th>
+                                    <th>Term / Session</th>
+                                    <th>Original Amount</th>
+                                    <th>Total Discount</th>
+                                    <th>Amount Received</th>
+                                    <th>Balance</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for combined_payment in combined_payments %}
+                                <tr>
+                                    <td data-label="Student">{{ combined_payment.student_obj.user.first_name }} {{ combined_payment.student_obj.user.last_name }}</td>
+                                    <td data-label="Category">{{ combined_payment.payment_category_obj.name|default:"N/A" }}</td>
+                                    <td data-label="Term / Session">{{ combined_payment.term_obj.name|default:"N/A" }} / {{ combined_payment.session_obj.name|default:"N/A" }}</td>
+                                    <td data-label="Original Amount" class="text-orange">N{{ combined_payment.total_original_amount|floatformat:2 }}</td>
+                                    <td data-label="Total Discount" class="text-danger">N{{ combined_payment.total_discount_amount|floatformat:2 }}</td>
+                                    <td data-label="Amount Received" class="text-success fw-bold">N{{ combined_payment.total_amount_received|floatformat:2 }}</td>
+                                    <td data-label="Balance" class="text-info fw-bold">N{{ combined_payment.balance|floatformat:2 }}</td>
+                                    <td data-label="Details">
+                                        {% if combined_payment.student_obj and combined_payment.payment_category_obj and combined_payment.term_obj and combined_payment.session_obj %}
+                                            <a href="{% url 'payments:payment-details' pk=combined_payment.student_obj.pk category_pk=combined_payment.payment_category_obj.pk term_pk=combined_payment.term_obj.pk session_pk=combined_payment.session_obj.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5 class="mt-4 mb-3">Individual Payment Records</h5>
+                    <div class="table-responsive rounded-3 shadow-sm border">
+                        <table class="table table-striped table-hover individual-payment-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Student</th>
+                                    <th>Category</th>
+                                    <th>Term / Session</th>
+                                    <th>Amount Received</th>
+                                    <th>Payment Method</th>
+                                    <th>Status</th>
+                                    <th>Recorded By</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if payments %}
+                                    {% for payment in payments %}
+                                    <tr>
+                                        <td data-label="Date">{{ payment.payment_date|date:"F d, Y" }}</td>
+                                        <td data-label="Student">{{ payment.student.user.first_name }} {{ payment.student.user.last_name }}</td>
+                                        <td data-label="Category">{{ payment.payment_category.name|default:"N/A" }}</td>
+                                        <td data-label="Term / Session">{{ payment.term.name|default:"N/A" }} / {{ payment.session.name|default:"N/A" }}</td>
+                                        <td data-label="Amount Received" class="text-orange">N{{ payment.amount_received|floatformat:2 }}</td>
+                                        <td data-label="Payment Method">{{ payment.get_payment_method_display }}</td>
+                                        <td data-label="Status">{{ payment.get_status_display }}</td>
+                                        <td data-label="Recorded By"><small>{{ payment.recorded_by.first_name }} {{ payment.recorded_by.last_name }}</small></td>
+                                        <td data-label="Details">
+                                            {% if payment.is_installment %}
+                                                <span class="badge bg-info">Installment</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Full Payment</span>
+                                            {% endif %}
+                                            <a href="{% url 'payments:receipt' payment.pk %}" class="btn btn-sm btn-outline-info">Receipt</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="9" class="text-center text-muted py-4">No individual payments found.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if payments.has_other_pages %}
+                    <nav class="mt-4" aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if payments.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{{ query_string }}&page={{ payments.previous_page_number }}">&laquo; Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">&laquo; Previous</span>
+                                </li>
+                            {% endif %}
+
+                            {% for i in payments.paginator.page_range %}
+                                {% if payments.number == i %}
+                                    <li class="page-item active" aria-current="page">
+                                        <span class="page-link">{{ i }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{{ query_string }}&page={{ i }}">{{ i }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if payments.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{{ query_string }}&page={{ payments.next_page_number }}">Next &raquo;</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Next &raquo;</span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="footer mt-auto py-3 text-center">
+    <div class="container">
+        <span>&copy; {% now "Y" %} Kwikschools. All Rights Reserved.</span>
+        <div class="mt-1">
+            <a href="#">Privacy Policy</a> | <a href="#">Terms of Use</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

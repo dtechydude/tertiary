@@ -73,7 +73,7 @@ class QuestionAdmin(ImportExportModelAdmin):
 
     # ✅ Clean preview (removes HTML tags and truncates)
     list_display = ('formatted_content', 'quiz', 'question_type', 'correct_answer')
-    list_filter = ('quiz', 'question_type', 'quiz__programme__name',)
+    list_filter = ('quiz', 'question_type', 'quiz__level__name',)
     search_fields = ('content', 'quiz__examination__name')
 
     def formatted_content(self, obj):
@@ -92,7 +92,7 @@ class QuizAdmin(admin.ModelAdmin):
         'get_exam_name',
         'get_course_name',
         'semester',
-        'programme',
+        'level',
         'start_date',
         'end_date',
         'start_time',
@@ -104,7 +104,7 @@ class QuizAdmin(admin.ModelAdmin):
     list_filter = [
         'semester',
         'course',
-        'programme',
+        'level',
         'active',
         'start_date',
         'end_date',
@@ -124,7 +124,7 @@ class QuizAdmin(admin.ModelAdmin):
                 'course',
                 'semester',
                 'session',
-                'programme',
+                'level',
             )
         }),
         ('Exam Configuration', {
@@ -215,7 +215,7 @@ class QuizAdmin(admin.ModelAdmin):
             readonly += [
                 'examination',
                 'course',
-                'programme',
+                'level',
                 'number_of_questions',
                 'time',
                 'start_date',
