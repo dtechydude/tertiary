@@ -38,73 +38,173 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 
 
-# Displays all students
+# # Displays all students
+# @login_required
+# def student_list(request):
+#     # Check if the user is authenticated at the very beginning
+#     if not request.user.is_authenticated:
+#         # If not authenticated, redirect to login or show an error page
+#         return render(request, 'pages/portal_home.html') # Or redirect('login')
+
+#     # Now that we know the user is authenticated, we can safely access user properties.
+    
+#     # Check for CSV export request first
+#     if request.GET.get('export') == 'csv':
+#         response = HttpResponse(content_type='text/csv')
+
+#         # Determine which students to export based on user's role
+#         if request.user.is_superuser or request.user.is_staff:
+#             students_to_export = Student.objects.exclude(student_status='graduated').order_by('-date_admitted')
+#             filename = 'all_students.csv'
+#         elif hasattr(request.user, 'teacher'):
+#             students_to_export = Student.objects.filter(
+#                 form_teacher__user=request.user
+#             ).exclude(student_status='graduated').order_by('user')
+#             filename = 'my_students.csv'
+#         else:
+#             return HttpResponse('You are not authorized to export student data.', status=403)
+
+#         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+#         writer = csv.writer(response)
+#         writer.writerow([
+#             'StudentID', 'Full Name', 'Current Class', 'DOB', 'Student Email', 'Student Phone', 
+#             'Guardian Phone', 'Guardian Email', 'Student Status'
+#         ])
+
+#         for student in students_to_export:
+#             writer.writerow([
+#                 student.user.username,
+#                 student.get_full_name(),
+#                 student.level.name if student.level else '',
+#                 student.DOB.strftime('%Y-%m-%d'),
+#                 student.user.email,
+#                 student.user.profile.phone,
+#                 student.guardian_phone,
+#                 student.guardian_email,
+#                 student.student_status
+#             ])
+#         return response
+
+#     # Rendering logic for the HTML page
+#     my_students = []
+#     all_students = Student.objects.exclude(student_status='graduated').order_by('-date_admitted')
+
+#     if hasattr(request.user, 'teacher'):
+#         my_students = Student.objects.filter(
+#             form_teacher__user=request.user
+#         ).exclude(student_status='graduated').order_by('user')
+
+#     context = {
+#         'all_students': all_students,
+#         'my_students': my_students
+#     }
+
+#     if request.user.is_superuser or request.user.is_staff:
+#         return render(request, 'students/student_list.html', context)
+#     elif my_students:
+#         return render(request, 'students/my_student_list.html', context)
+#     else:
+#         return render(request, 'pages/portal_home.html')
+
+import csv
+from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Student
+
 @login_required
 def student_list(request):
-    # Check if the user is authenticated at the very beginning
-    if not request.user.is_authenticated:
-        # If not authenticated, redirect to login or show an error page
-        return render(request, 'pages/portal_home.html') # Or redirect('login')
+    # 1. AUTHENTICATION & ROLE CHECK
+    user = request.user
+    is_admin = user.is_superuser or user.is_staff
+    is_teacher = hasattr(user, 'teacher')
 
-    # Now that we know the user is authenticated, we can safely access user properties.
-    
-    # Check for CSV export request first
+    # 2. DATA FILTERING LOGIC
+    # Base queryset: Active students only for the general list
+    students_queryset = Student.objects.select_related('user', 'department', 'level', 'programme').exclude(student_status='graduated')
+
+    if is_admin:
+        all_students = students_queryset.order_by('department', 'matric_number')
+    elif is_teacher:
+        # In tertiary, teachers see students in their Department
+        teacher_dept = user.teacher.department if hasattr(user.teacher, 'department') else None
+        all_students = students_queryset.filter(department=teacher_dept).order_by('level', 'matric_number')
+    else:
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+
+    # 3. CSV EXPORT LOGIC
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
-
-        # Determine which students to export based on user's role
-        if request.user.is_superuser or request.user.is_staff:
-            students_to_export = Student.objects.exclude(student_status='graduated').order_by('-date_admitted')
-            filename = 'all_students.csv'
-        elif hasattr(request.user, 'teacher'):
-            students_to_export = Student.objects.filter(
-                form_teacher__user=request.user
-            ).exclude(student_status='graduated').order_by('user')
-            filename = 'my_students.csv'
-        else:
-            return HttpResponse('You are not authorized to export student data.', status=403)
-
+        filename = f"Students_Export_{timezone.now().strftime('%Y%m%d')}.csv"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
         writer = csv.writer(response)
         writer.writerow([
-            'StudentID', 'Full Name', 'Current Class', 'DOB', 'Student Email', 'Student Phone', 
-            'Guardian Phone', 'Guardian Email', 'Student Status'
+            'Matric Number', 'Full Name', 'Department', 'Programme', 
+            'Level', 'Gender', 'Student Type', 'Fee Balance', 'Status'
         ])
 
-        for student in students_to_export:
+        for s in all_students:
             writer.writerow([
-                student.user.username,
-                student.get_full_name(),
-                student.level.name if student.level else '',
-                student.DOB.strftime('%Y-%m-%d'),
-                student.user.email,
-                student.user.profile.phone,
-                student.guardian_phone,
-                student.guardian_email,
-                student.student_status
+                s.matric_number,
+                s.get_full_name(),
+                s.department.name if s.department else 'N/A',
+                s.programme.name if s.programme else 'N/A',
+                s.level.name if s.level else 'N/A',
+                s.get_gender_display(),
+                s.get_student_type_display(),
+                s.fee_balance,
+                s.get_student_status_display()
             ])
         return response
 
-    # Rendering logic for the HTML page
-    my_students = []
-    all_students = Student.objects.exclude(student_status='graduated').order_by('-date_admitted')
-
-    if hasattr(request.user, 'teacher'):
-        my_students = Student.objects.filter(
-            form_teacher__user=request.user
-        ).exclude(student_status='graduated').order_by('user')
-
-    context = {
+    # 4. RENDER
+    return render(request, 'students/student_list.html', {
         'all_students': all_students,
-        'my_students': my_students
-    }
+        'is_admin': is_admin
+    })
 
-    if request.user.is_superuser or request.user.is_staff:
-        return render(request, 'students/student_list.html', context)
-    elif my_students:
-        return render(request, 'students/my_student_list.html', context)
-    else:
-        return render(request, 'pages/portal_home.html')
+
+# Student Detail View
+from django.views.generic import DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from .models import Student
+
+class StudentDetailView(LoginRequiredMixin, DetailView):
+    """
+    Used by Staff/Admins to view any student's profile via Matric Number.
+    """
+    model = Student
+    template_name = 'students/student_detail.html'
+    context_object_name = 'student'
+
+    def get_object(self):
+        # Updated from USN=id_ to matric_number=matric_number
+        matric_number = self.kwargs.get("matric_number")
+        return get_object_or_404(Student, matric_number=matric_number)
+
+
+class StudentSelfDetailView(LoginRequiredMixin, DetailView):
+    """
+    Used by the logged-in student to view their own profile.
+    """
+    model = Student
+    template_name = 'students/student_self_detail.html'
+    context_object_name = 'student'
+
+    def dispatch(self, request, *args, **kwargs):
+        # Check if student profile exists before proceeding to get_object
+        if not hasattr(request.user, 'student'):
+            messages.error(request, "Your student profile could not be found. Please contact administration.")
+            return redirect('pages:portal-home')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self, queryset=None):
+        return self.request.user.student
 
 
 
@@ -375,45 +475,6 @@ def student_in_class(request):
     return render(request, 'students/student_no_in_class.html', {'students': students, 'student_no':student_no, 'num_inclass':num_inclass})
 
 
-class StudentDetailView(DetailView):
-    template_name = 'students/student_detail.html'
-    queryset = Student.objects.all()
-
-    def get_object(self):
-        id_ = self.kwargs.get("id")
-        return get_object_or_404(Student, USN=id_)
-    
-
-
-## Specific to the login detail New Logic to handle student does not exist
-class StudentSelfDetailView(LoginRequiredMixin, DetailView):
-    model = Student
-    template_name = 'students/student_self_detail.html'
-    context_object_name = 'student'
-
-    def get_object(self, queryset=None):
-        try:
-            # Attempt to find the Student object linked to the logged-in user.
-            return Student.objects.get(user=self.request.user)
-        except Student.DoesNotExist:
-            # If no student is found, redirect to a safe page with an error message.
-            messages.error(self.request, "Your student profile could not be found. Please contact the school administration for assistance.")
-            return redirect('pages:portal-home') # Adjust this URL as needed
-
-
-# class StudentUpdateView(LoginRequiredMixin, UpdateView):
-#     form_class = StudentUpdateForm
-#     template_name = 'students/student_update_form.html'
-#     # queryset = StudentDetail.objects.all()
-
-
-#     def get_object(self):
-#         id_ = self.kwargs.get("id")
-#         return get_object_or_404(Student, USN=id_)
-
-#     def form_valid(self, form):
-#         print(form.cleaned_data)
-        return super().form_valid(form)
     
 # new student update form
 class StudentUpdateView(LoginRequiredMixin, UpdateView):

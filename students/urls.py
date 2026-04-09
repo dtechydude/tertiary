@@ -1,6 +1,6 @@
 from django.urls import path
 from students import views as students_views
-# from students.views import StudentDetailView, StudentUpdateView, StudentDeleteView, StudentSelfDetailView, MyTeacherDetailView
+from students.views import StudentDetailView, StudentUpdateView, StudentDeleteView, StudentSelfDetailView, MyTeacherDetailView
 
 
 
@@ -41,6 +41,14 @@ urlpatterns = [
     # # Search student detail app
     path('search/', students_views.search, name='search'),
     path('student_search_list/', students_views.student_search_list, name='student_search_list'),
+
+    # General detail view (Admins/Teachers)
+    path('profile/<str:matric_number>/', StudentDetailView.as_view(), name='student-detail'),
+    
+    # Self-view (Logged-in student)
+    path('my-profile/', StudentSelfDetailView.as_view(), name='student-self-detail'),
+
+    
     
     # path('my-detail/', StudentSelfDetailView.as_view(), name="student-self-detail"),
 
