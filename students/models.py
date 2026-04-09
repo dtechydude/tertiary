@@ -172,14 +172,26 @@ class Student(models.Model):
     # -------------------------
     # UTILITIES
     # -------------------------
-
+       
     def get_full_name(self):
-        names = [
-            self.user.last_name,
-            self.user.first_name,
-            self.middle_name
-        ]
-        return " ".join(filter(None, names)).strip()
+        """
+        Returns: UPPERCASE_SURNAME Firstname Middlename
+        Example: DOE John Smith
+        """
+        if not self.user:
+            return self.matric_number or f"Student #{self.id}"
+
+        # .upper() is applied specifically to the last_name
+        last = getattr(self.user, 'last_name', '').strip().upper()
+        first = getattr(self.user, 'first_name', '').strip()
+        middle = (self.middle_name or '').strip()
+        
+        names = [last, first, middle]
+        full_name = " ".join(filter(None, names))
+            
+        # Fallback to Matric Number or Username if all name fields are empty
+        return full_name or self.matric_number or self.user.username
+        
 
     def __str__(self):
         return f"{self.matric_number} - {self.get_full_name()}"

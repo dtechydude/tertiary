@@ -79,7 +79,7 @@ class AttendanceReportForm(forms.Form):
         if is_superuser:
             self.fields['course'].queryset = Course.objects.all().order_by('course_code')
             self.fields['current_class'].queryset = Department.objects.all().order_by('name')
-            self.fields['student'].queryset = Student.objects.all().order_by('last_name')
+            self.fields['student'].queryset = Student.objects.all().order_by('user__last_name')
         
         elif lecturer:
             # Show only courses this lecturer is assigned to
