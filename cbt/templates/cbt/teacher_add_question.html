@@ -1,0 +1,96 @@
+{% extends 'cbt/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+
+        <!-- HEADER -->
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-1">
+                    Adding Questions for: 
+                    {{ quiz.course.course_code }} - {{ quiz.course.title }}
+                </h5>
+                <small>
+                    {{ quiz.course.department }} |
+                    {{ quiz.level }} |
+                    {{ quiz.semester }} Semester |
+                    {{ quiz.session }}
+                </small>
+            </div>
+            <span class="badge bg-light text-dark">
+                Existing Questions: {{ quiz.question_set.count }}
+            </span>
+        </div>
+
+        <!-- BODY -->
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                {{ form.media }}
+
+                <!-- QUESTION -->
+                <div class="mb-4">
+                    <label class="fw-bold">Question Text</label>
+                    {{ form.content }}
+                </div>
+
+                <!-- TYPE -->
+                <div class="mb-3">
+                    <label class="fw-bold">Question Type</label>
+                    {{ form.question_type }}
+                </div>
+
+                <!-- IMAGE -->
+                <div class="mb-3">
+                    <label class="fw-bold">Image URL (Optional)</label>
+                    {{ form.image_url }}
+                </div>
+
+                <!-- OPTIONS -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label>Option A</label>
+                        {{ form.option_a }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label>Option B</label>
+                        {{ form.option_b }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label>Option C</label>
+                        {{ form.option_c }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label>Option D</label>
+                        {{ form.option_d }}
+                    </div>
+                </div>
+
+                <!-- CORRECT ANSWER -->
+                <div class="mb-4 col-md-4">
+                    <label class="text-success fw-bold">Correct Answer</label>
+                    {{ form.correct_answer }}
+                </div>
+
+                <!-- ACTION BUTTONS -->
+                <div class="d-flex gap-2">
+                    <button type="submit" name="add_another" class="btn btn-primary">
+                        Save & Add Another
+                    </button>
+
+                    <button type="submit" class="btn btn-success">
+                        Save & Finish
+                    </button>
+
+                    <a href="{% url 'cbt:teacher-add-question' %}" class="btn btn-light border">
+                        Cancel
+                    </a>
+                </div>
+
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

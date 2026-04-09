@@ -441,7 +441,7 @@
 							<li><a href="{% url 'students:bulk_student_id_cards' %}">Print Bulk Students ID</a></li>
 							<li><a href="{% url 'students:boarder-list' %}">All Boarders</a></li>
 							<li><a href="{% url 'students:student-in-class' %}">No. In Class</a></li>
-							<li><a href="{% url 'students:assign_classgroup_to_students' %}">Assign Students To ClassGroup</a></li>
+							{% comment %} <li><a href="{% url 'students:assign_classgroup_to_students' %}">Assign Students To ClassGroup</a></li> {% endcomment %}
 							<li><a href="{% url 'students:parent_list' %}">PARENTS LIST</a></li>	
 							<li><a href="{% url 'students:parent-dashboard' %}">PARENTS DASHBOARD</a></li>
 							<li><a href="{% url 'students:graduate_students' %}">Move Students To Alumni</a></li>
@@ -495,7 +495,7 @@
 						<i class="flaticon-013-checkmark"></i>
 							<span class="nav-text">EXAMS & RESULTS</span>
 						</a>
-						<ul aria-expanded="false">
+						{% comment %} <ul aria-expanded="false">
 							{% if user.is_superuser or user.is_staff %}	
 							<li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>
 							<li><a href="{% url 'results:score_entry' %}">Enter End-Of-Term Scores</a></li>
@@ -527,7 +527,7 @@
 							{% endif %}						
 
 						</ul>
-					</li>
+					</li> {% endcomment %}
 					{% endif %}
 
 					{% if user.is_superuser or user.is_staff %}
@@ -535,7 +535,7 @@
 						<i class="flaticon-013-checkmark"></i>
 							<span class="nav-text">STAFF/TEACHERS</span>
 						</a>
-						<ul aria-expanded="false">
+						{% comment %} <ul aria-expanded="false">
 							<li><a href="{% url 'staff:teacher_user_signup'%}">Signup Teacher</a></li>
 							<li><a href="{% url 'staff:teacher-list' %}">All Teachers</a></li>
 							<li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li> 
@@ -546,7 +546,7 @@
 							<li><a href="{% url 'curriculum:classgroup_form_teachers' %}">ClassGroup FormTeachers</a></li>
 
 						</ul>
-					</li>
+					</li> {% endcomment %}
 					{% endif %}
 
 					{% if user.is_authenticated and user.is_superuser or user.is_staff or user.student or user.parent %}
@@ -554,7 +554,7 @@
 						<i class="flaticon-013-checkmark"></i>
 							<span class="nav-text">PAYMENTS & FEES</span>
 						</a>					
-						<ul aria-expanded="false"> 
+						{% comment %} <ul aria-expanded="false"> 
 							
 							{% if user.is_superuser or user.is_staff %}		
 							<li><a href="{% url 'payments:finance_dashboard' %}">Finance Dashboard</a></li>								
@@ -583,7 +583,7 @@
 							{% endif %}						
 							
 						</ul>
-					</li>	
+					</li>	 {% endcomment %}
 					{% endif %}		
 					
 					{% if user.is_authenticated and not user.parent %}					
@@ -637,10 +637,10 @@
 						<i class="flaticon-013-checkmark"></i>
 						<span class="nav-text">SCHOOL BUS</span>
 					</a>
-					<ul aria-expanded="false">
+					{% comment %} <ul aria-expanded="false">
 						<li><a href="{% url 'transport:bus_route_list' %}">Bus Route/Fare</a></li>
 						{% if user.student %}						
-						{% comment %}<li><a href="{% url 'transport:create_bus_signup' %}">SignUp For Bus</a></li>{% endcomment %}
+						<li><a href="{% url 'transport:create_bus_signup' %}">SignUp For Bus</a></li>
 						<li><a href="{% url 'transport:student_own_route_detail' %}">My Route Details</a></li>						
 						<li><a href="{% url 'transport:signup' %}">Signup For Bus</a></li>
 						<li><a href="{% url 'transport:my_pass' %}">My Bus Pass</a></li>
@@ -656,7 +656,7 @@
 						<li><a href="{% url 'transport:payment_report' %}">Bus Payment Report</a></li>					
 					
 						{% endif %}						
-					</ul>
+					</ul> {% endcomment %}
 					</li>
 						{% endif %}
 

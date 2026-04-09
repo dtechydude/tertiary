@@ -1,6 +1,6 @@
 from django.urls import path
-# from . import views
-# from curriculum import views as curriculum_view
+from . import views
+from curriculum import views as curriculum_view
 
 
 app_name = 'curriculum'
@@ -8,7 +8,7 @@ app_name = 'curriculum'
 urlpatterns = [
     # path('class_group_form_teacher/', curriculum_view.classgroup_form_teachers_list, name="classgroup_form_teachers"),
     # path('form_teacher_head/', curriculum_view.form_teachers_head_list, name="form_teachers_head"),
-    # path('', views.ClassListView.as_view(), name='standard_list'),
+    path('', views.ClassListView.as_view(), name='standard_list'),
     # path('my-standard/', views.StandardSelfListView.as_view(), name='my-standard'),
     # path('<slug:slug>/', views.SubjectListView.as_view(), name='subject_list'),
     # path('<str:standard>/<slug:slug>/', views.LessonListView.as_view(), name='lesson_list'),

@@ -55,6 +55,21 @@ genotype = [
 
 # Create your models here.
 
+
+class Hostel(models.Model):
+    name = models.CharField(max_length=50, blank=True, null=True)
+    hostel_master = models.ForeignKey(Lecturer, on_delete=models.CASCADE, blank=True, null=True, help_text='select hostel master')    
+    desc = models.CharField(max_length=50, blank=True)
+    slug = models.SlugField(null=True, blank=True)
+    
+    def __str__ (self):
+        return f'{self.name}'
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
 #parent Model
 class Parent(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, help_text='The user account for this parent.')
@@ -76,8 +91,8 @@ class Parent(models.Model):
 
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, help_text="Select user or create new user")
-    middle_name = models.CharField(max_length=50, blank=True, null=True)
     matric_number = models.CharField(max_length=100, unique=True, help_text="Must match username")
+    middle_name = models.CharField(max_length=50, blank=True, null=True)
 
     # Academic Placement
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name="students")
@@ -96,6 +111,16 @@ class Student(models.Model):
 
     gender = models.CharField( max_length=10, choices=GENDER_CHOICES)
     DOB = models.DateField(default='1998-01-01')
+    day_student = 'day_student'
+    boarder = 'boarder'
+
+    student_types = [
+        (day_student, 'day_student'),
+        (boarder, 'boarder'),
+
+    ]
+
+    student_type = models.CharField(max_length=15, choices=student_types, default=day_student)
     # -------------------------
     # MEDICAL INFORMATION
     # -------------------------

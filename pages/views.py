@@ -55,8 +55,8 @@ def dashboard(request):
     # staff_num = Staff.objects.count()
     teacher_num = Lecturer.objects.count()    
     my_idcard = Student.objects.filter(user=User.objects.get(username=request.user))
-    students = Student.objects.filter().order_by('current_class').values('current_class__name').annotate(count=Count('current_class__name'))
-    my_students = Student.objects.filter(form_teacher__user=request.user).order_by('first_name')
+    students = Student.objects.filter().order_by('programme').values('programme__name').annotate(count=Count('programme__name'))
+    # my_students = Student.objects.filter(form_teacher__user=request.user).order_by('first_name')
     # no_inteacherclass = Assign.objects.filter(teacher__user=request.user).count()
     # no_inteacherclass = Student.objects.filter(form_teacher=request.user).count()
 
@@ -97,7 +97,7 @@ def dashboard(request):
         'queryset': queryset,
         'events':events,
         'my_idcard':my_idcard,
-        'my_students':my_students,
+        # 'my_students':my_students,
         # 'no_inteacherclass': no_inteacherclass,
         'classrooms':classrooms,
         'num_of_classes':num_of_classes,

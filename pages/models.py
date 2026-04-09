@@ -2,6 +2,9 @@ from django.db import models
 from django.contrib.auth.models import User
 from django_ckeditor_5.fields import CKEditor5Field
 
+
+
+
 class BankDetail(models.Model):
     acc_name = models.CharField(max_length=50, blank=False)
     acc_number = models.CharField(max_length=10, blank=False)

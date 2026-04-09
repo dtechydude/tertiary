@@ -36,6 +36,7 @@ class StaffPosition(models.Model):
 class Lecturer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     staff_id = models.CharField(max_length=50, unique=True)
+    middle_name = models.CharField(max_length=50, blank=True, null=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name="lecturers")
     position = models.ForeignKey(StaffPosition, on_delete=models.SET_NULL,  null=True, blank=True)
 
@@ -59,7 +60,7 @@ class Lecturer(models.Model):
     DOB = models.DateField(null=True, blank=True)
     date_employed = models.DateField()
     phone = models.CharField(max_length=15, blank=True)
-    office_address = models.CharField(max_length=200, blank=True)
+    address = models.CharField(max_length=200, blank=True)
 
     # Academic Qualification
     highest_qualification = models.CharField(max_length=150)

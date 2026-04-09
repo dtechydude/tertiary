@@ -1,7 +1,7 @@
 from django import forms
 from .models import Quiz, Question
 from results.models import Examination
-from curriculum.models import Standard # Assuming this is where Standard lives
+from curriculum.models import Level
 from django_ckeditor_5.widgets import CKEditor5Widget
 
 
@@ -12,7 +12,7 @@ class AdminQuizForm(forms.ModelForm):
     """
     class Meta:
         model = Quiz
-        fields = ['examination', 'subject', 'term', 'number_of_questions', 'time']
+        fields = ['examination', 'course', 'semester', 'number_of_questions', 'time']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

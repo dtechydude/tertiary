@@ -1,14 +1,14 @@
 from django.urls import path
-# from cbt import views as cbt_views
+from cbt import views as cbt_views
 
 app_name ='cbt'
 
 urlpatterns = [
 
-#      path('', cbt_views.cbt_home, name='cbt-home'),
-#      path('order/', cbt_views.cbt_order, name='cbt-order'),
-#      path('teacher/order/', cbt_views.cbt_teacher_order, name='cbt_teacher_order'),
-#      path('student/order/', cbt_views.student_cbt_home, name='cbt_student_home'),
+     path('', cbt_views.cbt_home, name='cbt-home'),
+     path('order/', cbt_views.cbt_order, name='cbt-order'),
+     path('teacher/order/', cbt_views.cbt_teacher_order, name='cbt_teacher_order'),
+     path('student/order/', cbt_views.student_cbt_home, name='cbt_student_home'),
 
 #      path('request/submit/', cbt_views.submit_cbt_request, name='submit_request'),
 #      # URL for the CBT exam request form
@@ -18,14 +18,14 @@ urlpatterns = [
 #      #For Real CBT
 
 #      # 1. Existing Student Views
-# #     path('', cbt_views.quiz_list_view, name='main-view'),
+    path('', cbt_views.quiz_list_view, name='main-view'),
     
 #     # 2. New Teacher Views (Placed before <pk> to avoid routing conflicts)
 #     path('cbt/', cbt_views.quiz_list_view, name='main-view'),
 #     path('teacher/add-quiz/', cbt_views.admin_add_quiz, name='teacher-quiz-add'),
 
 #     # Teacher sees list of quizzes
-#     path('teacher/add-question/', cbt_views.teacher_add_question, name='teacher-add-question'),
+    path('teacher/add-question/', cbt_views.teacher_add_question, name='teacher-add-question'),
 
 #     # Teacher/admin clicks a specific quiz → add question form
 #     path('teacher/quiz/<int:quiz_id>/add-question/', cbt_views.teacher_add_question, name='teacher-add-question-quiz'),
@@ -36,8 +36,8 @@ urlpatterns = [
 
 #     path('teacher/quiz/<int:quiz_id>/questions/', cbt_views.teacher_view_questions, name='teacher-view-questions'),
     
-#     path('teacher/results/', cbt_views.teacher_results_view, name='teacher-results-view'),
-#     path('results/export/csv/', cbt_views.export_results_csv, name='results-csv'),
+    path('teacher/results/', cbt_views.teacher_results_view, name='teacher-results-view'),
+    path('results/export/csv/', cbt_views.export_results_csv, name='results-csv'),
 
 #     path('teacher/quiz/<int:quiz_id>/export/<str:export_type>/', cbt_views.export_questions,  name='export-questions'),
 

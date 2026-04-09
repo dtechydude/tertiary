@@ -128,8 +128,7 @@ class Payment(models.Model):
         ('online_gateway', 'Online Gateway'),
     ]
 
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='payments',
-                                help_text="The student associated with this payment.")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='payments', help_text="The student associated with this payment.")
     
     student_fee_assignment = models.ForeignKey(
         'StudentFeeAssignment', 

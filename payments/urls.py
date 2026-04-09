@@ -9,7 +9,7 @@ urlpatterns = [
     # --- Core Payment Processing ---
     # path('make-payment/', payment_views.make_payment, name='make_payment'),
     # path('payment/<int:pk>/', payment_views.payment_detail, name='payment-detail'),
-    # path('notify-payment/', payment_views.notify_payment, name='notify_payment'),
+    path('notify-payment/', payment_views.notify_payment, name='notify_payment'),
     # path('notification-success/', payment_views.payment_notification_success, name='payment-notification-success'),
     # path('notifications/my-submissions/', UserPaymentNotificationListView.as_view(), name='my-notifications'), 
 
