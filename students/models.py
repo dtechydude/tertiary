@@ -111,16 +111,19 @@ class Student(models.Model):
 
     gender = models.CharField( max_length=10, choices=GENDER_CHOICES)
     DOB = models.DateField(default='1998-01-01')
-    day_student = 'day_student'
-    boarder = 'boarder'
+    class StudentType(models.TextChoices):
+        FULL_TIME = 'FT', 'Full-Time'
+        PART_TIME = 'PT', 'Part-Time'
+        SANDWICH  = 'SW', 'Sandwich'  # Added for vacation-based students
+        WEEKEND   = 'WK', 'Weekend'   # Sometimes separated from Part-time
 
-    student_types = [
-        (day_student, 'day_student'),
-        (boarder, 'boarder'),
-
-    ]
-
-    student_type = models.CharField(max_length=15, choices=student_types, default=day_student)
+    student_type = models.CharField(
+        max_length=2,
+        choices=StudentType.choices,
+        default=StudentType.FULL_TIME,
+        help_text="Select student enrollment category")
+    
+    hostel_name = models.ForeignKey(Hostel, on_delete=models.SET_NULL, blank=True, null=True, related_name='hostel_name', verbose_name='hostel', help_text="If allocated Hoste, Select Hostel Name")
     # -------------------------
     # MEDICAL INFORMATION
     # -------------------------

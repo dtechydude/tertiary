@@ -1,23 +1,16 @@
-# attendance/forms.py
 from django import forms
-from .models import Attendance, Student # Assuming Student and Attendance models are correctly imported
-from django.utils import timezone # For initial date values
-from staff.models import Lecturer # Make sure lecturer is imported if form_lecturer links to it
-from curriculum.models import Department
-# --- Form for taking attendance on a specific date ---
-class AttendanceDateForm(forms.Form):
-    # Use DateInput widget for a calendar picker in most browsers
-    date = forms.DateField(
-        label="Select Date",
-        initial=timezone.localdate(), # Default to today's date
-        widget=forms.DateInput(attrs={
-            'type': 'date', # HTML5 date input
-            'class': 'form-control'
-        })
-    )
+from .models import Attendance
+from students.models import Student
+from curriculum.models import Department, Course
+from staff.models import Lecturer
+from django.utils import timezone
 
-# --- Form for taking individual student attendance (for formset) ---
+# --- 1. TAKE ATTENDANCE FORM (Used in Formsets) ---
 class AttendanceForm(forms.ModelForm):
+    """
+    Refactored to support Status Choices (P/A/L/E) 
+    instead of just a boolean 'present' checkbox.
+    """
     student_full_name = forms.CharField(
         label="Student Name",
         required=False,
@@ -26,61 +19,54 @@ class AttendanceForm(forms.ModelForm):
 
     class Meta:
         model = Attendance
-        fields = ['id', 'student', 'present']
+        fields = ['status', 'remarks']
         widgets = {
-            'student': forms.HiddenInput(),
-            'present': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            'status': forms.Select(attrs={'class': 'form-select form-select-sm'}),
+            'remarks': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Optional notes'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Display the student's name for the lecturer's convenience
         if self.instance and self.instance.student:
-            self.fields['student_full_name'].initial = self.instance.student.get_full_name()
-        else:
-            if 'initial' in kwargs and 'student' in kwargs['initial']:
-                try:
-                    student_instance = Student.objects.get(pk=kwargs['initial']['student'])
-                    self.fields['student_full_name'].initial = student_instance.get_full_name()
-                except Student.DoesNotExist:
-                    self.fields['student_full_name'].initial = "Student Not Found"
+            name = self.instance.student.get_full_name()
+            matric = getattr(self.instance.student, 'matric_number', '')
+            self.fields['student_full_name'].initial = f"{name} ({matric})"
 
-
-
-# --- Form for generating attendance reports ---
+# --- 2. ATTENDANCE REPORT FORM (Filtering) ---
 class AttendanceReportForm(forms.Form):
-    # ... (existing student, start_date, end_date fields remain unchanged) ...
-    student = forms.ModelChoiceField(
-        queryset=Student.objects.none(), # Will be populated in the view based on lecturer
+    start_date = forms.DateField(
+        label="From",
+        initial=timezone.localdate() - timezone.timedelta(days=7),
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    end_date = forms.DateField(
+        label="To",
+        initial=timezone.localdate(),
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    
+    course = forms.ModelChoiceField(
+        queryset=Course.objects.none(),
         required=False,
-        label="Select Student (Optional)",
-        empty_label="All Students",
+        label="Filter by Course",
+        empty_label="All My Courses",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
-    start_date = forms.DateField(
-        label="Start Date",
-        initial=timezone.localdate(),
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        })
+    current_class = forms.ModelChoiceField(
+        queryset=Department.objects.none(),
+        required=False,
+        label="Department/Class",
+        empty_label="All Departments",
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
 
-    end_date = forms.DateField(
-        label="End Date",
-        initial=timezone.localdate(),
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'form-control'
-        })
-    )
-    
-    # NEW: Class Filter Field
-    current_class = forms.ModelChoiceField(
-        queryset=Department.objects.all().order_by('name'), # Default to all, but restricted in __init__
+    student = forms.ModelChoiceField(
+        queryset=Student.objects.none(),
         required=False,
-        label="Filter by Class (Optional)",
-        empty_label="All Classes",
+        label="Specific Student",
+        empty_label="All Students",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
@@ -89,31 +75,34 @@ class AttendanceReportForm(forms.Form):
         is_superuser = kwargs.pop('is_superuser', False)
         super().__init__(*args, **kwargs)
 
-        # 1. Filter Student Field
-        if not is_superuser and lecturer:
+        # Logical Filtering based on User Role
+        if is_superuser:
+            self.fields['course'].queryset = Course.objects.all().order_by('course_code')
+            self.fields['current_class'].queryset = Department.objects.all().order_by('name')
+            self.fields['student'].queryset = Student.objects.all().order_by('last_name')
+        
+        elif lecturer:
+            # Show only courses this lecturer is assigned to
+            self.fields['course'].queryset = Course.objects.filter(lecturer=lecturer).order_by('course_code')
+            
+            # Show departments where this lecturer teaches or is a form lecturer
+            self.fields['current_class'].queryset = Department.objects.filter(
+                course__lecturer=lecturer
+            ).distinct().order_by('name')
+            
+            # Show students in this lecturer's courses
             self.fields['student'].queryset = Student.objects.filter(
-                form_lecturer=lecturer
-            ).order_by('last_name', 'first_name')
-            
-            # 2. Filter Class Field (Non-Superuser Logic)
-            # Restrict class choices to only those classes that have students assigned to this lecturer
-            # lecturer_classes = Standard.objects.filter(student__form_lecturer=lecturer).distinct().order_by('name') OLD LOGIC
-            lecturer_classes = Department.objects.filter(students__form_lecturer=lecturer).distinct().order_by('name')
-            self.fields['current_class'].queryset = lecturer_classes
-
-        elif is_superuser:
-            self.fields['student'].queryset = Student.objects.all().order_by('last_name', 'first_name')
-            # Superuser gets all classes by default (from field definition)
+                department__course__lecturer=lecturer
+            ).distinct().order_by('last_name')
+        
         else:
-            self.fields['student'].queryset = Student.objects.none()
-            self.fields['current_class'].queryset = Department.objects.none() # No class access
-            
-    # ... (clean method remains unchanged) ...
+            # Default empty state for non-staff
+            self.fields['course'].queryset = Course.objects.none()
+
     def clean(self):
         cleaned_data = super().clean()
-        start_date = cleaned_data.get('start_date')
-        end_date = cleaned_data.get('end_date')
-
-        if start_date and end_date and start_date > end_date:
+        start = cleaned_data.get('start_date')
+        end = cleaned_data.get('end_date')
+        if start and end and start > end:
             self.add_error('end_date', "End date cannot be before start date.")
         return cleaned_data

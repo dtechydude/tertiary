@@ -1,15 +1,15 @@
-from datetime import timedelta, datetime
-from django.contrib import admin
-from .models import Attendance
-from import_export.admin import ImportExportModelAdmin
+# from datetime import timedelta, datetime
+# from django.contrib import admin
+# from .models import Attendance
+# from import_export.admin import ImportExportModelAdmin
 
-@admin.register(Attendance)
-class AttendanceAdmin(ImportExportModelAdmin):   
+# @admin.register(Attendance)
+# class AttendanceAdmin(ImportExportModelAdmin):   
  
-    list_display = ('student', 'date',  'present')
-    list_filter = ['student__programme']
-    search_fields = ('student__user__first_name', 'student__user__last_name', 'student__user__username', 'student__matric_number')
-    raw_id_fields = ['student',]
+#     list_display = ('student', 'date',  'present')
+#     list_filter = ['student__programme']
+#     search_fields = ('student__user__first_name', 'student__user__last_name', 'student__user__username', 'student__matric_number')
+#     raw_id_fields = ['student',]
 
   
 
