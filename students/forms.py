@@ -11,40 +11,37 @@ class StudentRegisterForm(forms.ModelForm):
         model = Student
         fields = '__all__'
         
-        # widgets = {
-        #     'date_employed': forms.DateInput(
-        #         format=('%d/%m/%Y'),
-        #         attrs={'class': 'form-control', 
-        #                'placeholder': 'Select a date',
-        #                'type': 'date'  # <--- IF I REMOVE THIS LINE, THE INITIAL VALUE IS DISPLAYED
-        #               }),
-
-        #     'year': forms.DateInput(
-        #         format=('%d/%m/%Y'),
-        #         attrs={'class': 'form-control', 
-        #                'placeholder': 'Select a date',
-        #                'type': 'date'  # <--- IF I REMOVE THIS LINE, THE INITIAL VALUE IS DISPLAYED
-        #               }),
-
-        #  }
-
-       # Widget = {'date_employed': forms.DateInput()}
+#TERTIARY LOGIC======================================
 
 class StudentUpdateForm(forms.ModelForm):
-
+    """
+    Form for Admin Staff: 
+    Focuses on Bio-data, Contact Info, and Medicals.
+    Excludes sensitive academic and financial fields.
+    """
     class Meta:
         model = Student
         fields = '__all__'
-        exclude = ('user', 'USN', 'student_status', 'badge', 'form_teacher', 'date_admitted', 'last_name', 'first_name',  'standard', 'class_on_admission', 'fee_balance')
-
+        exclude = (
+            'user', 'matric_number', 'student_status', 
+            'faculty', 'department', 'programme', 
+            'date_admitted', 'fee_balance', 'level', 
+            'current_semester', 'graduated'
+        )
+        widgets = {
+            'DOB': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'rows': 3}),
+        }
 
 class SuperUserStudentUpdateForm(forms.ModelForm):
-
+    """
+    Form for Registrar/Superuser: 
+    Has the power to change Levels, Departments, and Finances.
+    """
     class Meta:
         model = Student
         fields = '__all__'
-        exclude = ('fee_balance',)
-
-
-
-
+        exclude = ('user',) # Only exclude the User relationship
+        widgets = {
+            'DOB': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        }

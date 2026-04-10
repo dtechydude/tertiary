@@ -35,9 +35,8 @@ class StaffPosition(models.Model):
 
 class Lecturer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    staff_id = models.CharField(max_length=50, unique=True)
     middle_name = models.CharField(max_length=50, blank=True, null=True)
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, related_name="lecturers")
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name="lecturers")
     position = models.ForeignKey(StaffPosition, on_delete=models.SET_NULL,  null=True, blank=True)
 
     GENDER_CHOICES = [
@@ -96,5 +95,13 @@ class Lecturer(models.Model):
         ordering = ["user__last_name"]
         verbose_name = "Lecturer"
         verbose_name_plural = "Lecturers"
+
+    # Add this property so you can still call lecturer.staff_id in your templates
+    @property
+    def staff_id(self):
+        return self.user.username
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_full_name()}"
 
 

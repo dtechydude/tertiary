@@ -9,11 +9,8 @@ app_name ='students'
 urlpatterns = [
 
     path('student_list/', students_views.student_list, name='student-list'),
-    path('parent-dashboard/', students_views.parent_dashboard, name='parent-dashboard'),
-    path('parents/', students_views.parent_list_view, name='parent_list'),
-    path('parents/export-csv/', students_views.export_parents_csv, name='export_parents_csv'),
     path('boarder_list/', students_views.student_boarder_list, name='boarder-list'),
-    path('student_in_class/', students_views.student_in_class, name='student-in-class'),
+    path('student_in_class/', students_views.student_distribution_view, name='student-in-class'),
     # path('my-classmates/', students_views.my_classmates_view, name='my_classmates'),
     path('hostel_list/', students_views.hostel_list, name='hostel_list'),
     # path('graduated_students_list/', students_views.graduated_students_list, name='graduated_students_list'),
@@ -27,9 +24,8 @@ urlpatterns = [
     path('alumni/', students_views.alumni_list_view, name='alumni_list'),
     # path('alumni/readmit/<int:student_id>/', students_views.readmit_student, name='readmit_student'),
 
-
-    path('upcoming_birthdays/', students_views.upcoming_birthdays_view, name='upcoming_birthdays'),
-
+    path('student/id-card/<str:matric_number>/', students_views.StudentIDCardView.as_view(), name='student_id_card'),
+    # path('student/id-card/<int:pk>/', students_views.StudentIDCardView.as_view(), name='student_id_card'),
     # path('student/id-card/<int:student_id>/', students_views.StudentIDCardView.as_view(), name='student_id_card'),
     # #Bulk Print ID Card
     path('students/id-cards/bulk/', students_views.BulkStudentIDCardView.as_view(), name='bulk_student_id_cards'),
@@ -38,9 +34,10 @@ urlpatterns = [
     # path('assign-classgroup-to-students/', students_views.assign_classgroup_to_students_view, name='assign_classgroup_to_students'),
 
     # # path('create-student-profile/', views.create_student_profile, name='create_student_profile'), # Example
+    
     # # Search student detail app
-    path('search/', students_views.search, name='search'),
-    path('student_search_list/', students_views.student_search_list, name='student_search_list'),
+   
+    path('search/', students_views.student_search_list, name='student-search'),
 
     # General detail view (Admins/Teachers)
     path('profile/<str:matric_number>/', StudentDetailView.as_view(), name='student-detail'),
@@ -48,12 +45,13 @@ urlpatterns = [
     # Self-view (Logged-in student)
     path('my-profile/', StudentSelfDetailView.as_view(), name='student-self-detail'),
 
-    
+
     
     # path('my-detail/', StudentSelfDetailView.as_view(), name="student-self-detail"),
 
-    # path('<str:id>/', StudentDetailView.as_view(), name="student-detail"),
+    path('<str:matric_number>/', StudentDetailView.as_view(), name="student-detail"),
     # path('students/<str:usn>/update/', StudentUpdateView.as_view(), name='student-update'),
+    path('student/edit/<str:matric_number>/', StudentUpdateView.as_view(), name='student-update'),
 
     # # path('<str:id>/update/', StudentUpdateView.as_view(), name="student-update"),
     # path('<str:id>/delete/', StudentDeleteView.as_view(), name="student-delete"), 

@@ -1,80 +1,130 @@
+{% extends 'pages/portal_home.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
 
-<!DOCTYPE html>
-<html lang="en" class="h-100">
+{% block title %}
+<title>Student Enrollment | Tertiary Portal</title>
+{% endblock title %}
 
-<head>
-    <meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="keywords" content="" />
-	<meta name="author" content="" />
-	<meta name="robots" content="" />
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="description" content="Ermine : Ermine Application Dashboard" />
-	<meta property="og:title" content="Ermine : Ermine Application Dashboard" />
-	<meta property="og:description" content="Ermine : Ermine Application Dashboard" />
-	<!-- <meta property="og:image" content="https://travl.dexignlab.com/xhtml/social-image.png" /> -->
-	<meta name="format-detection" content="telephone=no">
-	
-	<!-- PAGE TITLE HERE -->
-	<title>Student Enrollment Form</title>
-	
-	<!-- FAVICONS ICON -->
-	<link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png'%} " />
-    <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="javascript:void(0)">Registration</a></li>
+                <li class="breadcrumb-item active"><a href="javascript:void(0)">New Enrollment</a></li>
+            </ol>
+        </div>
 
-</head>
-{% block content %}
-<body class="vh-100">
-    <div class="authincation h-100">
-        <div class="container h-100">
-            <div class="row justify-content-center h-100 align-items-center">
-                <div class="col-md-6">
-                    <div class="authincation-content">
-                        <div class="row no-gutters">
-                            <div class="col-xl-12">
-                                <div class="auth-form">
-									<div class="text-center mb-3">
-										<!-- <a href=""><img src="{% static 'pages/images/logo-full.png' %}" alt=""></a> -->
-                                         <h4>Enrol New STUDENT </h4>
-									</div>
-                                    <!-- <h4 class="text-center mb-4">Welcome To Ermine App!</h4> -->
-                                    <form  action ="" method="POST">
-                                        {% csrf_token %}
-                                        <div class="mb-3">
-                                            {{ u_form|crispy }}
-                                            {{ p_form|crispy }}
-                                            <!-- <label class="mb-1"><strong>Email</strong></label>
-                                            <input type="email" class="form-control" value="hello@example.com"> -->
+        <div class="row justify-content-center">
+            <div class="col-xl-10 col-lg-12">
+                <div class="card">
+                    <div class="card-header border-0 pb-0">
+                        <h4 class="card-title text-primary"><i class="fas fa-user-plus me-2"></i> Comprehensive Student Enrollment</h4>
+                    </div>
+                    <div class="card-body">
+                        
+                        {% if u_form.errors or p_form.errors %}
+                        <div class="alert alert-danger alert-dismissible fade show mb-4">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="me-2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                            <strong>Validation Error!</strong> Please check both tabs for highlighted errors.
+                            <ul class="mt-2 mb-0 small">
+                                {% for field, errors in u_form.errors.items %}<li><b>Account:</b> {{ field|capfirst }} - {{ errors|striptags }}</li>{% endfor %}
+                                {% for field, errors in p_form.errors.items %}<li><b>Academic:</b> {{ field|capfirst }} - {{ errors|striptags }}</li>{% endfor %}
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="btn-close"></button>
+                        </div>
+                        {% endif %}
+
+                        <form action="" method="POST" enctype="multipart/form-data" id="enrollmentForm">
+                            {% csrf_token %}
+                            
+                            <div class="custom-tab-1">
+                                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" id="account-tab" data-bs-toggle="tab" href="#accountInfo">
+                                            <i class="la la-user me-2"></i> Account & Security 
+                                            {% if u_form.errors %}<span class="badge badge-xs badge-danger ms-1">!</span>{% endif %}
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="academic-tab" data-bs-toggle="tab" href="#academicInfo">
+                                            <i class="la la-graduation-cap me-2"></i> Academic & Personal
+                                            {% if p_form.errors %}<span class="badge badge-xs badge-danger ms-1">!</span>{% endif %}
+                                        </a>
+                                    </li>
+                                </ul>
+                                
+                                <div class="tab-content pt-4">
+                                    <div class="tab-pane fade show active" id="accountInfo" role="tabpanel">
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="alert alert-secondary light small">
+                                                    <strong>Note:</strong> The <b>Username</b> will be synchronized with the <b>Matric Number</b>.
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">{{ u_form.first_name|as_crispy_field }}</div>
+                                            <div class="col-md-6">{{ u_form.last_name|as_crispy_field }}</div>
+                                            <div class="col-md-6">{{ u_form.username|as_crispy_field }}</div>
+                                            <div class="col-md-6">{{ u_form.email|as_crispy_field }}</div>
+                                            <div class="col-md-6">{{ u_form.password|as_crispy_field }}</div>
+                                            <div class="col-md-6">{{ u_form.password2|as_crispy_field }}</div>
                                         </div>
-                                                                              
-                                        <div class="text-center">
-                                            <button type="submit" class="btn btn-primary btn-block">Enroll Student</button>
+                                    </div>
+
+                                    <div class="tab-pane fade" id="academicInfo" role="tabpanel">
+                                        <div class="row">
+                                            <h5 class="mb-3 text-muted">Placement Details</h5>
+                                            <div class="col-md-4">{{ p_form.matric_number|as_crispy_field }}</div>
+                                            <div class="col-md-4">{{ p_form.middle_name|as_crispy_field }}</div>
+                                            <div class="col-md-4">{{ p_form.date_admitted|as_crispy_field }}</div>
+                                            
+                                            <div class="col-md-3">{{ p_form.department|as_crispy_field }}</div>
+                                            <div class="col-md-3">{{ p_form.programme|as_crispy_field }}</div>
+                                            <div class="col-md-3">{{ p_form.level|as_crispy_field }}</div>
+                                            <div class="col-md-3">{{ p_form.student_type|as_crispy_field }}</div> <h5 class="mb-3 mt-4 text-muted">Bio-Data</h5>
+                                            <div class="col-md-3">{{ p_form.gender|as_crispy_field }}</div>
+                                            <div class="col-md-3">{{ p_form.DOB|as_crispy_field }}</div>
+                                            <div class="col-md-3">{{ p_form.blood_group|as_crispy_field }}</div>
+                                            <div class="col-md-3">{{ p_form.genotype|as_crispy_field }}</div>
+                                            <div class="col-md-12">{{ p_form.health_remark|as_crispy_field }}</div>
                                         </div>
-                                    </form>
-                                    <div class="new-account mt-3">
-                                        <p>Back To: <a class="text-primary" href="{% url 'pages:portal_home' %}">DASHBOARD</a></p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+
+                            <div class="text-end mt-4">
+                                <hr>
+                                <button type="submit" class="btn btn-primary btn-lg px-5">Finalize Enrollment</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endblock content %}
+</div>
+{% endblock content_body %}
 
-    <!--**********************************
-        Scripts
-    ***********************************-->
-    <!-- Required vendors -->
-    {% block script %}
-    <script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
-    <script src="{% static 'pages/js/custom.min.js' %}"></script>
-    <script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
-	<script src="{% static 'pages/js/styleSwitcher.js' %}"></script>
-    {% endblock script %}
-</body>
-</html>
+{% block scripts %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const usernameInput = document.getElementById('id_username');
+        const matricInput = document.querySelector('[name="matric_number"]');
+
+        // Sync logic
+        if(usernameInput && matricInput) {
+            usernameInput.addEventListener('input', function() {
+                matricInput.value = this.value.toUpperCase();
+            });
+        }
+
+        // Auto-switch tab on error
+        {% if p_form.errors and not u_form.errors %}
+            var academicTab = new bootstrap.Tab(document.querySelector('#academic-tab'));
+            academicTab.show();
+        {% endif %}
+    });
+</script>
+{% endblock scripts %}

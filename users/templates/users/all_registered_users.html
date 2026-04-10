@@ -1,189 +1,132 @@
 {% extends 'pages/portal_home.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    
-	<!-- PAGE TITLE HERE -->
-    {% block title %}
-	<title>All Users List</title>
-	{% endblock title %}
-	
-	<!-- FAVICONS ICON -->
-    {% block favicon %}
-    <!-- Datatable -->
-    <link href="{% static 'pages/vendor/datatables/css/jquery.dataTables.min.css' %}" rel="stylesheet">
-    <!-- Custom Stylesheet -->
-	<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
-    <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
-    {% endblock favicon %}
+{% block title %}
+<title>All Users List | Schoolly EdTech</title>
+{% endblock title %}
 
-</head>
+{% block favicon %}
+<link href="{% static 'pages/vendor/datatables/css/jquery.dataTables.min.css' %}" rel="stylesheet">
+<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    .badge-student { background-color: #eef2ff; color: #4338ca; }
+    .badge-teacher { background-color: #fff7ed; color: #c2410c; }
+    .badge-admin { background-color: #f0fdf4; color: #15803d; }
+</style>
+{% endblock favicon %}
 
-<body>
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="javascript:void(0)">User Management</a></li>
+                <li class="breadcrumb-item active"><a href="javascript:void(0)">All Registered Users</a></li>
+            </ol>
+        </div>
 
-    <!--*******************
-        Preloader start
-    ********************-->
-   <div id="preloader">
-		<div class="lds-ripple">
-			<div></div>
-			<div></div>
-		</div>
-    </div>
-    <!--*******************
-        Preloader end
-    ********************-->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title text-primary">System User Directory</h4>
+                            <p class="mb-0 small text-muted">Total registered accounts: <strong>{{ total_count }}</strong></p>
+                        </div>
+                        <a href="{% url 'all_users' %}?export=csv" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-file-csv me-2"></i> Download CSV
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="example3" class="display" style="min-width: 845px">
+                                <thead>
+                                    <tr>
+                                        <th>S/N</th>
+                                        <th>ID / Matric</th>
+                                        <th>Full Name</th>                                
+                                        <th>Role</th>
+                                        <th>Department</th>
+                                        <th>Status</th>
+                                        <th>Joined</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for u in all_users %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        
+                                        <td>
+                                            <span class="text-dark fw-bold">
+                                                {% if u.student %}
+                                                    {{ u.student.matric_number }}
+                                                {% else %}
+                                                    {{ u.username }}
+                                                {% endif %}
+                                            </span>
+                                        </td>
 
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ u.profile.image_url }}" class="rounded-lg me-2" width="24" alt="">
+                                                <span class="w-space-no">
+                                                    <strong>{{ u.last_name|upper }}</strong> {{ u.first_name }}
+                                                </span>
+                                            </div>
+                                        </td>
 
-    <!--**********************************
-        Main wrapper start
-    ***********************************-->
-    <div id="main-wrapper">
+                                        <td>
+                                            {% with role=u.profile.user_type %}
+                                            <span class="badge badge-sm 
+                                                {% if role == 'student' %}badge-student
+                                                {% elif role == 'teacher' %}badge-teacher
+                                                {% elif role == 'admin' %}badge-admin
+                                                {% else %}badge-light{% endif %}">
+                                                {{ u.profile.get_user_type_display|title }}
+                                            </span>
+                                            {% endwith %}
+                                        </td>
 
-        <!--**********************************
-            Nav header start
-        ***********************************-->
-		
-        <!--**********************************
-            Nav header end
-        ***********************************-->
-		
-		<!--**********************************
-            Chat box start
-        ***********************************-->
-		
-		<!--**********************************
-            Chat box End
-        ***********************************-->
+                                        <td>
+                                            <div class="text-muted small">
+                                                {% if u.student %}
+                                                    {{ u.student.department.name|default:"Unassigned" }}
+                                                {% elif u.lecturer %}
+                                                    {{ u.lecturer.department.name|default:"Faculty Staff" }}
+                                                {% else %}
+                                                    Administrative
+                                                {% endif %}
+                                            </div>
+                                        </td>
 
-		
-        <!--**********************************
-            Header start
-        ***********************************-->
-       
-        <!--**********************************
-            Header end ti-comment-alt
-        ***********************************-->
+                                        <td>
+                                            {% if u.profile.activate %}
+                                                <span class="text-success"><i class="fa fa-circle me-1 small"></i> Active</span>
+                                            {% else %}
+                                                <span class="text-warning"><i class="fa fa-circle me-1 small"></i> Pending</span>
+                                            {% endif %}
+                                        </td>
 
-        <!--**********************************
-            Sidebar start
-        ***********************************-->
-      
-        <!--**********************************
-            Sidebar end
-        ***********************************-->
-
-        <!--**********************************
-            Content body start
-        ***********************************-->
-        {% block content_body %}
-        <div class="content-body">
-            <div class="container-fluid">
-			                
-                <!-- row -->
-
-                <div class="row">
-                
-					<div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h4 class="card-title" style="color:green;">All Registered Users </h4>
-                                <a href="{% url 'all_users' %}?export=csv" class="btn btn-success float-end">
-                                        <i class="fas fa-file-download me-2"></i> Export to CSV
-                                    </a>
-                                    </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table id="example3" class="display" style="min-width: 845px">
-                                        <thead>
-                                            <tr>
-                                                <th>S/N</th>
-                                                <th>Username</th>
-                                                <th>Name</th>                                                
-                                                <th>Status</th>
-                                                <th>State Of Origin</th>
-                                                <th>Created Date</th>
-                                                <th>Last Updated</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for u in all_users %}
-                                            <tr>
-                                                <td>{{ forloop.counter }}</td>
-                                                <td><a href="">{{ u.username }}</a></td>
-                                                <td><a href=""><strong>{{ u.last_name }} </strong> {{ u.first_name }}</a></td>
-                                                <td>{{ u.profile.user_type }}</td>
-                                                <td>{{ u.profile.state_of_origin}}</td>                                               
-                                                <td><strong>{{ u.profile.created }}</strong></a></td>
-                                                <td>{{ u.profile.updated }}</td>
-                                                
-                                                {% endfor %}
-                                            </tr>
-                                           
-                                           
-                                         
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                                        <td>{{ u.date_joined|date:"M d, Y" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-
-
-
-				</div>
+                </div>
             </div>
         </div>
-        {% endblock content_body %}
-        <!--**********************************
-            Content body end
-        ***********************************-->
-
-
-        <!--**********************************
-            Footer start
-        ***********************************-->
-       
-        <!--**********************************
-            Footer end
-        ***********************************-->
-
-        <!--**********************************
-           Support ticket button start
-        ***********************************-->
-
-        <!--**********************************
-           Support ticket button end
-        ***********************************-->
-
-        
     </div>
-    <!--**********************************
-        Main wrapper end
-    ***********************************-->
+</div>
+{% endblock content_body %}
 
-    <!--**********************************
-        Scripts
-    ***********************************-->
-    <!-- Required vendors -->
-    {% block scripts %}
+{% block scripts %}
     <script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
-    <script src="{% static 'pages/vendor/chart.js/Chart.bundle.min.js' %}"></script>
-	<!-- Apex Chart -->
-	<script src="{% static 'pages/vendor/apexchart/apexchart.js' %}"></script>
-	
-    <!-- Datatable -->
     <script src="{% static 'pages/vendor/datatables/js/jquery.dataTables.min.js' %}"></script>
     <script src="{% static 'pages/js/plugins-init/datatables.init.js' %}"></script>
-
-	<script src="{% static 'pages/vendor/jquery-nice-select/js/jquery.nice-select.min.js' %}"></script>
-
+    <script src="{% static 'pages/vendor/jquery-nice-select/js/jquery.nice-select.min.js' %}"></script>
     <script src="{% static 'pages/js/custom.min.js' %}"></script>
-	<script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
-	<script src="{% static 'pages/js/demo.js' %}"></script>
-    <script src="{% static 'pages/js/styleSwitcher.js' %}"></script>
-    {% endblock scripts %}
-</body>
-</html>
+    <script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
+{% endblock scripts %}

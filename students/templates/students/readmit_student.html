@@ -1,91 +1,97 @@
+{% extends 'pages/portal_home.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ school_info.name }} — Re-Admit Student</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block title %}
+<title>Re-admit Student | {{ school_info.name }}</title>
+{% endblock title %}
 
-    <style>
-        body { 
-            background:#f0f2f5;
-            display:flex;
-            flex-direction:column;
-            min-height:100vh;
-        }
-        .page-header {
-            background:white;
-            padding:20px;
-            border-radius:10px;
-            box-shadow:0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom:25px;
-        }
-        .card { 
-            border-radius:12px; 
-        }
-        footer {
-            background:#e9ecef;
-            padding:12px 0;
-            text-align:center;
-            margin-top:auto;
-            color:#6c757d;
-            font-size:14px;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container py-4" style="max-width:700px;">
-
-    <!-- Page Header -->
-    <div class="page-header d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">{{ school_info.name }} — Re-Admit Student</h4>
-        <a href="{% url 'students:alumni_list' %}" class="btn btn-outline-secondary btn-sm">← Back</a>
-    </div>
-
-    <!-- Body Card -->
-    <div class="card shadow-sm">
-        <div class="card-body">
-
-            <h5 class="mb-3">Student Information</h5>
-
-            <div class="mb-4">
-                <p class="text-muted mb-1">
-                    <strong>Name:</strong> {{ student.get_full_name }}
-                </p>
-                <p class="text-muted mb-0">
-                    <strong>Status:</strong> Graduated
-                </p>
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles mb-4">
+            <div class="col-sm-6 p-md-0">
+                <div class="welcome-text">
+                    <h4><i class="fas fa-undo-alt me-2 text-warning"></i> Student Re-admission</h4>
+                    <p class="mb-0">Restore a graduated student to active academic status.</p>
+                </div>
             </div>
+            <div class="col-sm-6 p-md-0 justify-content-sm-end mt-2 mt-sm-0 d-flex">
+                <a href="{% url 'students:alumni_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Alumni List
+                </a>
+            </div>
+        </div>
 
-            <form method="post">
-                {% csrf_token %}
+        <div class="row">
+            <div class="col-xl-6 col-lg-8 m-auto">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h5 class="card-title mb-0 text-primary">Candidate Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
+                            <div class="flex-shrink-0">
+                                {% if student.user.profile.image %}
+                                    <img src="{{ student.user.profile.image.url }}" class="rounded-circle shadow-sm" width="80" height="80" style="object-fit: cover;">
+                                {% else %}
+                                    <img src="{% static 'pages/images/default-avatar.png' %}" class="rounded-circle shadow-sm" width="80">
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1 ms-4">
+                                <h4 class="mb-1">{{ student.get_full_name }}</h4>
+                                <p class="mb-1 text-primary fw-bold">{{ student.matric_number }}</p>
+                                <span class="badge badge-outline-danger">Status: Graduated</span>
+                            </div>
+                        </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Select New Class</label>
-                    <select name="new_class" class="form-select" required>
-                        <option value="">-- Select Class --</option>
-                        {% for st in standards %}
-                        <option value="{{ st.id }}">{{ st.name }}</option>
-                        {% endfor %}
-                    </select>
+                        <div class="alert alert-info border-0 small">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Re-admitting this student will change their status to <strong>Active</strong> and allow them to be enrolled in courses and appear in academic reports again.
+                        </div>
+
+                        <form method="post" id="readmitForm">
+                            {% csrf_token %}
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Target Academic Level</label>
+                                <select name="new_level" class="form-select form-select-lg" required>
+                                    <option value="">-- Choose Level for Re-admission --</option>
+                                    {% for level in levels %}
+                                        <option value="{{ level.id }}">{{ level.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Select the level where the student will resume their studies (e.g., HND 1, HND 2).</div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-warning btn-lg text-white shadow-sm" onclick="return confirm('Confirm re-admission? This student will be moved out of the Alumni records.')">
+                                    <i class="fas fa-check-circle me-2"></i>Finalize Re-admission
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
-                <button class="btn btn-primary w-100">Re-Admit Student</button>
-            </form>
-
+                {% with last_rec=student.graduation_records.first %}
+                {% if last_rec %}
+                <div class="mt-4 text-center">
+                    <p class="text-muted small">
+                        This student previously graduated in the <strong>{{ last_rec.session.name }}</strong> session 
+                        from the <strong>{{ last_rec.level_completed.name }}</strong> level.
+                    </p>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
         </div>
     </div>
-
 </div>
 
-<!-- Footer -->
-<footer>
-    © {{ now.year }} {{ school_info.name }} — All Rights Reserved.
+<footer class="footer mt-auto py-3 bg-white border-top text-center">
+    <div class="container-fluid">
+        <span class="text-muted small">
+            &copy; {% now "Y" %} {{ school_info.name }}. Powered by <strong>Schoolly EdTech Portal</strong>
+        </span>
+    </div>
 </footer>
-
-</body>
-</html>
+{% endblock content_body %}

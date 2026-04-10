@@ -1,0 +1,267 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Card: {{ student.get_full_name }}</title>
+
+    <link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png'%}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .id-card-container {
+            width: 350px;
+            height: 560px; /* Slightly taller for tertiary details */
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border: 1px solid #ddd;
+        }
+
+        /* HEADER: Tertiary Branding */
+        .header {
+            background-color: #1a237e; /* Professional Navy */
+            color: white;
+            text-align: center;
+            padding: 12px 10px;
+            border-bottom: 4px solid #ffd600; /* School Accent Color */
+        }
+
+        .header img.school-logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: white;
+            margin-bottom: 5px;
+            object-fit: contain;
+            padding: 3px;
+        }
+
+        .header h5 {
+            margin: 0;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            font-weight: 800;
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 0.7rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+        }
+
+        /* PHOTO SECTION */
+        .profile-photo-container {
+            width: 110px;
+            height: 110px;
+            border-radius: 8px; /* Square with rounded corners looks more "Tertiary" */
+            border: 2px solid #1a237e;
+            background-color: #fff;
+            margin: 15px auto 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .profile-photo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* DETAILS SECTION */
+        .details-section {
+            text-align: center;
+            padding: 0 15px;
+            flex-grow: 1;
+        }
+
+        .details-section h4 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1a237e;
+            margin-bottom: 2px;
+        }
+
+        .matric-no {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #d32f2f;
+            margin-bottom: 10px !important;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+            text-align: left;
+            padding: 0 10px;
+        }
+
+        .info-item label {
+            display: block;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 0;
+        }
+
+        .info-item span {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .dept-badge {
+            background-color: #e8eaf6;
+            color: #1a237e;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-top: 8px;
+            display: inline-block;
+            border: 1px solid #1a237e;
+        }
+
+        #qrcode {
+            padding: 10px;
+            background: white;
+            display: inline-block;
+            margin: 10px auto;
+        }
+
+        .footer {
+            background-color: #1a237e;
+            color: white;
+            padding: 6px;
+            text-align: center;
+            font-size: 0.7rem;
+        }
+
+        #printButton {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        @media print {
+            #printButton { display: none; }
+            body { background: white; }
+            .id-card-container {
+                box-shadow: none;
+                margin: 0;
+                border: 1px solid #000;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="id-card-container">
+    <div class="header">
+        {% if school_identity.logo %}
+            <img src="{{ school_identity.logo.url }}" class="school-logo" alt="Logo">
+        {% else %}
+            <img src="{% static 'pages/images/logo.png' %}" class="school-logo" alt="Logo">
+        {% endif %}
+        <h5 class="text-uppercase">{{ school_identity.name|default:"INSTITUTION NAME" }}</h5>
+        <p>{{ school_identity.address_line_1|truncatechars:40 }}</p>
+    </div>
+
+    <div class="profile-photo-container">
+        {% if student.user.profile.image %}
+            <img src="{{ student.user.profile.image.url }}" alt="Profile">
+        {% else %}
+            <img src="{% static 'pages/images/default-avatar.png' %}" alt="Profile">
+        {% endif %}
+    </div>
+
+    <div class="details-section">
+        <h4 class="text-uppercase">{{ student.get_full_name }}</h4>
+        <p class="matric-no">{{ student.matric_number }}</p>
+
+        <div class="badge-section">
+            <span class="dept-badge">{{ student.department.name|upper }}</span>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Programme</label>
+                <span>{{ student.programme.name|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Level</label>
+                <span>{{ student.level.name|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Blood Group</label>
+                <span>{{ student.blood_group|default:"N/A" }}</span>
+            </div>
+            <div class="info-item">
+                <label>Expiry Date</label>
+                <span>{{ expiry_date|date:"M Y"|default:"DEC 2027" }}</span>
+            </div>
+        </div>
+
+        <div id="qrcode"></div>
+    </div>
+
+    <div class="footer">
+        STUDENT IDENTITY CARD
+    </div>
+</div>
+
+<button id="printButton" onclick="window.print()">
+    <i class="fas fa-print mr-2"></i> Print Identity Card
+</button>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Tertiary QR Data: Matric, Name, Dept, and School Name
+        const qrData = "Matric: {{ student.matric_number }}\n" + 
+                       "Name: {{ student.get_full_name }}\n" +
+                       "Dept: {{ student.department.name }}\n" +
+                       "School: {{ school_identity.name }}";
+        
+        if (qrData) {
+            new QRCode(document.getElementById("qrcode"), {
+                text: qrData,
+                width: 75,
+                height: 75,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -53,37 +53,46 @@ genotype = [
 
 ]
 
-# Create your models here.
-
+#TERTIARY MODEL FOR HOSTEL=======================================
 
 class Hostel(models.Model):
-    name = models.CharField(max_length=50, blank=True, null=True)
-    hostel_master = models.ForeignKey(Lecturer, on_delete=models.CASCADE, blank=True, null=True, help_text='select hostel master')    
-    desc = models.CharField(max_length=50, blank=True)
-    slug = models.SlugField(null=True, blank=True)
-    
-    def __str__ (self):
-        return f'{self.name}'
+    GENDER_CHOICES = [('male', 'Male'), ('female', 'Female'), ('mixed', 'Mixed')]
 
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.name)
-        super().save(*args, **kwargs)
-
-
-#parent Model
-class Parent(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, help_text='The user account for this parent.')
-    guardian_name = models.CharField(max_length=60, blank=False, null=True)  
-    guardian_address = models.CharField(max_length=200, blank=True, null=True)  
-    guardian_phone = models.CharField(max_length=15, blank=True, null=True)
-    guardian_email = models.CharField(max_length=30, blank=True, null=True)
-    # You can add other parent-specific fields here if needed,
-    # e.g., address, phone_number, etc.
-    # The guardian_name, guardian_address, etc., from the Student model
-    # can be moved here to avoid redundancy.
+    name = models.CharField(max_length=100, unique=True, default="TEMPORARY_NAME")
+    hostel_master = models.ForeignKey(
+        'staff.Lecturer', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='managed_hostels'
+    )
+    gender_type = models.CharField(max_length=10, choices=GENDER_CHOICES, default='mixed')
+    capacity = models.PositiveIntegerField(default=1, help_text="Total bed spaces in this hostel")
+    description = models.TextField(blank=True, help_text="Location details or rules")
+    slug = models.SlugField(unique=True, null=True, blank=True)
 
     def __str__(self):
-        return self.user.get_full_name()
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    @property
+    def occupied_spaces(self):
+        # Dynamically count students assigned to this hostel
+        return self.student_hostel_name.count() # matches related_name in Student model
+
+class Room(models.Model):
+    hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE, related_name='rooms')
+    room_number = models.CharField(max_length=10)
+    max_occupancy = models.PositiveIntegerField(default=4)
+    is_available = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.hostel.name} - Room {self.room_number}"
+    
 
 
 
@@ -123,13 +132,30 @@ class Student(models.Model):
         default=StudentType.FULL_TIME,
         help_text="Select student enrollment category")
     
-    hostel_name = models.ForeignKey(Hostel, on_delete=models.SET_NULL, blank=True, null=True, related_name='hostel_name', verbose_name='hostel', help_text="If allocated Hoste, Select Hostel Name")
+    # ----------------------
+    # HOSTEL INFORMATION
+    #-----------------------
+    hostel_name = models.ForeignKey(
+        Hostel, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='student_hostel_name'
+    )
+    assigned_room = models.ForeignKey(
+        Room, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='occupants'
+    )
+    
     # -------------------------
     # MEDICAL INFORMATION
     # -------------------------
 
     blood_group = models.CharField(max_length=15, blank=True, null=True, choices=blood_group)
-    genotype = models.CharField(max_length=5, blank=True, null=True)
+    genotype = models.CharField(max_length=15, blank=True, null=True, choices=genotype)
     health_remark = models.CharField(max_length=200, blank=True)
 
     # -------------------------
@@ -165,7 +191,7 @@ class Student(models.Model):
     ]
 
     student_status = models.CharField( max_length=20, choices=STATUS_CHOICES, default="active")
-    fee_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    fee_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0, blank=True, null=True)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
@@ -223,3 +249,20 @@ class GraduationRecord(models.Model):
         verbose_name = "Graduation Record"
         verbose_name_plural = "Graduation Records"
         ordering = ["-date_graduated"]
+
+
+
+#parent Model
+class Parent(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, help_text='The user account for this parent.')
+    guardian_name = models.CharField(max_length=60, blank=False, null=True)  
+    guardian_address = models.CharField(max_length=200, blank=True, null=True)  
+    guardian_phone = models.CharField(max_length=15, blank=True, null=True)
+    guardian_email = models.CharField(max_length=30, blank=True, null=True)
+    # You can add other parent-specific fields here if needed,
+    # e.g., address, phone_number, etc.
+    # The guardian_name, guardian_address, etc., from the Student model
+    # can be moved here to avoid redundancy.
+
+    def __str__(self):
+        return self.user.get_full_name()

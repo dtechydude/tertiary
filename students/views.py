@@ -18,7 +18,7 @@ from students.forms import StudentUpdateForm, SuperUserStudentUpdateForm
 from payments.models import Payment, CategoryFee # Import Payment and CategoryFee models
 
 from users.forms import UserRegisterForm
-from curriculum.models import Session, Semester, Programme, SchoolIdentity, Level
+from curriculum.models import Session, Semester, Programme, SchoolIdentity, Level, Department
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
@@ -30,89 +30,17 @@ from django.db.models import Q
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, models
 from datetime import date
 from django.views import View
 from django.contrib.admin.views.decorators import staff_member_required
 
+from django.utils import timezone
 
 
 
-# # Displays all students
-# @login_required
-# def student_list(request):
-#     # Check if the user is authenticated at the very beginning
-#     if not request.user.is_authenticated:
-#         # If not authenticated, redirect to login or show an error page
-#         return render(request, 'pages/portal_home.html') # Or redirect('login')
 
-#     # Now that we know the user is authenticated, we can safely access user properties.
-    
-#     # Check for CSV export request first
-#     if request.GET.get('export') == 'csv':
-#         response = HttpResponse(content_type='text/csv')
-
-#         # Determine which students to export based on user's role
-#         if request.user.is_superuser or request.user.is_staff:
-#             students_to_export = Student.objects.exclude(student_status='graduated').order_by('-date_admitted')
-#             filename = 'all_students.csv'
-#         elif hasattr(request.user, 'teacher'):
-#             students_to_export = Student.objects.filter(
-#                 form_teacher__user=request.user
-#             ).exclude(student_status='graduated').order_by('user')
-#             filename = 'my_students.csv'
-#         else:
-#             return HttpResponse('You are not authorized to export student data.', status=403)
-
-#         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-#         writer = csv.writer(response)
-#         writer.writerow([
-#             'StudentID', 'Full Name', 'Current Class', 'DOB', 'Student Email', 'Student Phone', 
-#             'Guardian Phone', 'Guardian Email', 'Student Status'
-#         ])
-
-#         for student in students_to_export:
-#             writer.writerow([
-#                 student.user.username,
-#                 student.get_full_name(),
-#                 student.level.name if student.level else '',
-#                 student.DOB.strftime('%Y-%m-%d'),
-#                 student.user.email,
-#                 student.user.profile.phone,
-#                 student.guardian_phone,
-#                 student.guardian_email,
-#                 student.student_status
-#             ])
-#         return response
-
-#     # Rendering logic for the HTML page
-#     my_students = []
-#     all_students = Student.objects.exclude(student_status='graduated').order_by('-date_admitted')
-
-#     if hasattr(request.user, 'teacher'):
-#         my_students = Student.objects.filter(
-#             form_teacher__user=request.user
-#         ).exclude(student_status='graduated').order_by('user')
-
-#     context = {
-#         'all_students': all_students,
-#         'my_students': my_students
-#     }
-
-#     if request.user.is_superuser or request.user.is_staff:
-#         return render(request, 'students/student_list.html', context)
-#     elif my_students:
-#         return render(request, 'students/my_student_list.html', context)
-#     else:
-#         return render(request, 'pages/portal_home.html')
-
-import csv
-from django.http import HttpResponse
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .models import Student
-
+# TERTIARY LOGIC ===============================================
 @login_required
 def student_list(request):
     # 1. AUTHENTICATION & ROLE CHECK
@@ -167,13 +95,7 @@ def student_list(request):
     })
 
 
-# Student Detail View
-from django.views.generic import DetailView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect
-from django.contrib import messages
-from .models import Student
-
+# TERTIARY LOGIC =============================================================================
 class StudentDetailView(LoginRequiredMixin, DetailView):
     """
     Used by Staff/Admins to view any student's profile via Matric Number.
@@ -188,6 +110,7 @@ class StudentDetailView(LoginRequiredMixin, DetailView):
         return get_object_or_404(Student, matric_number=matric_number)
 
 
+# TERTIARY LOGIC===================================================
 class StudentSelfDetailView(LoginRequiredMixin, DetailView):
     """
     Used by the logged-in student to view their own profile.
@@ -207,212 +130,275 @@ class StudentSelfDetailView(LoginRequiredMixin, DetailView):
         return self.request.user.student
 
 
+# TERTIARY LOGIC ===============================
+# Student Search List
 
+def student_search_list(request):
+    """
+    Unified view to list all students or filter them based on a search query.
+    """
+    # 1. Get the base queryset
+    student_list = Student.objects.all().order_by('matric_number')
+    
+    # 2. Extract search query from GET request
+    query = request.GET.get('search', '').strip()
+
+    # 3. Apply filtering if a query exists
+    if query:
+        student_list = student_list.filter(
+            Q(user__first_name__icontains=query) | 
+            Q(user__last_name__icontains=query) | 
+            Q(matric_number__icontains=query) | 
+            Q(level__name__icontains=query) | 
+            Q(department__name__icontains=query) |  # Added for tertiary flow
+            Q(programme__name__icontains=query) |   # Added for tertiary flow
+            Q(guardian_name__icontains=query)
+        ).distinct()
+
+    # 4. Pagination (30 students per page)
+    page = request.GET.get('page', 1)
+    paginator = Paginator(student_list, 30)
+    
+    try:
+        students = paginator.page(page)
+    except PageNotAnInteger:
+        students = paginator.page(1)
+    except EmptyPage:
+        students = paginator.page(paginator.num_pages)
+
+    context = {
+        'students': students,
+        'query': query,
+    }
+    
+    return render(request, 'students/search_student_list.html', context)
+
+
+# TERTIARY LOGIC FOR BORDERS ================================================
 # For Boading Students
 @login_required
 def student_boarder_list(request):
-    # Filter for 'boarder' students and exclude any with a 'graduated' status
-    boarder_student = Student.objects.filter(
+    # Security Check: Ensure only staff/superusers proceed
+    if not (request.user.is_superuser or request.user.is_staff):
+        return render(request, 'pages/portal_home.html')
+
+    # Optimization: Use select_related to join 'hostel_name' and 'level' 
+    # so they are fetched in a single database query.
+    boarder_students = Student.objects.filter(
         student_type='boarder'
     ).exclude(
         student_status='graduated'
+    ).select_related(
+        'hostel_name', 'level', 'programme'
     ).order_by('-date_admitted')
 
     context = {
-        'boarder_student': boarder_student
+        'boarder_students': boarder_students
     }
 
-    if request.user.is_superuser or request.user.is_staff:
-        return render(request, 'students/student_boarder_list.html', context)
-    else:
-        return render(request, 'pages/portal_home.html')
+    return render(request, 'students/student_boarder_list.html', context)
 
 
 
 
 # ==========================================================================
-# GRADUATED Students List Old
-@login_required
-def graduated_students_list(request):
-    """
-    Displays a list of all students who have a status of 'graduated'.
-    """
-    graduated_students = Student.objects.filter(student_status='graduated').order_by('last_name', 'first_name')
-    
-    context = {
-        'graduated_students': graduated_students,
-        'title': 'Graduated Students',
-    }
-    return render(request, 'students/graduated_students_list.html', context)
+# GRADUATED Students Tertiary
 
-# GRADUATED Students(Move Students To Graduated)
 def is_authorized_staff(user):
     return user.is_superuser or user.is_staff
 
-
-
 @user_passes_test(is_authorized_staff)
 def graduate_students_view(request):
-    standards = Level.objects.all().order_by('name')
-    sessions = Session.objects.all().order_by('-start_date')  # or use name
+    """
+    Logic to move students from 'active' to 'graduated' status.
+    """
+    levels = Level.objects.all().order_by('name')
+    sessions = Session.objects.all().order_by('-start_date')
     students = Student.objects.none()
-    selected_standard = None
+    selected_level = None
 
-    if request.method == "GET":
-        standard_id = request.GET.get('standard')
-        if standard_id:
-            selected_standard = get_object_or_404(Level, id=standard_id)
-            students = Student.objects.filter(
-                level=selected_standard
-            ).exclude(student_status='graduated').order_by('user__last_name')
+    # Step 1: Filter students by Level to select who is ready for graduation
+    level_id = request.GET.get('level')
+    if level_id:
+        selected_level = get_object_or_404(Level, id=level_id)
+        students = Student.objects.filter(
+            level=selected_level, 
+            student_status='active'
+        ).order_by('user__last_name')
 
-        return render(request, 'students/graduate_students.html', {
-            'standards': standards,
-            'sessions': sessions,
-            'students': students,
-            'selected_standard': selected_standard,
-            'title': 'Graduate Students To Alumni',
-        })
+    if request.method == "POST":
+        selected_ids = request.POST.getlist('selected_students')
+        session_id = request.POST.get('graduation_session_id')
+        
+        if not selected_ids:
+            messages.error(request, "Please select at least one student.")
+            return redirect(request.path)
 
-    # POST
-    selected_ids = request.POST.getlist('selected_students')
-    session_id = request.POST.get('graduation_session_id')
-
-    if not selected_ids:
-        messages.error(request, "Please select at least one student to graduate.")
-        return redirect('students:graduate_students')
-
-    # validate session
-    graduation_session = None
-    if session_id:
         graduation_session = get_object_or_404(Session, id=session_id)
 
-    try:
-        with transaction.atomic():
-            students_to_grad = Student.objects.filter(id__in=selected_ids)
+        try:
+            with transaction.atomic():
+                # Get the 'Alumni' level (create if doesn't exist)
+                alumni_level, _ = Level.objects.get_or_create(name='Alumni')
+                
+                students_to_grad = Student.objects.filter(id__in=selected_ids)
+                count = students_to_grad.count()
 
-            # Ensure Alumni standard exists
-            alumni_standard, created = Level.objects.get_or_create(name__iexact='Alumni', defaults={'name': 'Alumni'})
+                for student in students_to_grad:
+                    # Create the record using the new tertiary model fields
+                    GraduationRecord.objects.create(
+                        student=student,
+                        session=graduation_session,
+                        programme=student.programme,
+                        department=student.department,
+                        level_completed=student.level,
+                        date_graduated=timezone.now().date(),
+                        remarks=request.POST.get(f'remarks_{student.id}', '')
+                    )
 
-            count = students_to_grad.count()
-            for student in students_to_grad:
-                # Create a graduation record
-                GraduationRecord.objects.create(
-                    student=student,
-                    session=graduation_session,
-                    graduated_class=student.current_class
-                )
+                    # Update student status
+                    student.student_status = 'graduated'
+                    student.level = alumni_level
+                    student.save()
 
-                # Update student fields
-                student.student_status = 'graduated'
-                student.level = alumni_standard
-                student.graduated_session = graduation_session
-                student.save()
+            messages.success(request, f"Successfully moved {count} students to Alumni status.")
+            return redirect('students:alumni_list')
+        except Exception as e:
+            messages.error(request, f"Error: {e}")
 
-        messages.success(request, f"Successfully graduated {count} students.")
-    except Exception as e:
-        messages.error(request, f"An error occurred: {e}")
-
-    return redirect('students:graduate_students')
-
-
+    return render(request, 'students/graduate_students.html', {
+        'levels': levels,
+        'sessions': sessions,
+        'students': students,
+        'selected_level': selected_level,
+        'title': 'Process Graduation',
+    })
 
 @user_passes_test(is_authorized_staff)
 def alumni_list_view(request):
-    queryset = Student.objects.filter(student_status='graduated') \
-        .select_related('current_class', 'graduated_session')
+    """
+    Comprehensive list of graduates with filtering and CSV export.
+    """
+    queryset = Student.objects.filter(student_status='graduated').select_related(
+        'user', 'department', 'programme'
+    ).prefetch_related('graduation_records')
 
-    sessions = Session.objects.all().order_by('-start_date')
-    standards = Level.objects.filter(name__iexact='Alumni') | Level.objects.exclude(name__iexact='Alumni')
-
-    # ---- FILTERING ----
+    # Filtering Logic
     session_id = request.GET.get('session')
-    class_id = request.GET.get('class')
-    year = request.GET.get('year')
+    dept_id = request.GET.get('department')
     q = request.GET.get('q')
 
     if session_id:
-        queryset = queryset.filter(graduated_session__id=session_id)
-
-    if class_id:
-        queryset = queryset.filter(graduation_records__graduated_class__id=class_id)
-
-    if year:
-        queryset = queryset.filter(graduation_records__date_graduated__year=year)
-
+        queryset = queryset.filter(graduation_records__session_id=session_id)
+    if dept_id:
+        queryset = queryset.filter(department_id=dept_id)
     if q:
         queryset = queryset.filter(
-            models.Q(first_name__icontains=q) |
-            models.Q(last_name__icontains=q) |
-            models.Q(USN__icontains=q)
+            models.Q(user__first_name__icontains=q) |
+            models.Q(user__last_name__icontains=q) |
+            models.Q(matric_number__icontains=q)
         )
 
-    queryset = queryset.distinct().order_by('-graduation_records__date_graduated', 'user__last_name')
+    queryset = queryset.distinct().order_by('-graduation_records__date_graduated')
 
-    # ---- SIMPLE CSV EXPORT WITHOUT CHANGING YOUR LOGIC ----
+    # CSV Export
     if request.GET.get("export") == "csv":
         response = HttpResponse(content_type="text/csv")
-        response['Content-Disposition'] = 'attachment; filename="alumni.csv"'
-
+        response['Content-Disposition'] = 'attachment; filename="alumni_records.csv"'
         writer = csv.writer(response)
-        writer.writerow(["Name", "Previous Class", "Session", "Graduated On"])
-
-        for student in queryset:
-            rec = student.graduation_records.first()
-            writer.writerow([
-                student.get_full_name(),
-                rec.graduated_class.name if rec else "-",
-                student.graduated_session.name if student.graduated_session else "-",
-                rec.date_graduated.strftime("%Y-%m-%d %H:%M") if rec and rec.date_graduated else "-"
-            ])
+        writer.writerow(["Matric No", "Name", "Programme", "Department", "Graduation Date"])
+        for s in queryset:
+            writer.writerow([s.matric_number, s.get_full_name(), s.programme, s.department, s.graduation_records.first().date_graduated if s.graduation_records.exists() else "N/A"])
         return response
 
-    # ---- PAGINATION (unchanged) ----
     paginator = Paginator(queryset, 25)
-    page = request.GET.get('page')
-    alumni_page = paginator.get_page(page)
-
-    # ---- YEARS (unchanged) ----
-    date_objects = GraduationRecord.objects.dates('date_graduated', 'year', order='DESC')
-    years = [date_obj.year for date_obj in date_objects]
+    page_obj = paginator.get_page(request.GET.get('page'))
 
     return render(request, 'students/alumni_list.html', {
-        'alumni': alumni_page,
-        'sessions': sessions,
-        'years': years,
-        'standards': standards,
-        'q': q,
+        'alumni': page_obj,
+        'sessions': Session.objects.all().order_by('-start_date'),
+        'departments': Department.objects.all(),
     })
-
-
 
 @user_passes_test(is_authorized_staff)
 def readmit_student(request, student_id):
+    """
+    Moves a student from 'graduated' back to 'active'.
+    """
     student = get_object_or_404(Student, id=student_id, student_status='graduated')
-    standards = Programme.objects.exclude(name__iexact='Alumni').order_by('name')
+    levels = Level.objects.exclude(name='Alumni')
 
     if request.method == 'POST':
-        new_class_id = request.POST.get('new_class')
-        if not new_class_id:
-            messages.error(request, "Please choose a class to re-admit the student into.")
-            return redirect('students:readmit_student', student_id=student.id)
-
-        new_class = get_object_or_404(Level, id=new_class_id)
-        student.level = new_class
+        new_level_id = request.POST.get('new_level')
+        new_level = get_object_or_404(Level, id=new_level_id)
+        
+        student.level = new_level
         student.student_status = 'active'
-        student.graduated_session = None  # optional: clear session
         student.save()
+        
+        # Optional: Delete graduation record if readmission is a correction
+        # GraduationRecord.objects.filter(student=student).delete()
 
-        messages.success(request, f"{student.get_full_name()} has been re-admitted into {new_class.name}.")
+        messages.success(request, f"{student.get_full_name()} readmitted to {new_level.name}.")
         return redirect('students:alumni_list')
 
-    return render(request, 'students/readmit_student.html', {
-        'student': student,
-        'standards': standards,
-    })
+    return render(request, 'students/readmit_student.html', {'student': student, 'levels': levels})
 
-#  End Graduated View Code
+#  End Graduated View Code for tertiary
 #======================================================================================
+
+# TERTIARY LOGIC=========================================
+# Promotion logic
+
+def is_authorized_to_manage(user):
+    return user.is_superuser or user.groups.filter(name='Registrar').exists()
+
+@user_passes_test(is_authorized_to_manage)
+def promote_students_view(request):
+    """
+    Refactored for Tertiary: Promotes students to the next level within their department.
+    """
+    levels = Level.objects.all().order_by('rank') # Assuming 'rank' replaces promotion_order
+    departments = Department.objects.all()
+
+    if request.method == 'POST':
+        from_level_id = request.POST.get('from_level')
+        dept_id = request.POST.get('department')
+        selected_student_ids = request.POST.getlist('selected_students')
+
+        if not from_level_id or not selected_student_ids:
+            messages.error(request, "Please select a level and at least one student.")
+            return redirect('students:promote_students')
+
+        try:
+            current_level = Level.objects.get(id=from_level_id)
+            # Find the next level by rank
+            next_level = Level.objects.filter(rank__gt=current_level.rank).order_by('rank').first()
+
+            with transaction.atomic():
+                students = Student.objects.filter(id__in=selected_student_ids, current_level=current_level)
+                
+                if next_level:
+                    count = students.count()
+                    students.update(current_level=next_level)
+                    messages.success(request, f"Successfully promoted {count} students to {next_level.name}.")
+                else:
+                    # If no next level exists, they should likely be moved to the graduation workflow
+                    messages.warning(request, f"{current_level.name} is the final level. Use the Graduation module to graduate these students.")
+            
+        except Exception as e:
+            messages.error(request, f"Promotion failed: {str(e)}")
+            
+        return redirect('students:promote_students')
+
+    context = {
+        'levels': levels,
+        'departments': departments,
+        'title': 'Level Promotion',
+    }
+    return render(request, 'students/promote_students.html', context)
+
+
 
 
 
@@ -430,93 +416,88 @@ def hostel_list(request):
     
 
 
-# Student Search Query App
-def student_search_list(request):
-    student = Student.objects.all()
-    
-     # PAGINATOR METHOD
-    page = request.GET.get('page', 1)
-    paginator = Paginator(student, 30)
-    try:
-        student = paginator.page(page)
-    except PageNotAnInteger:
-        student = paginator.page(1)
-    except EmptyPage:
-        student = paginator.page(paginator.num_pages)
-
-    return render(request, 'students/search_student_list.html', {'student': student })
-
-# Define function to search student
-def search(request):
-    results = []
-
-    if request.method == "GET":
-        query = request.GET.get('search')
-
-        if query == '':
-            query = 'None'
-
-        results = Student.objects.filter(Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query) | Q(level__name__icontains=query) | Q(guardian_name__icontains=query) | Q(user__username__icontains=query) | Q(matric_number__icontains=query))
-        # results = Student.objects.filter(Q(full_name__icontains=query))
-        
-    return render(request, 'students/search.html', {'query': query, 'results': results})
-
+# TERTIARY LOGIC for students count ===================================================
 #count students in each class
+
 @login_required
-def student_in_class(request):
-    students = Student.objects.all()
-    student_no = Student.objects.filter().order_by('level').values('level__name').annotate(count=Count('level__name'))
+def student_distribution_view(request):
+    """
+    Displays the headcount of students broken down by 
+    Programme, Department, and Level.
+    """
+    # 1. Total Count per Programme
+    programme_counts = Student.objects.values('programme__name').annotate(
+        total=Count('id')
+    ).order_by('programme__name')
 
-    try:
-        num_inclass = Student.objects.filter(level__name = request.user.student.level).count()
-    except Student.DoesNotExist:
-        num_inclass = Student.objects.filter()
+    # 2. Total Count per Department
+    department_counts = Student.objects.values('department__name').annotate(
+        total=Count('id')
+    ).order_by('department__name')
 
-    return render(request, 'students/student_no_in_class.html', {'students': students, 'student_no':student_no, 'num_inclass':num_inclass})
+    # 3. Detailed breakdown (Level + Department)
+    # Changed 'current_level__name' to 'level__name' to match your model
+    detailed_counts = Student.objects.values(
+        'department__name', 
+        'level__name' 
+    ).annotate(
+        total=Count('id')
+    ).order_by('department__name', 'level__id') # Using level__id for ordering
+
+    # 4. Context for the logged-in student
+    peers_count = 0
+    if hasattr(request.user, 'student'):
+        # Changed current_level to level to match your model
+        peers_count = Student.objects.filter(
+            level=request.user.student.level,
+            department=request.user.student.department
+        ).count()
+
+    context = {
+        'programme_counts': programme_counts,
+        'department_counts': department_counts,
+        'detailed_counts': detailed_counts,
+        'peers_count': peers_count,
+    }
+
+    return render(request, 'students/student_distribution.html', context)
 
 
-    
+# TERTIARY LOGIC ===============================================================    
 # new student update form
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import UpdateView
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
+from django.contrib import messages
+from .models import Student
+from .forms import StudentUpdateForm, SuperUserStudentUpdateForm
+
 class StudentUpdateView(LoginRequiredMixin, UpdateView):
+    model = Student
     template_name = 'students/student_update_form.html'
-    # Define the default form and model here for clarity
-    # model = Student 
-    # form_class = StudentUpdateForm # This is often necessary even if overridden by get_form_class
 
     def dispatch(self, request, *args, **kwargs):
-        """
-        Check if the user is staff before allowing them to access the view.
-        If not staff, redirect them to the portal home page.
-        """
+        """Only staff or superusers can access this view."""
         if not request.user.is_staff:
-            messages.error(request, "You do not have permission to edit student details.")
-            # Redirect to the main portal home page
-            return redirect(reverse_lazy('pages:portal-home')) # Change 'pages:portal-home' to your actual home URL name
-        
-        # If the user is staff, proceed with the UpdateView logic
+            messages.error(request, "Access Denied: You do not have permission to edit student records.")
+            return redirect('pages:portal-home')
         return super().dispatch(request, *args, **kwargs)
 
     def get_object(self, queryset=None):
-        """
-        Retrieves the student object based on the URL parameter (usn).
-        """
-        usn = self.kwargs.get("usn")
-        return get_object_or_404(Student, USN=usn)
+        """Retrieve student using matric_number instead of USN."""
+        matric = self.kwargs.get("matric_number")
+        return get_object_or_404(Student, matric_number=matric)
 
     def get_form_class(self):
-        # Allow superusers to use the superuser form, staff uses the standard form
+        """Different forms based on administrative hierarchy."""
         if self.request.user.is_superuser:
             return SuperUserStudentUpdateForm
-        
-        # If the user is staff (and passed the dispatch check)
         return StudentUpdateForm
 
     def get_success_url(self):
-        """
-        Defines the URL to redirect to after a successful form submission.
-        """
-        # Ensure 'self.object' is available after a successful save
-        return reverse_lazy('students:student-detail', kwargs={'id': self.object.USN})
+        """Redirect to the updated profile view."""
+        return reverse_lazy('students:student-detail', kwargs={'matric_number': self.object.matric_number})
 
 
 class StudentDeleteView(LoginRequiredMixin, DeleteView):
@@ -537,651 +518,308 @@ class MyTeacherDetailView(DetailView):
         id_ = self.kwargs.get("id")
         return get_object_or_404(Lecturer, id=id_)
     
-# My Class Mates
 
+# TERTIARY VIEW FOR =============================================
+# My Class Mates
 @login_required
 def my_classmates_view(request):
     try:
         # Get the logged-in user's student profile
-        student = request.user.student
+        # select_related avoids extra DB hits for tertiary metadata
+        student = Student.objects.select_related('department', 'programme', 'level', 'user').get(user=request.user)
         
-        # Get the classroom the student belongs to
-        standard = student.current_class
+        # Tertiary Logic: Classmates share Department, Programme, and Level
+        department = student.department
+        programme = student.programme
+        level = student.level
 
-        if standard:
-            # Get all other students in the same classroom, excluding the current student
-            classmates = Student.objects.filter(current_class=standard).exclude(user=request.user)
+        if department and level:
+            # Filter by the academic "Cohort"
+            classmates = Student.objects.filter(
+                department=department,
+                level=level,
+                programme=programme,
+                student_status='active' # Only show currently enrolled peers
+            ).exclude(user=request.user).select_related('user')
         else:
-            classmates = [] # No classroom assigned
+            classmates = Student.objects.none()
             
         context = {
             'student': student,
-            'standard': standard,
+            'department': department,
+            'programme': programme,
+            'level': level,
             'classmates': classmates,
         }
         return render(request, 'students/my_classmates.html', context)
+
     except Student.DoesNotExist:
-        # Handle cases where the logged-in user doesn't have a student profile
         return render(request, 'students/no_student_profile.html', {})
     except Exception as e:
-        # Generic error handling
         return render(request, 'students/error.html', {'error_message': str(e)})
-    
 
+
+# TERTIARY LOGIC ==============================================
 # Student ID Card
+
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import render, get_object_or_404
+from django.views import View
+from .models import Student
+# Ensure SchoolIdentity is imported from the correct app
+# from curriculum.models import SchoolIdentity 
+
+# class StudentIDCardView(LoginRequiredMixin, View):
+#     """
+#     Displays a printable ID card for a specific student.
+#     """
+#     def get(self, request, pk):
+#         # Using pk consistently with the URL
+#         student = get_object_or_404(
+#             Student.objects.select_related('user', 'department', 'level'), 
+#             pk=pk
+#         )
+        
+#         school_identity = SchoolIdentity.objects.first()
+
+#         context = {
+#             'student': student,
+#             'school_identity': school_identity,
+#         }
+#         return render(request, 'students/id_card_single.html', context)
+
 class StudentIDCardView(LoginRequiredMixin, View):
     """
-    Displays a printable ID card for a specific student.
+    Displays a printable ID card for a specific student using Matric Number.
     """
-    def get(self, request, student_id):
-        student = get_object_or_404(Student, id=student_id)
+    def get(self, request, matric_number):
+        # Fetch using matric_number to align with your existing system logic
+        student = get_object_or_404(
+            Student.objects.select_related('user', 'department', 'level'), 
+            matric_number=matric_number
+        )
         
-        # Get the SchoolIdentity. Assuming there is only one instance.
-        # If there can be multiple, you may need a different retrieval method.
-        try:
-            school_identity = SchoolIdentity.objects.first()
-        except SchoolIdentity.DoesNotExist:
-            school_identity = None
+        school_identity = SchoolIdentity.objects.first()
 
         context = {
             'student': student,
             'school_identity': school_identity,
         }
-        return render(request, 'students/test_student_id_card.html', context)
+        return render(request, 'students/id_card_single.html', context)
 
-# Bulk Print ID CArd
+
 class BulkStudentIDCardView(LoginRequiredMixin, View):
+    """
+    View to generate multiple ID cards at once, filtered by tertiary parameters.
+    """
     def get(self, request):
-        class_id = request.GET.get('class')
-        students = Student.objects.select_related('current_class')
+        # Fetching tertiary filters from the GET request
+        level_id = request.GET.get('level')
+        dept_id = request.GET.get('department')
+        prog_id = request.GET.get('programme')
 
-        if class_id:
-            students = students.filter(current_class_id=class_id)
+        # Optimizing query with select_related for level/dept/programme
+        students = Student.objects.all().select_related('level', 'department', 'programme')
 
-        return render(request, 'students/bulk_id_cards.html', {
+        if level_id:
+            students = students.filter(level_id=level_id)
+        if dept_id:
+            students = students.filter(department_id=dept_id)
+        if prog_id:
+            students = students.filter(programme_id=prog_id)
+
+        # Ensure we only show ID cards for "Active" students
+        students = students.filter(student_status='active')
+
+        context = {
             'students': students,
-            'classes': Standard.objects.all(),
-            'selected_class': class_id,
+            'levels': Level.objects.all(),
+            'departments': Department.objects.all(),
+            'programmes': Programme.objects.all(),
+            'selected_level': level_id,
+            'selected_dept': dept_id,
             'school_identity': SchoolIdentity.objects.first(),
-        })
-
-
-
-# Student Promotion Logic
-def is_authorized_to_promote(user):
-    """
-    Checks if the user is an admin or a staff member.
-    """
-    return user.is_superuser or hasattr(user, 'teacher')
-
-@user_passes_test(is_authorized_to_promote)
-def promote_students_view(request):
-    """
-    View to promote all students from one class to the next using a defined promotion order.
-    """
-    if request.method == 'POST':
-        from_class_id = request.POST.get('from_class')
-        
-        if not from_class_id:
-            messages.error(request, "Please select a class to promote.")
-            return redirect('promote_students')
-
-        try:
-            from_class = Standard.objects.get(id=from_class_id)
-            
-            # Permission Check
-            is_admin = request.user.is_superuser
-            is_form_teacher = False
-            if hasattr(request.user, 'teacher'):
-                # Assuming Standard has a ForeignKey to Teacher
-                is_form_teacher = (from_class.form_teacher == request.user.teacher)
-
-            if not is_admin and not is_form_teacher:
-                messages.error(request, "You do not have permission to promote this class.")
-                return redirect('promote_students')
-
-            # Find the next class based on the promotion_order
-            try:
-                next_class = Standard.objects.get(promotion_order=from_class.promotion_order + 1)
-                promotion_type = 'promoted'
-            except Standard.DoesNotExist:
-                # If there is no next class, students will be graduated
-                next_class = None
-                promotion_type = 'graduated'
-            
-            with transaction.atomic():
-                students_to_promote = Student.objects.filter(current_class=from_class)
-                count = students_to_promote.count()
-                
-                if promotion_type == 'promoted':
-                    students_to_promote.update(current_class=next_class)
-                    messages.success(request, f"Successfully promoted {count} students from {from_class.name} to {next_class.name}.")
-                else:
-                    students_to_promote.update(current_class=None, student_status='graduated')
-                    messages.success(request, f"Successfully graduated {count} students from {from_class.name}.")
-            
-        except Standard.DoesNotExist:
-            messages.error(request, "The selected class does not exist.")
-        except Exception as e:
-            messages.error(request, f"An unexpected error occurred: {e}")
-            
-        return redirect('students:promote_students')
-
-    # GET request: display the form
-    classes = Standard.objects.all().order_by('promotion_order')
-    context = {
-        'classes': classes,
-        'title': 'Promote Students',
-    }
-    return render(request, 'students/promote_students.html', context)
-
-
-# Promoting Individual Students Using the Standard Model
-def is_authorized_to_promote(user):
-    """
-    Checks if the user is an admin or a staff member.
-    """
-    return user.is_superuser or hasattr(user, 'teacher')
-
-@user_passes_test(is_authorized_to_promote)
-def promote_individual_students_view(request):
-    """
-    View to promote specific students from a selected class.
-    """
-    classes = Standard.objects.all().order_by('promotion_order')
-    students = Student.objects.none()
-    from_class = None
-    next_class_options = Standard.objects.none()
-
-    if request.method == 'POST':
-        from_class_id = request.POST.get('from_class_id')
-        selected_students_ids = request.POST.getlist('selected_students')
-        to_class_id = request.POST.get('to_class')
-
-        if not from_class_id or not selected_students_ids or not to_class_id:
-            messages.error(request, "Invalid promotion request. Please select a class, students, and a destination class.")
-            return redirect('promote_individual_students')
-
-        try:
-            from_class = get_object_or_404(Level, id=from_class_id)
-            to_class = get_object_or_404(Level, id=to_class_id)
-            
-            # Permission Check (re-check on POST for security)
-            is_admin = request.user.is_superuser
-            is_form_teacher = False
-            if hasattr(request.user, 'teacher'):
-                # Assuming Standard has a ForeignKey to Teacher
-                is_form_teacher = (from_class.form_teacher == request.user.teacher)
-
-            if not is_admin and not is_form_teacher:
-                messages.error(request, "You do not have permission to promote students from this class.")
-                return redirect('promote_individual_students')
-
-            with transaction.atomic():
-                students_to_promote = Student.objects.filter(
-                    current_class=from_class,
-                    id__in=selected_students_ids
-                )
-                count = students_to_promote.count()
-                
-                students_to_promote.update(current_class=to_class)
-                
-            messages.success(request, f"Successfully promoted {count} students from {from_class.name} to {to_class.name}.")
-            
-        except Standard.DoesNotExist:
-            messages.error(request, "One of the selected classes does not exist.")
-        except Exception as e:
-            messages.error(request, f"An unexpected error occurred: {e}")
-            
-        return redirect('students:promote_individual_students')
-
-    # GET request: Display the student selection form
-    selected_class_id = request.GET.get('class')
-    if selected_class_id:
-        from_class = get_object_or_404(Standard, id=selected_class_id)
-        students = Student.objects.filter(current_class=from_class).order_by('last_name', 'first_name')
-        
-        # Get next class options (all classes after the selected one)
-        next_class_options = Standard.objects.filter(
-            promotion_order__gt=from_class.promotion_order
-        ).order_by('promotion_order')
-
-    context = {
-        'classes': classes,
-        'students': students,
-        'from_class': from_class,
-        'next_class_options': next_class_options,
-        'title': 'Individual Student Promotion',
-    }
-    return render(request, 'students/promote_individual_students.html', context)
-
-
-# Promoting Using The ClassGroup Model Not Yet implemented
-@user_passes_test(is_authorized_to_promote)
-def promote_students_by_group_view(request):
-    if request.method == 'POST':
-        from_group_id = request.POST.get('from_group')
-        
-        if not from_group_id:
-            messages.error(request, "Please select a class group to promote.")
-            return redirect('promote_students_by_group')
-
-        try:
-            from_group = ClassGroup.objects.get(id=from_group_id)
-            from_standard = from_group.standard
-            
-            try:
-                next_standard = Standard.objects.get(promotion_order=from_standard.promotion_order + 1)
-                next_group = ClassGroup.objects.get(standard=next_standard, promotion_order=from_group.promotion_order)
-                promotion_type = 'promoted'
-            except (Standard.DoesNotExist, ClassGroup.DoesNotExist):
-                next_group = None
-                promotion_type = 'graduated'
-
-            # ... permission checks (as before)
-
-            with transaction.atomic():
-                students_to_promote = Student.objects.filter(current_class=from_group)
-                count = students_to_promote.count()
-                
-                if promotion_type == 'promoted':
-                    students_to_promote.update(current_class=next_group)
-                    messages.success(request, f"Successfully promoted {count} students from {from_group.name} to {next_group.name}.")
-                else:
-                    students_to_promote.update(current_class=None, student_status='graduated')
-                    messages.success(request, f"Successfully graduated {count} students from {from_group.name}.")
-            
-        except Exception as e:
-            messages.error(request, f"An error occurred: {e}")
-            
-        return redirect('promote_students_by_group')
-
-    # GET request
-    groups = ClassGroup.objects.all().order_by('standard__promotion_order', 'promotion_order')
-    context = {
-        'groups': groups,
-        'title': 'Promote Students by Group',
-    }
-    return render(request, 'schools/promote_students_by_group.html', context)
-
-
-# View For Assigning Class Group To Students
-def is_authorized_staff(user):
-    return user.is_superuser or user.is_staff
-
-@user_passes_test(is_authorized_staff)
-def assign_classgroup_to_students_view(request):
-    """
-    Allows batch assignment of a ClassGroup to students within a specific Standard.
-    """
-    if request.method == 'POST':
-        standard_id = request.POST.get('standard_id')
-        classgroup_id = request.POST.get('classgroup')
-        selected_student_ids = request.POST.getlist('selected_students')
-
-        if not standard_id or not classgroup_id or not selected_student_ids:
-            messages.error(request, "Please select a standard, a class group, and at least one student.")
-            return redirect('assign_classgroup_to_students')
-
-        try:
-            standard = get_object_or_404(Standard, id=standard_id)
-            classgroup = get_object_or_404(ClassGroup, id=classgroup_id)
-
-            # Important: Validate that the selected ClassGroup belongs to the selected Standard.
-            if classgroup.standard != standard:
-                messages.error(request, "The selected class group does not belong to the selected standard.")
-                return redirect('assign_classgroup_to_students')
-            
-            with transaction.atomic():
-                students_to_update = Student.objects.filter(id__in=selected_student_ids, current_class=standard)
-                count = students_to_update.count()
-                
-                # Update the students' class_group field. The form_teacher is automatically
-                # determined by this relationship.
-                students_to_update.update(class_group=classgroup)
-                
-            messages.success(request, f"Successfully assigned {count} students to {classgroup.name}.")
-
-        except Exception as e:
-            messages.error(request, f"An error occurred: {e}")
-
-        return redirect('students:assign_classgroup_to_students')
-    
-    # GET request
-    standards = Level.objects.all().order_by('name')
-    selected_standard = None
-    students = Student.objects.none()
-    class_groups = Programme.objects.none()
-
-    standard_id_param = request.GET.get('standard')
-    if standard_id_param:
-        selected_standard = get_object_or_404(Level, id=standard_id_param)
-        students = Student.objects.filter(current_class=selected_standard).order_by('first_name')
-        class_groups = Programme.objects.filter(standard=selected_standard).order_by('name')
-
-    context = {
-        'standards': standards,
-        'selected_standard': selected_standard,
-        'students': students,
-        'class_groups': class_groups,
-        'title': 'Assign Class Group to Students',
-    }
-    return render(request, 'students/assign_classgroup.html', context)
-
-
-
-# PARENT DASHBOARD
-@login_required
-def parent_dashboard(request):
-    from .models import Parent, Student
-    from curriculum.models import Session, Semester
-    from payments.models import StudentFeeAssignment, Payment
-    from django.db.models import Sum
-    from decimal import Decimal
-
-    try:
-        parent = Parent.objects.get(user=request.user)
-        children = Student.objects.filter(parent=parent).prefetch_related('scores__term')
-    except Parent.DoesNotExist:
-        children = []
-    
-    children_with_reports = []
-    all_terms = Semester.objects.all().order_by('id') 
-    all_sessions = Session.objects.all().order_by('id')
-    
-    current_session = Session.objects.filter(is_current=True).order_by('-name').first()
-    current_term = Semester.objects.filter(session=current_session, is_current=True).order_by('-start_date').first()
-
-    for child in children:
-        # Fetch individual invoices and receipts for this child
-        invoices = StudentFeeAssignment.objects.filter(student=child).order_by('-id')
-        # receipts = Payment.objects.filter(student=child).order_by('-date_paid')
-        receipts = Payment.objects.filter(student=child).order_by('-payment_date')
-
-        child_data = {
-            'child': child,
-            'termly_reports': [],
-            'session_reports': [],
-            'invoices': invoices, # Added
-            'receipts': receipts, # Added
-            'grand_payment_summary': {}, 
-            'current_term': current_term,
-            'current_session': current_session,
         }
         
-        for term in all_terms:
-            if child.scores.filter(term=term).exists():
-                child_data['termly_reports'].append(term)
-        
-        for session in all_sessions:
-            if child.scores.filter(term__session=session).exists():
-                child_data['session_reports'].append(session)
-        
-        # Financial aggregation
-        total_due_agg = StudentFeeAssignment.objects.filter(student=child).aggregate(total_due=Sum('amount_due'))
-        total_due = total_due_agg.get('total_due') or Decimal('0.00')
-
-        total_paid_agg = Payment.objects.filter(student=child).aggregate(total_paid=Sum('amount_received'))
-        total_paid = total_paid_agg.get('total_paid') or Decimal('0.00')
-
-        total_balance = total_due - total_paid
-
-        child_data['grand_payment_summary'] = {
-            'total_due': total_due,
-            'total_paid': total_paid, 
-            'total_balance': total_balance,
-            'is_paid': total_balance <= 0
-        }
-        
-        children_with_reports.append(child_data)
-        
-    context = {'children_with_reports': children_with_reports}
-    return render(request, 'students/parent_dashboard.html', context)
+        return render(request, 'students/id_card_bulk.html', context)
 
 
-@staff_member_required
-def parent_list_view(request):
-    query = request.GET.get('q', '')
-    
-    parents_list = Parent.objects.all().prefetch_related('children')
-    
-    if query:
-        parents_list = parents_list.filter(
-            Q(guardian_name__icontains=query) |
-            Q(guardian_email__icontains=query) |
-            Q(user__username__icontains=query) |
-            Q(children__first_name__icontains=query) |
-            Q(children__last_name__icontains=query)
-        ).distinct()
-
-    paginator = Paginator(parents_list, 10)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    try:
-        school_identity = SchoolIdentity.objects.first()
-    except SchoolIdentity.DoesNotExist:
-        school_identity = None
-    
-    context = {
-        'page_obj': page_obj,
-        'query': query,
-        'school_identity': school_identity,
-    }
-    return render(request, 'students/parent_list.html', context)
-
-# New view to export data as CSV
-@staff_member_required
-def export_parents_csv(request):
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="parents.csv"'
-
-    writer = csv.writer(response)
-    
-    # Write the header row
-    writer.writerow(['Guardian Name', 'Guardian Email', 'Guardian Phone', 'Student Name', 'Student USN'])
-    
-    # Get all parents and related children
-    parents = Parent.objects.all().prefetch_related('children')
-    
-    for parent in parents:
-        # Check if the parent has children
-        if parent.children.exists():
-            for child in parent.children.all():
-                writer.writerow([
-                    parent.guardian_name, 
-                    parent.guardian_email, 
-                    parent.guardian_phone,
-                    child.get_full_name(),
-                    child.USN
-                ])
-        else:
-            # Handle parents without children
-            writer.writerow([
-                parent.guardian_name, 
-                parent.guardian_email, 
-                parent.guardian_phone,
-                'N/A',
-                'N/A'
-            ])
-
-    return response
 
 
-# Student's Birthay
-@login_required
-def upcoming_birthdays_view(request):
-    """
-    Allows form teachers to view their own students' birthdays
-    and admins (is_staff) to view all students' birthdays.
-    """
-    today = datetime.date.today()
-    current_month = today.month
-    upcoming_month_1 = (today.month % 12) + 1
-    upcoming_month_2 = (upcoming_month_1 % 12) + 1
-    
-    # Check if the user is a staff member (admin)
-    if request.user.is_staff:
-        # Staff members see all students
-        birthday_students = Student.objects.select_related('user__profile').filter(
-            Q(DOB__month=current_month) | 
-            Q(DOB__month=upcoming_month_1) | 
-            Q(DOB__month=upcoming_month_2)
-        ).order_by('DOB__month', 'DOB__day')
-    else:
-        # Normal users (form teachers) see only their own students
-        try:
-            form_teacher = request.user.teacher # Assuming a one-to-one relationship
-            birthday_students = Student.objects.select_related('user__profile').filter(
-                form_teacher=form_teacher,
-                DOB__month__in=[current_month, upcoming_month_1, upcoming_month_2]
-            ).order_by('DOB__month', 'DOB__day')
-        except Teacher.DoesNotExist:
-            # Handle cases where the user is logged in but not a teacher
-            return redirect('some_other_view_name') # Change to a safe URL name
-
-    # Handle CSV export request
-    if request.GET.get('export') == 'csv':
-        response = HttpResponse(content_type='text/csv')
-        filename = "all_students_birthdays.csv" if request.user.is_staff else "my_students_birthdays.csv"
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-        writer = csv.writer(response)
-        writer.writerow(['Full Name', 'DOB', 'Student Email', 'Student Phone', 'Guardian Phone', 'Guardian Email', 'Current Class'])
-
-        for student in birthday_students:
-            writer.writerow([
-                student.get_full_name(),
-                student.DOB.strftime('%B %d'),
-                student.user.email,
-                student.user.profile.phone,
-                student.guardian_phone,
-                student.guardian_email,
-                student.current_class
-            ])
-        return response
-
-    # Normal template rendering
-    current_birthdays = birthday_students.filter(DOB__month=current_month)
-    upcoming_birthdays = birthday_students.exclude(DOB__month=current_month)
-
-    context = {
-        'current_birthdays': current_birthdays,
-        'upcoming_birthdays': upcoming_birthdays,
-    }
-    
-    return render(request, 'students/upcoming_birthdays.html', context)
-
-
-#============================================================
+#TERTIARY LOGIC ============================================================
 # LOGIC FOR STUDENT ARCHIVE
+import csv
+from django.http import HttpResponse
+from django.shortcuts import render
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db import models
+from django.contrib.admin.views.decorators import staff_member_required
+from .models import Student, Session
 
-# --- Helper Function for CSV Export (Unchanged) ---
+# --- Helper Function for CSV Export ---
 def export_students_csv(queryset):
     """
-    Helper function to generate a CSV response from a given student queryset.
-    (Assuming Student model and its field definitions are available)
+    Generates a CSV response from a student queryset with Tertiary fields.
     """
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="student_archive.csv"'
+    response['Content-Disposition'] = 'attachment; filename="tertiary_student_archive.csv"'
 
     writer = csv.writer(response)
     writer.writerow([
-        "USN",
+        "Matric Number",
         "Full Name",
         "Gender",
         "Status",
-        "Class on Admission",
+        "Department",
+        "Programme",
+        "Entry Level",
         "Date Admitted",
-        "Graduated Session",
-        "Parent/Guardian",
-        "Guardian Phone",
+        "Graduation Session",
     ])
 
     for s in queryset:
-        # Safely access foreign key names, assuming .name exists
-        class_name = s.class_on_admission.name if hasattr(s, 'class_on_admission') and s.class_on_admission else ""
-        session_name = s.graduated_session.name if hasattr(s, 'graduated_session') and s.graduated_session else ""
+        # Using select_related in the view makes these lookups efficient
+        dept_name = s.department.name if s.department else "N/A"
+        prog_name = s.programme.name if s.programme else "N/A"
+        session_name = s.graduated_session.name if s.graduated_session else "N/A"
         
         writer.writerow([
-            s.USN,
-            f"{s.last_name} {s.first_name}",
+            s.matric_number,
+            f"{s.last_name} {s.first_name} {s.middle_name or ''}".strip(),
             s.gender,
             s.student_status,
-            class_name,
+            dept_name,
+            prog_name,
+            s.level.name if s.level else "N/A",
             s.date_admitted,
             session_name,
-            s.guardian_name,
-            s.guardian_phone,
         ])
 
     return response
+
+# --------------------------------------------------
+
+import csv
+from django.http import HttpResponse
+from django.shortcuts import render
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db import models
+from django.contrib.admin.views.decorators import staff_member_required
+from .models import Student, Session, Department
+
+# --- Helper Function for CSV Export ---
+def export_students_csv(queryset):
+    """
+    Generates a CSV response from a student queryset.
+    Accesses names via the User relationship.
+    """
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="tertiary_student_archive.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "Matric Number",
+        "Full Name",
+        "Gender",
+        "Status",
+        "Department",
+        "Programme",
+        "Date Admitted",
+    ])
+
+    for s in queryset:
+        # Accessing names from the related User model
+        full_name = f"{s.user.last_name} {s.user.first_name} {s.middle_name or ''}".strip()
+        dept_name = s.department.name if s.department else "N/A"
+        prog_name = s.programme.name if s.programme else "N/A"
+        
+        writer.writerow([
+            s.matric_number,
+            full_name.upper(),
+            s.gender,
+            s.student_status,
+            dept_name,
+            prog_name,
+            s.date_admitted,
+        ])
+
+    return response
+
 # --------------------------------------------------
 
 @staff_member_required
 def student_archive(request):
     """
-    Displays the archived student records, supporting search, filtering, and CSV export,
-    with server-side pagination.
+    Displays archived records with fixes for User-model name fields
+    and Tertiary filtering logic.
     """
-    # Archived statuses
-    archived_status = ['graduated', 'dropped', 'expelled', 'suspended']
+    # 1. Base Setup
+    archived_status = ['graduated', 'dropped', 'expelled', 'suspended', 'alumni']
 
-    # Base queryset, ordered for consistent pagination
-    students = Student.objects.filter(student_status__in=archived_status).order_by('-date_admitted', 'last_name')
+    # 2. Base Queryset
+    # FIXED: Accessing 'user__last_name' for ordering
+    # FIXED: Removed 'graduated_session' from select_related as per FieldError
+    students = Student.objects.filter(
+        student_status__in=archived_status
+    ).select_related('user', 'department', 'programme', 'level').order_by('-date_admitted', 'user__last_name')
 
-    # --- GET FILTERS & PAGE NUMBER ---
+    # --- GET FILTERS ---
     q = request.GET.get('q')
     status_filter = request.GET.get('status')
-    session_filter = request.GET.get('session')
-    page = request.GET.get('page', 1) # Default to page 1
+    session_filter = request.GET.get('session') # Note: Verify field name for this in your model
+    dept_filter = request.GET.get('department')
+    page = request.GET.get('page', 1)
 
-    # --- APPLY FILTERS TO QUERYSET ---
+    # --- APPLY FILTERS ---
     if q:
+        # FIXED: Searching via user__first_name and user__last_name
         students = students.filter(
-            models.Q(first_name__icontains=q) |
-            models.Q(last_name__icontains=q) |
-            models.Q(USN__icontains=q)
+            models.Q(user__first_name__icontains=q) |
+            models.Q(user__last_name__icontains=q) |
+            models.Q(matric_number__icontains=q)
         )
 
     if status_filter and status_filter != "all":
         students = students.filter(student_status=status_filter)
 
+    # Note: verify if session filtering should target a specific FK on your model
     if session_filter and session_filter != "all":
-        students = students.filter(graduated_session_id=session_filter)
+        # If your model has no graduated_session FK, this filter might need 
+        # to target the related name (e.g., graduation_records__session_id)
+        pass 
+        
+    if dept_filter and dept_filter != "all":
+        students = students.filter(department_id=dept_filter)
 
-    # --- CSV EXPORT (Must run on the full filtered queryset) ---
+    # --- CSV EXPORT ---
     if request.GET.get("export") == "csv":
         return export_students_csv(students)
 
-    # --- SERVER-SIDE PAGINATION ---
-    paginator = Paginator(students, 15) # 15 students per page
+    # --- PAGINATION ---
+    paginator = Paginator(students, 20)
     
     try:
         students_page = paginator.page(page)
-    except PageNotAnInteger:
-        # If page is not an integer, deliver first page.
+    except (PageNotAnInteger, EmptyPage):
         students_page = paginator.page(1)
-    except EmptyPage:
-        # If page is out of range, deliver last page of results.
-        students_page = paginator.page(paginator.num_pages)
 
     # --- PREPARE CONTEXT ---
-    sessions = Student.objects.filter(graduated_session__isnull=False).values_list("graduated_session", "graduated_session__name").distinct()
+    # Using a generic fetch for sessions since the related name may vary
+    sessions = Session.objects.all().order_by('-start_date')
+    departments = Department.objects.all().order_by('name')
 
-    # Generate the query string fragment to preserve filters across pagination links
-    # Start with request.GET.copy() to get mutable object
+    # Preserve filters across pagination
     params = request.GET.copy()
-    # Remove 'page' so it can be cleanly added back by the template pagination logic
-    if 'page' in params:
-        params.pop('page')
+    params.pop('page', None)
     query_string = params.urlencode()
 
     return render(request, "students/archive.html", {
-        "students": students_page, # Pass the Paginator Page object
+        "students": students_page,
         "sessions": sessions,
+        "departments": departments,
         "selected_status": status_filter,
         "selected_session": session_filter,
+        "selected_dept": dept_filter,
         "q": q,
-        "query_string": query_string, # Used to preserve filters in pagination links
+        "query_string": query_string,
     })

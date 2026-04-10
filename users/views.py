@@ -12,11 +12,20 @@ from django.http import JsonResponse
 from curriculum.models import SchoolIdentity
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
-from students.models import Parent
+from students.models import Parent, Student
 
 from django.contrib.auth import views as auth_views
 from django.db.utils import OperationalError, ProgrammingError
-# Create your views here.
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db import transaction
+from django.contrib.auth.decorators import login_required
+from .forms import UserRegistrationForm, StudentEnrollmentForm, LecturerEnrollmentForm
+from .models import Profile
+
+
+
+
 
 # Enrollment of new student
 def user_registration(request):
@@ -34,39 +43,116 @@ def user_registration(request):
             return render(request, 'users/user_registration.html', {'form': form})
        
 
-    
-# STUDENTS ENROLLMENT
+# TERTIARY ENROLMENT===================================================
+#enrolment logic
 @login_required
+@transaction.atomic # Ensures database integrity
 def student_enrollment(request):
+    if not (request.user.is_superuser or request.user.is_staff):
+        return redirect('pages:portal_home')
+
     if request.method == 'POST':
-        u_form = UserRegisterForm(request.POST)
+        u_form = UserRegistrationForm(request.POST)
         p_form = StudentEnrollmentForm(request.POST, request.FILES)
 
         if u_form.is_valid() and p_form.is_valid():
-            # Get the cleaned data from the forms
-            user_data = u_form.cleaned_data
-            student_data = p_form.cleaned_data
+            user = u_form.save(commit=False)
+            user.set_password(u_form.cleaned_data['password'])
+            user.save()
 
-            # Create the Student object, setting first_name and last_name from the user form
-            student = Student(
-                first_name=user_data.get('first_name'),
-                last_name=user_data.get('last_name'),
-                **student_data
-            )
+            student = p_form.save(commit=False)
+            student.user = user
+            student.matric_number = user.username 
             student.save()
 
-            messages.success(request, 'Student has been enrolled successfully')
-            return redirect('some_success_url')  # Replace with a valid URL name
+            messages.success(request, f'Student {student.matric_number} enrolled successfully!')
+            # REDIRECT TO SUCCESS PAGE
+            return redirect('success_page') 
+        else:
+            messages.error(request, "Enrollment failed. Please check the details in both tabs.")
     else:
-        u_form = UserRegisterForm()
+        u_form = UserRegistrationForm()
         p_form = StudentEnrollmentForm()
 
-    context = {
+    return render(request, 'users/student_enrollment.html', {
         'u_form': u_form,
         'p_form': p_form,
-    }
+    })
 
-    return render(request, 'users/student_enrollment.html', context)
+
+@login_required
+def enroll_success(request):
+    return render(request, 'users/enroll_success.html')
+
+
+@login_required
+def lecturer_signup_success(request):
+    return render(request, 'users/lecturer_signup_success.html')
+
+
+
+def check_username(request):
+    """
+    Checks if a username is already taken.
+    """
+    if request.method == 'GET':
+        username = request.GET.get('username', None)
+        is_taken = User.objects.filter(username__iexact=username).exists()
+        data = {
+            'is_taken': is_taken
+        }
+        return JsonResponse(data)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+# TERTIARY LOGIC=========================
+# Lecturer signup
+def lecturer_enrollment(request):
+    # 1. Authorization Check
+    if not (request.user.is_superuser or request.user.is_staff):
+        return redirect('pages:portal_home')
+
+    if request.method == 'POST':
+        u_form = UserRegistrationForm(request.POST)
+        l_form = LecturerEnrollmentForm(request.POST, request.FILES)
+
+        if u_form.is_valid() and l_form.is_valid():
+            try:
+                # Use atomic transaction so if one fails, both fail (no "ghost" users)
+                with transaction.atomic():
+                    # 2. Save User
+                    user = u_form.save(commit=False)
+                    user.set_password(u_form.cleaned_data['password'])
+                    user.save()
+
+                    # 3. Handle Profile (Ensure user_type is 'teacher')
+                    # We use get_or_create in case a signal already created the profile
+                    profile, created = Profile.objects.get_or_create(user=user)
+                    profile.user_type = 'teacher'
+                    profile.activate = True
+                    profile.save()
+
+                    # 4. Save Lecturer (Linked to User)
+                    lecturer = l_form.save(commit=False)
+                    lecturer.user = user
+                    # Note: lecturer.staff_id is removed as it's now a property of the model
+                    lecturer.save()
+
+                messages.success(request, f'Lecturer {user.username} enrolled successfully!')
+                return redirect('lecturer_success')
+                
+            except Exception as e:
+                messages.error(request, f"A database error occurred: {e}")
+        else:
+            messages.error(request, "Enrollment failed. Please review the errors in each tab.")
+    else:
+        u_form = UserRegistrationForm()
+        l_form = LecturerEnrollmentForm()
+
+    return render(request, 'users/lecturer_enrollment.html', {
+        'u_form': u_form,
+        'l_form': l_form,
+    })
 
 
 def register(request):
@@ -107,6 +193,8 @@ def profile_edit(request):
     }
 
     return render(request, 'users/profile.html', context)
+
+
 
 # BASIC PROFILE UPDATE For Staff
 @login_required
@@ -165,161 +253,71 @@ def users_home(request):
     return render(request, 'pages/portal_home.html')
 
 
+
+
+
+# TERTIARY LOGIC =========================================
 # all users
 @login_required
 def all_users(request):
     """
-    A view to display all users and export them to a CSV,
-    only accessible by staff users.
+    A unified view to display all users, pulling identity from Profile,
+    and role-specific data from Student or Lecturer models.
     """
-    user = request.user
-    
-    # Restrict access to only staff users
-    if not user.is_staff:
-        return redirect('pages/portal_home.html') # Redirect to a safe URL for non-staff users
+    if not request.user.is_staff:
+        return redirect('pages:portal_home')
 
-    all_users_list = User.objects.all().order_by('last_name', 'first_name')
-    
+    # Optimized Query: Joins Profile, Student, and Lecturer tables in one go
+    all_users_list = User.objects.all().select_related(
+        'profile', 
+        'student', 
+        'lecturer'
+    ).order_by('last_name', 'first_name')
+
     # Handle CSV export request
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="all_users.csv"'
+        response['Content-Disposition'] = 'attachment; filename="schoolly_unified_users.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['Username', 'First Name', 'Last Name', 'Email', 'Phone', 'State Of Origin', 'User Type', 'Registered Date'])
+        # Headers adjusted for multi-role portal
+        writer.writerow([
+            'ID/Matric', 'Surname', 'First Name', 'Email', 
+            'Role', 'Phone', 'Department', 'Status'
+        ])
 
         for u in all_users_list:
-            writer.writerow([u.username, u.first_name, u.last_name, u.email, u.profile.phone, u.profile.state_of_origin, u.profile.user_type, u.profile.created])
+            prof = getattr(u, 'profile', None)
+            
+            # Determine Identifier (Matric for students, Username for others)
+            if hasattr(u, 'student'):
+                identifier = u.student.matric_number
+                dept = u.student.department.name if u.student.department else "N/A"
+            elif hasattr(u, 'lecturer'):
+                identifier = u.username
+                dept = u.lecturer.department.name if u.lecturer.department else "N/A"
+            else:
+                identifier = u.username
+                dept = "N/A"
+
+            writer.writerow([
+                identifier,
+                u.last_name,
+                u.first_name,
+                u.email,
+                prof.get_user_type_display() if prof else "N/A",
+                prof.phone if prof else "",
+                dept,
+                "Active" if (prof and prof.activate) else "Inactive"
+            ])
         return response
 
     # Normal template rendering
-    context = {'all_users': all_users_list}
+    context = {
+        'all_users': all_users_list,
+        'total_count': all_users_list.count()
+    }
     return render(request, 'users/all_registered_users.html', context)
-
-
-# Enroll students view
-@login_required
-def enroll_student(request):
-    user_form = UserRegistrationForm(request.POST or None)
-    student_form = StudentEnrollmentForm(request.POST or None)
-    
-    # Retrieve the school identity information
-    try:
-        school_identity = SchoolIdentity.objects.first()
-    except SchoolIdentity.DoesNotExist:
-        school_identity = None
-
-    if request.method == 'POST':
-        # Check which form was submitted using a hidden input or button name
-        if 'user_submit' in request.POST:
-            if user_form.is_valid():
-                user_data = user_form.cleaned_data
-                user = User.objects.create_user(
-                    username=user_data['username'],
-                    email=user_data['email'],
-                    password=user_data['password'],
-                    first_name=user_data['first_name'],
-                    last_name=user_data['last_name']
-                )
-                
-                # Store user info in session to pass to the next step
-                request.session['temp_user_id'] = user.id
-                
-                messages.success(request, 'User created successfully! Now, please provide the student details.')
-                return redirect('enroll_student_details')  # Redirect to the next step
-
-        elif 'student_submit' in request.POST:
-            if 'temp_user_id' in request.session:
-                user_id = request.session['temp_user_id']
-                try:
-                    user = User.objects.get(id=user_id)
-                except User.DoesNotExist:
-                    messages.error(request, 'An error occurred. Please restart the enrollment process.')
-                    return redirect('enroll_student')
-                
-                # Bind the student form to the request data
-                student_form = StudentEnrollmentForm(request.POST)
-                if student_form.is_valid():
-                    student = student_form.save(commit=False)
-                    student.user = user  # Link the student record to the new user
-                    student.USN = user.username # Ensure USN is the same as username
-                    student.first_name = user.first_name # Sync first name
-                    student.last_name = user.last_name # Sync last name
-                    student.save()
-                    
-                    # Clear session data
-                    del request.session['temp_user_id']
-
-                    messages.success(request, f'Student {student.get_full_name()} has been successfully enrolled!')
-                    return redirect('some_success_page') # Redirect to a success page
-
-    return render(request, 'users/enroll_student.html', {
-        'user_form': user_form,
-        'student_form': student_form,
-        'school_identity': school_identity, # Add school_identity to the context
-    })
-
-@login_required
-def enroll_student_details(request):
-    if 'temp_user_id' not in request.session:
-        messages.error(request, 'Invalid session. Please start the enrollment process from the beginning.')
-        return redirect('enroll_student')
-    
-    user_id = request.session['temp_user_id']
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        messages.error(request, 'User not found. Please restart the enrollment process.')
-        return redirect('enroll_student')
-
-    student_form = StudentEnrollmentForm(request.POST or None, initial={'USN': user.username})
-
-    # Retrieve the school identity information for this view as well
-    try:
-        school_identity = SchoolIdentity.objects.first()
-    except SchoolIdentity.DoesNotExist:
-        school_identity = None
-
-    if request.method == 'POST':
-        if student_form.is_valid():
-            student = student_form.save(commit=False)
-            student.user = user
-            student.USN = user.username
-            student.first_name = user.first_name
-            student.last_name = user.last_name
-            student.save()
-            
-            del request.session['temp_user_id']
-            
-            messages.success(request, f'Student {student.get_full_name()} has been successfully enrolled!')
-            return redirect('success_page')
-    
-    return render(request, 'users/enroll_student_details.html', {
-        'student_form': student_form,
-        'user_first_name': user.first_name,
-        'user_last_name': user.last_name,
-        'school_identity': school_identity, # Add school_identity to the context
-    })
-
-
-@login_required
-def enroll_success(request):
-    return render(request, 'users/enroll_success.html')
-
-
-def check_username(request):
-    """
-    Checks if a username is already taken.
-    """
-    if request.method == 'GET':
-        username = request.GET.get('username', None)
-        is_taken = User.objects.filter(username__iexact=username).exists()
-        data = {
-            'is_taken': is_taken
-        }
-        return JsonResponse(data)
-    
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 

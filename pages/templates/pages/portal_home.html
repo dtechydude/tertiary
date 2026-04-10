@@ -412,7 +412,7 @@
 							<li><a href="/admin/" target="_blank">Main Settings (ADMIN PANEL)</a></li>
 							<li><a href="{% url 'events:event_new' %}">Add New Event</a></li>							
 							<li><a href="{% url 'all_users' %}">All Registered Users</a></li>
-							<li><a href="{% url 'students:student_search_list' %}">Search Students</a></li>
+							<li><a href="{% url 'students:student-search' %}">Search Students</a></li>
 							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
 
 							{% endif %}		
@@ -441,24 +441,21 @@
 							<li><a href="{% url 'students:bulk_student_id_cards' %}">Print Bulk Students ID</a></li>
 							<li><a href="{% url 'students:boarder-list' %}">All Boarders</a></li>
 							<li><a href="{% url 'students:student-in-class' %}">No. In Class</a></li>
-							{% comment %} <li><a href="{% url 'students:assign_classgroup_to_students' %}">Assign Students To ClassGroup</a></li> {% endcomment %}
-							<li><a href="{% url 'students:parent_list' %}">PARENTS LIST</a></li>	
-							<li><a href="{% url 'students:parent-dashboard' %}">PARENTS DASHBOARD</a></li>
 							<li><a href="{% url 'students:graduate_students' %}">Move Students To Alumni</a></li>
 							<li><a href="{% url 'students:alumni_list' %}">GRADUATE/ALUMNI List</a></li>
 							
 							{% elif user.teacher %}		
 							<li><a href="{% url 'students:student-list' %}">My Students</a></li>
 							<li><a href="{% url 'staff:my_assignments' %}">My Assigned Classes</a></li>
-							<li><a href="{% url 'students:upcoming_birthdays' %}">My Students Birthday</a></li>	
 							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>																	
 							
 							{% elif user.student %}	
-							<li><a href="{% url 'students:student_id_card' student.id %}"> My ID Card</a></li>	
-							<li><a href="{% url 'attendance:self-attendance-summary' %}">Attendance Summary</a></li>	
-							<li><a href="{% url 'attendance:self-attendance-detail' %}">Attendance Detail</a></li>							
-							<li><a href="{% url 'staff:my_teacher_view' %}">My Teacher</a></li>
-							<li><a href="{% url 'students:my_classmates' %}">My Class Mates</a></li>
+							{% comment %} <li><a href="{% url 'students:student_id_card' student.id %}"> My ID Card</a></li>	 {% endcomment %}
+							<li>
+								<a href="{% url 'students:student_id_card' matric_number=request.user.student.matric_number %}"> My ID Card </a>
+							</li>
+							{% comment %} <li><a href="{% url 'staff:my_teacher_view' %}">My Teacher</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'students:my_classmates' %}">My Class Mates</a></li> {% endcomment %}
 							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
 
 							{% else %}
@@ -533,20 +530,20 @@
 					{% if user.is_superuser or user.is_staff %}
 					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 						<i class="flaticon-013-checkmark"></i>
-							<span class="nav-text">STAFF/TEACHERS</span>
+							<span class="nav-text">LECTURER/STAFF</span>
 						</a>
-						{% comment %} <ul aria-expanded="false">
-							<li><a href="{% url 'staff:teacher_user_signup'%}">Signup Teacher</a></li>
-							<li><a href="{% url 'staff:teacher-list' %}">All Teachers</a></li>
-							<li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li> 
-							<li><a href="{% url 'staff:assign_form_teacher_to_classgroup' %}">Assign FormTeacher To CLASSGROUP</a></li>
-							<li><a href="{% url 'staff:teacher_assignments' %}">Teacher's Subj./Classes</a></li>
-							<li><a href="{% url 'staff:cbv_all_teachers_student_counts' %}">Teacher's Students Count</a></li>
-							<li><a href="{% url 'curriculum:form_teachers_head' %}">FormTeachers List</a></li>
-							<li><a href="{% url 'curriculum:classgroup_form_teachers' %}">ClassGroup FormTeachers</a></li>
+						<ul aria-expanded="false">
+							<li><a href="{% url 'lecturer_signup' %}">Signup Lecturer</a></li>
+							{% comment %} <li><a href="{% url 'staff:teacher-list' %}">All Teachers</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li>  {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:assign_form_teacher_to_classgroup' %}">Assign FormTeacher To CLASSGROUP</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:teacher_assignments' %}">Teacher's Subj./Classes</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:cbv_all_teachers_student_counts' %}">Teacher's Students Count</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'curriculum:form_teachers_head' %}">FormTeachers List</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'curriculum:classgroup_form_teachers' %}">ClassGroup FormTeachers</a></li> {% endcomment %}
 
 						</ul>
-					</li> {% endcomment %}
+					</li> 
 					{% endif %}
 
 					{% if user.is_authenticated and user.is_superuser or user.is_staff or user.student or user.parent %}
@@ -621,7 +618,7 @@
 						<ul aria-expanded="false">							
 						
 							{% if user.is_authenticated and user.student %}
-							<li><a href="{% url 'curriculum:my-standard' %}">Learning Center</a></li>
+							{% comment %} <li><a href="{% url 'curriculum:my-standard' %}">Learning Center</a></li> {% endcomment %}
 							
 							{% elif user.is_authenticated and user.teacher %}
 							<li><a href="{% url 'curriculum:standard_list' %}">E-Class List</a></li>
@@ -706,7 +703,6 @@
 							</a>
 							<ul aria-expanded="false">
 							<li><a href="{% url 'events:calendar' %}">School Events Calendar</a></li>
-							<li><a href="{% url 'students:upcoming_birthdays' %}">Students Birthday</a></li>
 							<li><a href="{% url 'pages:students_email_list' %}">Students Email List</a></li>
 							<li><a href="{% url 'pages:students_phone_list' %}">Students Phone List</a></li>
 							<li><a href="{% url 'pages:teachers_phone_list' %}">Teachers Phone List</a></li>
@@ -920,7 +916,7 @@
 														<h5 class="mb-0 font-w600">{{ user.teacher.staff_role }}</h5>
 														<p class="mb-0 text-nowrap ">My Role</p>
 														{% elif user.is_authenticated and user.student %}
-														<a href="{% url 'results:student_dashboard' %}">
+														{% comment %} <a href="{% url 'results:student_dashboard' %}"> {% endcomment %}
 														<h5 class="mb-0 font-w600">Check Results</h5>
 														<p class="mb-0 text-nowrap ">Termly/Session</p>
 													</a>														

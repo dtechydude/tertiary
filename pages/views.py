@@ -62,10 +62,9 @@ def dashboard(request):
 
     classrooms = Level.objects.all()
 
-    try:
-        num_inclass = Student.objects.filter(current_class = request.user.student.current_class).count()
-    except Student.DoesNotExist:
-        num_inclass = Student.objects.filter()
+    s = getattr(request.user, 'student', None)
+    num_inclass = Student.objects.filter(department=s.department, level=s.level, student_status='active').count() if s else 0
+
     # Build a paginator with function based view
     queryset = Level.objects.all().order_by("-id")
     page = request.GET.get('page', 1)
