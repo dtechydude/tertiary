@@ -153,23 +153,7 @@ def lecturer_enrollment(request):
         'u_form': u_form,
         'l_form': l_form,
     })
-
-
-def register(request):
-    if request.method == 'POST':
-        form = UserRegisterForm(request.POST)
-        if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
-            messages.success(request, f'New user account has been created!' )
-            return redirect('pages:success_submission')
-    else:
-        form = UserRegisterForm()
-        user = request.user
-        if user.is_superuser or user.is_staff:
-            return render(request, 'users/register.html', {'form': form})
-        else:
-            return render(request, 'pages/portal_home.html')       
+ 
     
 
 # BASIC PROFILE UPDATE
@@ -352,3 +336,22 @@ class SafePasswordResetView(auth_views.PasswordResetView):
             context['school_info'] = None
 
         return context
+
+
+
+def register(request):
+    if request.method == 'POST':
+        form = UserRegisterForm(request.POST)
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data.get('username')
+            messages.success(request, f'New user account has been created!' )
+            return redirect('pages:success_submission')
+    else:
+        form = UserRegisterForm()
+        user = request.user
+        if user.is_superuser or user.is_staff:
+            return render(request, 'users/register.html', {'form': form})
+        else:
+            return render(request, 'pages/portal_home.html')       
+    
