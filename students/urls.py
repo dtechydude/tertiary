@@ -39,6 +39,10 @@ urlpatterns = [
    
     path('search/', students_views.student_search_list, name='student-search'),
 
+     # course registration
+    path("course-registration/", students_views.course_registration_view, name="course-registration"),
+
+
     # General detail view (Admins/Teachers)
     path('profile/<str:matric_number>/', StudentDetailView.as_view(), name='student-detail'),
     
@@ -56,6 +60,8 @@ urlpatterns = [
     # # path('<str:id>/update/', StudentUpdateView.as_view(), name="student-update"),
     # path('<str:id>/delete/', StudentDeleteView.as_view(), name="student-delete"), 
     # path('<str:id>/', MyTeacherDetailView.as_view(), name="my-teacher-detail"),
+    
+   
 
          
 ]

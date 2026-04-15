@@ -9,7 +9,7 @@ from import_export.admin import ImportExportModelAdmin
 # from payments.models import StudentFeeAssignment, ClassFeeTemplate, PaymentCategory
 # from results.models import SessionResultStatus
 
-from .models import Faculty, Department, Programme, Level, Course, Session, Semester, CourseAssignment
+from .models import Faculty, Department, Programme, Level, Course, Session, Semester, CourseAssignment, CourseRegistration
 
 
 
@@ -95,3 +95,10 @@ class CourseAssignmentAdmin(admin.ModelAdmin):
         'lecturer__user__first_name',
         'lecturer__user__last_name'
     )
+
+# COURSE REGISTRATION
+@admin.register(CourseRegistration)
+class CourseRegistrationAdmin(admin.ModelAdmin):
+    list_display = ("student", "course", "session", "semester")
+    list_filter = ("session", "semester", "course__department")
+    search_fields = ("student__matric_number", "course__course_code")

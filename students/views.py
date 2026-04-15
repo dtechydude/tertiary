@@ -15,10 +15,10 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from students.models import Student, Hostel, Parent, GraduationRecord
 from staff.models import Lecturer
 from students.forms import StudentUpdateForm, SuperUserStudentUpdateForm
-from payments.models import Payment, CategoryFee # Import Payment and CategoryFee models
+# from payments.models import Payment, CategoryFee # Import Payment and CategoryFee models
 
 from users.forms import UserRegisterForm
-from curriculum.models import Session, Semester, Programme, SchoolIdentity, Level, Department
+from curriculum.models import Session, Semester, Programme, SchoolIdentity, Level, Department, CourseRegistration, Course
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
@@ -567,26 +567,6 @@ from django.shortcuts import render, get_object_or_404
 from django.views import View
 from .models import Student
 # Ensure SchoolIdentity is imported from the correct app
-# from curriculum.models import SchoolIdentity 
-
-# class StudentIDCardView(LoginRequiredMixin, View):
-#     """
-#     Displays a printable ID card for a specific student.
-#     """
-#     def get(self, request, pk):
-#         # Using pk consistently with the URL
-#         student = get_object_or_404(
-#             Student.objects.select_related('user', 'department', 'level'), 
-#             pk=pk
-#         )
-        
-#         school_identity = SchoolIdentity.objects.first()
-
-#         context = {
-#             'student': student,
-#             'school_identity': school_identity,
-#         }
-#         return render(request, 'students/id_card_single.html', context)
 
 class StudentIDCardView(LoginRequiredMixin, View):
     """
@@ -822,4 +802,551 @@ def student_archive(request):
         "selected_dept": dept_filter,
         "q": q,
         "query_string": query_string,
+    })
+
+# TERTIARY LOGIC
+# @login_required
+# def course_registration_view(request):
+#     user = request.user
+
+#     is_admin = user.is_superuser or user.is_staff
+#     is_student = hasattr(user, 'student')
+
+#     # ================= ACCESS CONTROL =================
+#     if not is_student and not is_admin:
+#         messages.error(request, "Access denied.")
+#         return redirect("pages:portal-home")
+
+#     student = user.student if is_student else None
+
+#     # ================= SESSION & SEMESTER =================
+#     current_session = Session.objects.filter(is_current=True).first()
+#     current_semester = Semester.objects.filter(is_current=True).first()
+
+#     if not current_session or not current_semester:
+#         messages.error(request, "Session or Semester not set.")
+#         return redirect("pages:portal-home")
+
+#     # ================= STUDENT FLOW =================
+#     if is_student:
+
+#         if student.student_status != "active":
+#             messages.error(request, "You are not eligible for course registration.")
+#             return redirect("pages:portal-home")
+
+#         available_courses = Course.objects.filter(
+#             department=student.department,
+#             programme=student.programme,
+#             level=student.level,
+#             semester=current_semester
+#         )
+
+#         registered_courses = CourseRegistration.objects.filter(
+#             student=student,
+#             session=current_session,
+#             semester=current_semester
+#         )
+
+#         registered_course_ids = list(
+#             registered_courses.values_list('course_id', flat=True)
+#         )
+
+#     else:
+#         # ================= ADMIN FLOW =================
+#         available_courses = Course.objects.filter(
+#             semester=current_semester
+#         )
+
+#         registered_course_ids = []
+
+#     # ================= HANDLE FORM =================
+#     if request.method == "POST" and is_student:
+#         selected_courses = request.POST.getlist("courses")
+
+#         if not selected_courses:
+#             messages.warning(request, "Please select at least one course.")
+#             return redirect("course-registration")
+
+#         CourseRegistration.objects.filter(
+#             student=student,
+#             session=current_session,
+#             semester=current_semester
+#         ).delete()
+
+#         new_registrations = [
+#             CourseRegistration(
+#                 student=student,
+#                 course_id=course_id,
+#                 session=current_session,
+#                 semester=current_semester
+#             )
+#             for course_id in selected_courses
+#         ]
+
+#         CourseRegistration.objects.bulk_create(new_registrations)
+
+#         messages.success(request, "Course registration successful.")
+#         return redirect("course-registration")
+
+#     # ================= RENDER =================
+#     return render(request, "students/course_registration.html", {
+#         "available_courses": available_courses,
+#         "registered_course_ids": registered_course_ids,
+#         "current_session": current_session,
+#         "current_semester": current_semester,
+#     })
+
+# from django.shortcuts import render, redirect
+# from django.contrib.auth.decorators import login_required
+# from django.contrib import messages
+# from django.db import transaction
+
+# @login_required
+# def course_registration_view(request):
+#     user = request.user
+    
+#     # 1. Access Control
+#     student = getattr(user, 'student', None)
+#     is_admin = user.is_superuser or user.is_staff
+
+#     if not student and not is_admin:
+#         messages.error(request, "Access denied. You must be a student or staff member.")
+#         return redirect("pages:portal_home")
+
+#     # 2. Session & Semester Check
+#     current_session = Session.objects.filter(is_current=True).first()
+#     current_semester = Semester.objects.filter(is_current=True).first()
+
+#     if not current_session or not current_semester:
+#         messages.error(request, "Active Session or Semester not found. Please contact Admin.")
+#         return redirect("pages:portal_home")
+
+#     # 3. Handle Form Submission (Post)
+#     if request.method == "POST":
+#         if not student:
+#             messages.error(request, "Admins cannot register for courses.")
+#             return redirect("course-registration")
+            
+#         selected_courses = request.POST.getlist("courses")
+#         if not selected_courses:
+#             messages.warning(request, "Please select at least one course.")
+#             return redirect("course-registration")
+
+#         try:
+#             with transaction.atomic():
+#                 # Remove existing registrations for this specific session/semester to allow updates
+#                 CourseRegistration.objects.filter(
+#                     student=student,
+#                     session=current_session,
+#                     semester=current_semester
+#                 ).delete()
+
+#                 # Bulk create the new registrations
+#                 new_registrations = [
+#                     CourseRegistration(
+#                         student=student,
+#                         course_id=course_id,
+#                         session=current_session,
+#                         semester=current_semester
+#                     ) for course_id in selected_courses
+#                 ]
+#                 CourseRegistration.objects.bulk_create(new_registrations)
+                
+#             messages.success(request, "Course registration updated successfully.")
+#             return redirect("students:course-registration")
+#         except Exception as e:
+#             messages.error(request, f"An error occurred: {e}")
+#             return redirect("students:course-registration")
+
+#     # 4. Data Retrieval for Page Load (Get)
+#     if student:
+#         if student.student_status != "active":
+#             messages.error(request, "Your account is not active. Registration denied.")
+#             return redirect("pages:portal_home")
+
+#         # Filter courses specific to the student's department, level, and the current semester
+#         available_courses = Course.objects.filter(
+#             department=student.department,
+#             programme=student.programme,
+#             level=student.level,
+#             semester=current_semester
+#         )
+#         # Get IDs of already registered courses to check the boxes
+#         registered_course_ids = CourseRegistration.objects.filter(
+#             student=student,
+#             session=current_session,
+#             semester=current_semester
+#         ).values_list('course_id', flat=True)
+#     else:
+#         # Admin View: Show all courses for the current semester
+#         available_courses = Course.objects.filter(semester=current_semester)
+#         registered_course_ids = []
+
+#     return render(request, "students/course_registration.html", {
+#         "available_courses": available_courses,
+#         "registered_course_ids": list(registered_course_ids),
+#         "current_session": current_session,
+#         "current_semester": current_semester,
+#         "is_student": student is not None,
+#     })
+
+# @login_required
+# def course_registration_view(request):
+#     user = request.user
+#     student = getattr(user, 'student', None)
+#     is_admin = user.is_superuser or user.is_staff
+
+#     if not student and not is_admin:
+#         messages.error(request, "Access denied.")
+#         return redirect("pages:portal_home")
+
+#     current_session = Session.objects.filter(is_current=True).first()
+#     current_semester = Semester.objects.filter(is_current=True).first()
+
+#     if request.method == "POST":
+#         if student:
+#             selected_courses = request.POST.getlist("courses")
+#             with transaction.atomic():
+#                 CourseRegistration.objects.filter(
+#                     student=student, session=current_session, semester=current_semester
+#                 ).delete()
+                
+#                 new_regs = [
+#                     CourseRegistration(
+#                         student=student, course_id=int(c_id), 
+#                         session=current_session, semester=current_semester
+#                     ) for c_id in selected_courses
+#                 ]
+#                 CourseRegistration.objects.bulk_create(new_regs)
+#             messages.success(request, "Registration updated.")
+#             return redirect("students:course-registration")
+
+#     # GET Logic
+#     if student:
+#         available_courses = Course.objects.filter(
+#             department=student.department, level=student.level, semester=current_semester
+#         )
+#         # CRITICAL: Convert to list of integers for the template check
+#         registered_course_ids = list(CourseRegistration.objects.filter(
+#             student=student, session=current_session, semester=current_semester
+#         ).values_list('course_id', flat=True))
+#     else:
+#         available_courses = Course.objects.filter(semester=current_semester)
+#         registered_course_ids = []
+
+#     return render(request, "students/course_registration.html", {
+#         "available_courses": available_courses,
+#         "registered_course_ids": registered_course_ids,
+#         "current_session": current_session,
+#         "current_semester": current_semester,
+#         "is_student": student is not None,
+#     })
+
+# from django.shortcuts import render, redirect
+# from django.contrib.auth.decorators import login_required
+# from django.contrib import messages
+# from django.db import transaction, models
+# from .models import Course, CourseRegistration, Session, Semester
+# from django.shortcuts import render, redirect
+# from django.contrib.auth.decorators import login_required
+# from django.contrib import messages
+# from django.db import transaction
+# from .models import Course, CourseRegistration, Session, Semester
+
+# @login_required
+# def course_registration_view(request):
+#     user = request.user
+#     student = getattr(user, 'student', None)
+#     is_admin = user.is_superuser or user.is_staff
+
+#     # 1. Access Control
+#     if not student and not is_admin:
+#         messages.error(request, "Access denied. You must be a student or staff member.")
+#         return redirect("pages:portal_home")
+
+#     # 2. Global Academic Context
+#     current_session = Session.objects.filter(is_current=True).first()
+#     current_semester = Semester.objects.filter(is_current=True).first()
+
+#     if not current_session or not current_semester:
+#         messages.error(request, "Active Session or Semester not found. Please contact Admin.")
+#         return redirect("pages:portal_home")
+
+#     # 3. Handle Form Submission (Sync Pattern)
+#     if request.method == "POST":
+#         if not student:
+#             messages.error(request, "Admins cannot modify course registrations.")
+#             return redirect("students:course-registration")
+            
+#         selected_courses = request.POST.getlist("courses")
+        
+#         try:
+#             with transaction.atomic():
+#                 # Step A: Delete ALL current registrations for this window.
+#                 # This ensures that unselected courses are actually removed.
+#                 CourseRegistration.objects.filter(
+#                     student=student,
+#                     session=current_session,
+#                     semester=current_semester
+#                 ).delete()
+
+#                 # Step B: Re-create only the courses currently selected.
+#                 if selected_courses:
+#                     new_registrations = [
+#                         CourseRegistration(
+#                             student=student,
+#                             course_id=int(course_id),
+#                             session=current_session,
+#                             semester=current_semester
+#                         ) for course_id in selected_courses
+#                     ]
+#                     CourseRegistration.objects.bulk_create(new_registrations)
+#                     messages.success(request, "Course registration updated successfully.")
+#                 else:
+#                     messages.warning(request, "All courses have been removed from your registration.")
+
+#             return redirect("students:course-registration")
+#         except Exception as e:
+#             messages.error(request, f"An error occurred while saving: {e}")
+#             return redirect("students:course-registration")
+
+#     # 4. Data Retrieval for GET (Page Load)
+#     total_cost = 0
+#     if student:
+#         if student.student_status != "active":
+#             messages.error(request, "Your account is inactive.")
+#             return redirect("pages:portal_home")
+
+#         # Fetch available courses for student's profile
+#         available_courses = Course.objects.filter(
+#             department=student.department,
+#             programme=student.programme,
+#             level=student.level,
+#             semester=current_semester
+#         )
+        
+#         # Fetch current registrations to mark checkboxes and calculate cost
+#         registrations = CourseRegistration.objects.filter(
+#             student=student,
+#             session=current_session,
+#             semester=current_semester
+#         ).select_related('course')
+        
+#         registered_course_ids = list(registrations.values_list('course_id', flat=True))
+        
+#         # Sum cost (handling optional/None cost values)
+#         for reg in registrations:
+#             if reg.course.cost:
+#                 total_cost += reg.course.cost
+#     else:
+#         # Admin View: Show all courses for the semester
+#         available_courses = Course.objects.filter(semester=current_semester)
+#         registered_course_ids = []
+
+#     return render(request, "students/course_registration.html", {
+#         "available_courses": available_courses,
+#         "registered_course_ids": registered_course_ids,
+#         "total_cost": total_cost,
+#         "current_session": current_session,
+#         "current_semester": current_semester,
+#         "is_student": student is not None,
+#     })
+
+# from django.utils import timezone
+# from django.db import transaction
+
+# @login_required
+# def course_registration_view(request):
+#     user = request.user
+#     student = getattr(user, 'student', None)
+#     is_admin = user.is_superuser or user.is_staff
+    
+#     current_session = Session.objects.filter(is_current=True).first()
+#     current_semester = Semester.objects.filter(is_current=True).first()
+
+#     # --- THE FIXED LOGIC ---
+#     today = timezone.localdate()
+#     reg_phase = "CLOSED"
+#     late_fee = 0
+#     debug_msg = "Checking configuration..."
+
+#     if current_semester:
+#         # Priority 1: Manual Override (Force Open)
+#         if current_semester.is_reg_active:
+#             reg_phase = "OPEN"
+#             debug_msg = "Portal opened via Manual Override."
+        
+#         # Priority 2: Date Windows (If Manual Override is OFF)
+#         elif current_semester.reg_start_date and current_semester.reg_end_date:
+#             if today < current_semester.reg_start_date:
+#                 reg_phase = "CLOSED"
+#                 debug_msg = f"Too early. Starts {current_semester.reg_start_date}."
+#             elif today <= current_semester.reg_end_date:
+#                 reg_phase = "OPEN"
+#                 debug_msg = "Within normal registration dates."
+#             elif current_semester.late_reg_end_date and today <= current_semester.late_reg_end_date:
+#                 reg_phase = "LATE"
+#                 late_fee = current_semester.late_reg_fee
+#                 debug_msg = "Within late registration dates."
+#             else:
+#                 reg_phase = "CLOSED"
+#                 debug_msg = "Deadlines have passed."
+#         else:
+#             reg_phase = "CLOSED"
+#             debug_msg = "Dates not configured and Manual Override is OFF."
+
+#     # --- POST & GET DATA (Integrated) ---
+#     if request.method == "POST" and student and reg_phase != "CLOSED":
+#         selected_courses = request.POST.getlist("courses")
+#         try:
+#             with transaction.atomic():
+#                 CourseRegistration.objects.filter(
+#                     student=student, session=current_session, semester=current_semester
+#                 ).delete()
+#                 if selected_courses:
+#                     registrations = [
+#                         CourseRegistration(
+#                             student=student, course_id=int(c_id),
+#                             session=current_session, semester=current_semester
+#                         ) for c_id in selected_courses
+#                     ]
+#                     CourseRegistration.objects.bulk_create(registrations)
+#             messages.success(request, "Registration updated successfully.")
+#             return redirect("course-registration")
+#         except Exception as e:
+#             messages.error(request, f"Error: {e}")
+
+#     # Calculate Total Cost for GET
+#     total_cost = float(late_fee)
+#     registered_course_ids = []
+#     available_courses = []
+
+#     if student:
+#         available_courses = Course.objects.filter(
+#             department=student.department, level=student.level, semester=current_semester
+#         )
+#         regs = CourseRegistration.objects.filter(
+#             student=student, session=current_session, semester=current_semester
+#         ).select_related('course')
+#         registered_course_ids = list(regs.values_list('course_id', flat=True))
+#         for r in regs:
+#             total_cost += float(r.course.cost or 0)
+
+#     return render(request, "students/course_registration.html", {
+#         "available_courses": available_courses,
+#         "registered_course_ids": registered_course_ids,
+#         "total_cost": total_cost,
+#         "reg_phase": reg_phase,
+#         "late_fee": late_fee,
+#         "debug_msg": debug_msg,
+#         "current_session": current_session,
+#         "current_semester": current_semester,
+#         "is_student": student is not None,
+#         "is_admin": is_admin,
+#         "today": today,
+#     })
+
+@login_required
+def course_registration_view(request):
+    user = request.user
+    student = getattr(user, 'student', None)
+    is_admin = user.is_superuser or user.is_staff
+
+    if not student and not is_admin:
+        messages.error(request, "Access denied.")
+        return redirect("pages:portal_home")
+
+    current_session = Session.objects.filter(is_current=True).first()
+    current_semester = Semester.objects.filter(is_current=True).first()
+
+    # --- REGISTRATION PHASE LOGIC ---
+    today = timezone.localdate()
+    reg_phase = "CLOSED"
+    late_fee = 0
+    debug_msg = ""
+
+    if current_semester:
+        # Priority 1: Manual Override
+        if current_semester.is_reg_active:
+            reg_phase = "OPEN"
+            debug_msg = "Manual override active."
+        # Priority 2: Date Windows
+        elif current_semester.reg_start_date and current_semester.reg_end_date:
+            if today < current_semester.reg_start_date:
+                reg_phase = "CLOSED"
+                debug_msg = f"Starts {current_semester.reg_start_date}"
+            elif today <= current_semester.reg_end_date:
+                reg_phase = "OPEN"
+                debug_msg = "Normal registration period."
+            elif current_semester.late_reg_end_date and today <= current_semester.late_reg_end_date:
+                reg_phase = "LATE"
+                late_fee = current_semester.late_reg_fee
+                debug_msg = "Late registration period."
+            else:
+                reg_phase = "CLOSED"
+                debug_msg = "Deadlines passed."
+        else:
+            debug_msg = "Dates not configured."
+
+    # --- POST HANDLER (Sync Pattern) ---
+    if request.method == "POST":
+        if not student:
+            messages.error(request, "Admins cannot modify records.")
+            return redirect("course-registration")
+        
+        if reg_phase == "CLOSED":
+            messages.error(request, "The portal is currently closed.")
+            return redirect("course-registration")
+
+        selected_courses = request.POST.getlist("courses")
+        try:
+            with transaction.atomic():
+                # Sync: Delete all existing then recreate
+                CourseRegistration.objects.filter(
+                    student=student, session=current_session, semester=current_semester
+                ).delete()
+
+                if selected_courses:
+                    new_regs = [
+                        CourseRegistration(
+                            student=student, course_id=int(c_id),
+                            session=current_session, semester=current_semester
+                        ) for c_id in selected_courses
+                    ]
+                    CourseRegistration.objects.bulk_create(new_regs)
+                    messages.success(request, "Course registration updated successfully.")
+                else:
+                    messages.warning(request, "Your registration has been cleared.")
+            return redirect("course-registration")
+        except Exception as e:
+            messages.error(request, f"System Error: {e}")
+
+    # --- GET DATA ---
+    total_cost = float(late_fee)
+    available_courses = []
+    registered_course_ids = []
+
+    if student:
+        available_courses = Course.objects.filter(
+            department=student.department, level=student.level, semester=current_semester
+        )
+        regs = CourseRegistration.objects.filter(
+            student=student, session=current_session, semester=current_semester
+        ).select_related('course')
+        registered_course_ids = list(regs.values_list('course_id', flat=True))
+        for r in regs:
+            total_cost += float(r.course.cost or 0)
+
+    return render(request, "students/course_registration.html", {
+        "available_courses": available_courses,
+        "registered_course_ids": registered_course_ids,
+        "total_cost": total_cost,
+        "reg_phase": reg_phase,
+        "late_fee": late_fee,
+        "debug_msg": debug_msg,
+        "current_session": current_session,
+        "current_semester": current_semester,
+        "is_student": student is not None,
+        "is_admin": is_admin,
+        "today": today,
     })

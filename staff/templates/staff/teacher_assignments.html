@@ -1,0 +1,134 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Staff Assignments | KwikSchools</title>
+{% endblock title %}
+
+{% block favicon %}
+<link href="{% static 'pages/vendor/datatables/css/jquery.dataTables.min.css' %}" rel="stylesheet">
+<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    /* Custom styles to enhance readability */
+    .subject-badge {
+        background-color: #ebf2ff !important;
+        color: #2c5cc5 !important;
+        border: 1px solid #c8daff;
+        font-weight: 500;
+        margin: 2px;
+    }
+    .class-badge {
+        background-color: #fff4eb !important;
+        color: #ff6600 !important;
+        border: 1px solid #ffd8bc;
+        font-weight: 500;
+        margin: 2px;
+    }
+    .teacher-name-link {
+        font-weight: 600;
+        color: #002244;
+        transition: 0.3s;
+    }
+    .teacher-name-link:hover {
+        color: #ff6600;
+    }
+    .table thead th {
+        background-color: #f8f9fa;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock favicon %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="javascript:void(0)">Staff</a></li>
+                <li class="breadcrumb-item active"><a href="javascript:void(0)">Assignments</a></li>
+            </ol>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header border-0 pb-0">
+                        <h4 class="card-title">
+                            <i class="fa fa-book-reader me-2" style="color: #ff6600;"></i>
+                            <span style="color: #002244;">Staff Subjects & Class Assignments</span>
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="example3" class="display table table-hover" style="min-width: 845px">
+                                <thead>
+                                    <tr>
+                                        <th>S/N</th>
+                                        <th>Teacher Name</th>
+                                        <th>Subjects Taught</th>
+                                        <th>Standards Assigned</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for teacher in teachers %}
+                                    <tr>
+                                        <td class="align-middle"><strong>{{ forloop.counter }}</strong></td>
+                                        <td class="align-middle">
+                                            <a href="{% url 'staff:teacher_profile' teacher.id %}" class="teacher-name-link">
+                                                {{ teacher.get_full_name|upper }}
+                                            </a>
+                                        </td>
+                                        <td class="align-middle">
+                                            {% if teacher.subjects_taught.all %}
+                                                <div class="d-flex flex-wrap">
+                                                    {% for subject in teacher.subjects_taught.all %}
+                                                        <span class="badge subject-badge">{{ subject.name }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted small italic">No subjects assigned</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="align-middle">
+                                            {% if teacher.standards_assigned.all %}
+                                                <div class="d-flex flex-wrap">
+                                                    {% for standard in teacher.standards_assigned.all %}
+                                                        <span class="badge class-badge">{{ standard.name }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted small italic">No classes assigned</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="align-middle text-end">
+                                            <a href="{% url 'staff:teacher_profile' teacher.id %}" class="btn btn-outline-primary btn-xs shadow-sm">
+                                                <i class="fa fa-eye me-1"></i> Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content_body %}
+
+{% block scripts %}
+    <script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
+    <script src="{% static 'pages/vendor/jquery-nice-select/js/jquery.nice-select.min.js' %}"></script>
+
+    <script src="{% static 'pages/vendor/datatables/js/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'pages/js/plugins-init/datatables.init.js' %}"></script>
+
+    <script src="{% static 'pages/js/custom.min.js' %}"></script>
+    <script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
+{% endblock scripts %}

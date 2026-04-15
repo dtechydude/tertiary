@@ -19,7 +19,7 @@ import csv
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Q, F
-from curriculum.models import Level, Course, CourseAssignment, Semester
+from curriculum.models import Level, Course, CourseAssignment, Semester, CourseRegistration
 
 
 import csv
@@ -213,6 +213,11 @@ def submit_cbt_request(request):
 
 
 # CBT Logics
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from curriculum.models import CourseAssignment, CourseRegistration, Session, Semester
+from .models import Quiz
+
 
 @login_required
 def quiz_list_view(request):
@@ -222,7 +227,7 @@ def quiz_list_view(request):
     today = timezone.localdate()
     now = timezone.localtime().time()
 
-    # Base Active Quiz Filter (DO NOT TOUCH – your timing logic remains)
+    # ================= BASE ACTIVE QUIZ FILTER (UNCHANGED) =================
     quizzes_qs = Quiz.objects.select_related(
         'examination',
         'subject',
@@ -236,58 +241,40 @@ def quiz_list_view(request):
         end_time__gte=now
     )
 
-    # # ================= STUDENT =================
-    # if hasattr(user, 'student'):
-    #     student_profile = user.student
-
-    #     if student_profile.student_status == 'active':
-    #         student_class = student_profile.current_class
-    #         quizzes = quizzes_qs.filter(standard=student_class)
-    #     else:
-    #         quizzes = Quiz.objects.none()
-
-    # # ================= STAFF / ADMIN =================
-    # elif user.is_staff and not hasattr(user, 'lecturer'):
-    #     # Admin or staff without teacher profile
-    #     quizzes = quizzes_qs
-
-    # # ================= TEACHER =================
-    # elif hasattr(user, 'lecturer'):
-    #     teacher_profile = Lecturer.objects.prefetch_related(
-    #         'standards_assigned',
-    #         'subjects_taught'
-    #     ).get(user=user)
-
-    #     quizzes = quizzes_qs.filter(
-    #         standard__in=teacher_profile.standards_assigned.all(),
-    #         subject__in=teacher_profile.subjects_taught.all()
-    #     )
-
-    # else:
-    #     quizzes = Quiz.objects.none()
-
-    # return render(request, 'cbt/main.html', {
-    #     'quizzes': quizzes,
-    #     'teacher_profile': teacher_profile
-    # })
-# ================= STUDENT =================
+    # ================= STUDENT =================
     if hasattr(user, 'student'):
         student_profile = user.student
 
         if student_profile.student_status == 'active':
-            student_level = student_profile.current_class
 
-            quizzes = quizzes_qs.filter(level=student_level)
+            # ✅ Get current session & semester
+            current_session = Session.objects.filter(is_current=True).first()
+            current_semester = Semester.objects.filter(is_current=True).first()
+
+            if not current_session or not current_semester:
+                quizzes = Quiz.objects.none()
+            else:
+                # ✅ Get student's registered courses
+                registered_courses = CourseRegistration.objects.filter(
+                    student=student_profile,
+                    session=current_session,
+                    semester=current_semester
+                ).values_list('course', flat=True)
+
+                # ✅ Filter quizzes based on registered courses
+                quizzes = quizzes_qs.filter(
+                    course__in=registered_courses,
+                    session=current_session,
+                    course__semester=current_semester
+                )
         else:
             quizzes = Quiz.objects.none()
 
-
-# ================= STAFF / ADMIN =================
+    # ================= STAFF / ADMIN =================
     elif user.is_staff and not hasattr(user, 'lecturer'):
         quizzes = quizzes_qs
 
-
-# ================= LECTURER =================
+    # ================= LECTURER =================
     elif hasattr(user, 'lecturer'):
         lecturer = user.lecturer
 
@@ -299,9 +286,14 @@ def quiz_list_view(request):
             course__in=assigned_courses
         )
 
+    # ================= DEFAULT FALLBACK =================
     else:
         quizzes = Quiz.objects.none()
 
+    # ================= RENDER =================
+    return render(request, "quiz/quiz_list.html", {
+        "quizzes": quizzes
+    })
 
 
 

@@ -19,34 +19,6 @@ from tinymce.models import HTMLField
 # from staff.models import Teacher
 
 
-# Register School
-# class SchoolIdentity(models.Model):
-#     name = models.CharField(max_length=50)
-#     address_line_1 = models.CharField(max_length=60)
-#     address_line_2 = models.CharField(max_length=60, blank=True, null=True)
-#     phone1 = models.CharField(max_length=11)
-#     phone2 = models.CharField(max_length=11, blank=True, null=True)
-#     email = models.CharField(max_length=50)
-#     logo = models.ImageField(default='school_logo.jpg', upload_to='official_pics', help_text='must not exceed 180px by 180px in size')
-#     signature = models.ImageField(blank=True, null=True, upload_to='official_pics', help_text='must not exceed 180px by 180px in size')
-
-#     slug = models.SlugField(null=True, blank=True)
-
-#     def __str__(self):
-#         return self.name
-#     class Meta:
-#         verbose_name_plural = 'School Identity'
-#         verbose_name_plural = "School Identity Settings"
-
-#     # code for ensuring that only single entry is made to this model
-#     def save(self, *args, **kwargs):
-#         # Check if any other instance of this model already exists
-#         if SchoolIdentity.objects.exists() and not self.pk:
-#             # If an instance exists and we are trying to create a *new* one (self.pk is None),
-#             # raise a ValidationError.
-#             raise ValidationError("There can be only one %s instance." % self._meta.verbose_name)
-#         return super().save(*args, **kwargs)
-
 
 
 # New School Identity
@@ -103,7 +75,6 @@ class SchoolIdentity(models.Model):
 
 
 
-
 class Session(models.Model):
     name = models.CharField(max_length=50, unique=True)
     start_date = models.DateField(blank=True, null=True, verbose_name='Start Date')
@@ -139,7 +110,15 @@ class Semester(models.Model):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='terms')
     start_date = models.DateField()
     end_date = models.DateField()
-    is_current = models.BooleanField(default=False, help_text='check the box if the term is current term in the current session')
+    is_current = models.BooleanField(default=False, help_text='check the box if the semester is current semester in the current session')
+    # New Administrative Control Fields
+    reg_start_date = models.DateField(null=True, blank=True, help_text="When the portal opens")
+    reg_end_date = models.DateField(null=True, blank=True, help_text="Normal registration deadline")
+    late_reg_end_date = models.DateField(null=True, blank=True, help_text="Absolute final deadline")
+    late_reg_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Manual kill-switch (In case of emergency or school strike)
+    is_reg_active = models.BooleanField(default=True, verbose_name="Portal Manual Override")
 
     class Meta:
         # Ensures that "First Term" doesn't appear twice within the same session
@@ -213,6 +192,8 @@ class Course(models.Model):
 
     lecturer = models.ForeignKey("staff.Lecturer", on_delete=models.SET_NULL,  null=True, blank=True, related_name="courses")
 
+    cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
     def __str__(self):
         return f"{self.course_code} - {self.title}"
 
@@ -231,8 +212,36 @@ class CourseAssignment(models.Model):
     def __str__(self):
         return f"{self.course.course_code} - {self.lecturer.get_full_name()} ({self.session})"
  
-        
 
+
+# Students Course Registrations
+class CourseRegistration(models.Model):
+    student = models.ForeignKey(
+        "students.Student",
+        on_delete=models.CASCADE,
+        related_name="course_registrations"
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="registrations"
+    )
+    session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+
+    registered_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("student", "course", "session", "semester")
+
+    def __str__(self):
+        return f"{self.student} - {self.course} ({self.session} / {self.semester})"
+
+
+
+
+
+#===================================================================
 # Subject For E-Learning
 class ELearningSubject(models.Model):
     subject_id = models.CharField(max_length=100, unique=True)

@@ -1,0 +1,144 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block favicon %}
+<style>
+    /* High Visibility Styling */
+    .course-card { border-radius: 12px; border: 2px solid #f0f0f0; transition: 0.3s; background: #fff; overflow: hidden; }
+    .course-card:hover { border-color: #A72D34; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+    
+    /* The Course Info Bar at bottom of card */
+    .course-meta-bar { background: #f8f9fa; border-top: 1px solid #eee; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; }
+    .text-unit { color: #444; font-weight: 700; font-size: 13px; }
+    .text-amount { color: #087f5b; font-weight: 800; font-size: 14px; }
+    
+    .status-banner { border-radius: 10px; padding: 18px; display: flex; align-items: center; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .banner-closed { background: #A72D34; color: #fff; }
+    .banner-late { background: #ffc107; color: #000; }
+    
+    .checkbox-wrapper { scale: 1.4; margin-right: 15px; }
+    .debug-console { background: #1a1a1a; color: #00ff00; padding: 10px; font-family: monospace; font-size: 11px; border-radius: 5px; margin-bottom: 20px; }
+</style>
+{% endblock favicon %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        
+        {% if is_admin %}
+        <div class="debug-console">
+            [SYSTEM DIAGNOSTICS] Today: {{ today }} | Phase: {{ reg_phase }} | Logic: {{ debug_msg }}
+        </div>
+        {% endif %}
+
+        {% if reg_phase == "CLOSED" %}
+        <div class="status-banner banner-closed mb-4">
+            <i class="fas fa-lock fa-2x me-3"></i>
+            <div>
+                <h5 class="mb-0 text-white fw-bold">Registration Portal Closed</h5>
+                <p class="mb-0 small opacity-80">You cannot modify your courses at this time. Please contact the Registrar.</p>
+            </div>
+        </div>
+        {% elif reg_phase == "LATE" %}
+        <div class="status-banner banner-late mb-4">
+            <i class="fas fa-clock fa-2x me-3"></i>
+            <div>
+                <h5 class="mb-0 fw-bold">Late Registration Active</h5>
+                <p class="mb-0 small">A late entry fee of <strong>₦{{ late_fee|floatformat:2 }}</strong> is included in your bill.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-7">
+                <h3 class="fw-bold text-black mb-1">Course Registration</h3>
+                <p class="text-muted mb-0">Academic Period: {{ current_session }} | {{ current_semester }}</p>
+            </div>
+            <div class="col-md-5">
+                <div class="card mb-0 shadow-sm border-0">
+                    <div class="card-body p-3 d-flex justify-content-around text-center">
+                        <div><p class="small text-muted mb-0">Total Units</p><h4 id="unit-count" class="fw-bold mb-0 text-primary">0</h4></div>
+                        <div style="border-left: 1px solid #eee;"></div>
+                        <div><p class="small text-muted mb-0">Current Bill</p><h4 class="fw-bold mb-0 text-success">₦<span id="cost-count">{{ total_cost|floatformat:2 }}</span></h4></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form method="post" id="regForm">
+            {% csrf_token %}
+            <input type="hidden" id="late-fee-hidden" value="{{ late_fee }}">
+            
+            <div class="row">
+                {% for course in available_courses %}
+                <div class="col-xl-4 col-lg-6 mb-4">
+                    <div class="card course-card h-100 {% if reg_phase == 'CLOSED' %}opacity-50{% endif %}">
+                        <div class="card-body p-4 d-flex align-items-center">
+                            <div class="checkbox-wrapper custom-control custom-checkbox checkbox-success">
+                                <input type="checkbox" name="courses" value="{{ course.id }}" class="course-check" 
+                                       {% if course.id in registered_course_ids %}checked{% endif %}
+                                       {% if reg_phase == 'CLOSED' or not is_student %}disabled{% endif %}>
+                            </div>
+                            <div>
+                                <h5 class="text-black fw-bold mb-1">{{ course.course_code }}</h5>
+                                <p class="text-muted small mb-0">{{ course.title|truncatechars:40 }}</p>
+                            </div>
+                        </div>
+                        <div class="course-meta-bar">
+                            <div class="text-unit"><i class="fas fa-layer-group me-1"></i> <span class="u-val">{{ course.credit_unit }}</span> Units</div>
+                            <div class="text-amount">₦<span class="p-val">{{ course.cost|default:"0.00" }}</span></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if is_student and reg_phase != "CLOSED" %}
+            <div class="mt-4 pb-5">
+                <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4">
+                    <i class="fas fa-info-circle me-3 fa-lg"></i>
+                    <span class="small"><strong>Important:</strong> Saving will overwrite your previous registration. Courses you uncheck will be removed from your profile.</span>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg px-5 shadow" 
+                        onclick="return confirm('Replace previous registration with this new selection?')">
+                    <i class="fas fa-check-circle me-2"></i> Confirm & Save Registration
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock content_body %}
+
+{% block scripts %}
+<script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
+<script src="{% static 'pages/js/custom.min.js' %}"></script>
+<script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
+<script>
+    (function($) {
+        "use strict";
+        function updateTotals() {
+            let units = 0;
+            let cost = parseFloat($('#late-fee-hidden').val()) || 0;
+            
+            $('.course-check:checked').each(function() {
+                const card = $(this).closest('.course-card');
+                units += parseInt(card.find('.u-val').text()) || 0;
+                let priceRaw = card.find('.p-val').text().replace(/[^0-9.]/g, '');
+                cost += parseFloat(priceRaw) || 0;
+            });
+            
+            $('#unit-count').text(units);
+            $('#cost-count').text(cost.toLocaleString(undefined, {
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2
+            }));
+        }
+
+        $(document).ready(function() {
+            updateTotals();
+            $('.course-check').on('change', updateTotals);
+        });
+    })(jQuery);
+</script>
+{% endblock scripts %}
