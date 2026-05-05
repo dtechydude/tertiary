@@ -80,6 +80,10 @@ class CourseAdmin(admin.ModelAdmin):
         'title'
     )
 
+    raw_id_fields = (
+        'lecturer',
+    )
+
 @admin.register(Semester)
 class SemesterAdmin(admin.ModelAdmin):
     list_display = ('name',)
@@ -108,12 +112,19 @@ class CourseAssignmentAdmin(admin.ModelAdmin):
         'lecturer__user__last_name'
     )
 
+    raw_id_fields = (
+        'lecturer',
+        'course',
+    )
+
+
 # COURSE REGISTRATION
 @admin.register(CourseRegistration)
 class CourseRegistrationAdmin(admin.ModelAdmin):
     list_display = ("student", "course", "session", "semester")
     list_filter = ("session", "semester", "course__department")
     search_fields = ("student__matric_number", "course__course_code")
+    raw_id_fields = ('student', 'course',)
 
 
 class AcademicIdentityInline(admin.TabularInline):

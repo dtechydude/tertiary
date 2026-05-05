@@ -15,7 +15,7 @@ from curriculum.models import Session
 # Tertiary Logic
 
 @admin.register(Student)
-class StudentsAdmin(admin.ModelAdmin):
+class StudentsAdmin(ImportExportModelAdmin):
     list_display = ("matric_number", "get_full_name", "department", "programme", "level", "student_status")
     list_filter = ("department", "programme", "level", "student_status")
     search_fields = ("matric_number", "user__first_name", "user__last_name", "middle_name")

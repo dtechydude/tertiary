@@ -8,6 +8,9 @@ app_name ='staff'
 urlpatterns = [
 
     path('lecturer_list/', staff_views.lecturers_list, name='lecturer-list'),
+    path('my-courses/', staff_views.lecturer_my_courses, name='lecturer_my_courses'),
+    path('course-assignments/', staff_views.admin_course_assignments, name='admin_course_assignments'),
+
     # path('assignments/', staff_views.teacher_subjects_standards_view, name='teacher_assignments'),
     # path('<int:teacher_id>/profile/', staff_views.teacher_profile_view, name='teacher_profile'),
     # path('my-assignments/', staff_views.my_assignments_view, name='my_assignments'),

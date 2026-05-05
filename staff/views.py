@@ -18,7 +18,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from collections import Counter
 from staff.models import Lecturer
 from students.models import Student
-from curriculum.models import SchoolIdentity
+from curriculum.models import SchoolIdentity, CourseAssignment
 from staff.forms import LecturerUpdateForm, LecturerForm, CustomUserCreationForm, StaffRegisterForm, StaffUpdateForm
 from django.contrib.auth.forms import UserCreationForm
 
@@ -197,30 +197,97 @@ class LecturerDetailView(LoginRequiredMixin, DetailView):
         )
     
 
-    
 
-class LecturerUpdateView(LoginRequiredMixin, UpdateView):
-    form_class = LecturerUpdateForm
-    template_name = 'students/student_update_form.html'
-    # queryset = StudentDetail.objects.all()
+# Lecturer view assigned courses
+@login_required
+def lecturer_my_courses(request):
+    if not hasattr(request.user, "lecturer"):
+        return redirect("pages:portal-home")
+
+    assignments = CourseAssignment.objects.select_related(
+        "course", "session", "semester"
+    ).filter(
+        lecturer=request.user.lecturer
+    ).order_by("-assigned_date")
+
+    # CSV EXPORT
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="my_courses.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(["Course Code", "Course Title", "Session", "Semester", "Adviser"])
+
+        for a in assignments:
+            writer.writerow([
+                a.course.course_code,
+                a.course.title,
+                a.session,
+                a.semester,
+                "Yes" if a.is_course_adviser else "No"
+            ])
+
+        return response
+
+    return render(request, "staff/lecturer_my_courses.html", {
+        "assignments": assignments
+    })
+
+# admin view lecturers assinged course
+@login_required
+def admin_course_assignments(request):
+    if not request.user.is_staff:
+        return redirect("pages:portal-home")
+
+    assignments = CourseAssignment.objects.select_related(
+        "lecturer__user",
+        "course",
+        "session",
+        "semester"
+    ).order_by("-assigned_date")
+
+    search = request.GET.get("search")
+    if search:
+        assignments = assignments.filter(
+            course__course_code__icontains=search
+        ) | assignments.filter(
+            lecturer__user__first_name__icontains=search
+        )
+
+    # CSV EXPORT
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="course_assignments.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Lecturer",
+            "Course Code",
+            "Course Title",
+            "Session",
+            "Semester",
+            "Adviser"
+        ])
+
+        for a in assignments:
+            writer.writerow([
+                a.lecturer.get_full_name(),
+                a.course.course_code,
+                a.course.title,
+                a.session,
+                a.semester,
+                "Yes" if a.is_course_adviser else "No"
+            ])
+
+        return response
+
+    return render(request, "staff/admin_course_assignments.html", {
+        "assignments": assignments,
+        "search": search
+    })
+  
 
 
-    def get_object(self):
-        id_ = self.kwargs.get("id")
-        return get_object_or_404(Lecturer, id=id_)
-
-    def form_valid(self, form):
-        print(form.cleaned_data)
-        return super().form_valid(form)
-
-class TeacherDeleteView(LoginRequiredMixin, DeleteView):
-    template_name = 'staff/teacher_delete.html'
-    success_url = reverse_lazy('staff:teacher-list')
-    
-    def get_object(self):
-        id_ = self.kwargs.get("id")
-        return get_object_or_404(Lecturer, id=id_)
-    
 
 
 @login_required

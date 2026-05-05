@@ -10,8 +10,8 @@ class StaffPositionAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 @admin.register(Lecturer)
-class LecturerAdmin(admin.ModelAdmin):
-    list_display = ("get_full_name",)
+class LecturerAdmin(ImportExportModelAdmin):
+    list_display = ("get_full_name", "department", "position", "gender")
     list_filter = ( "position", "is_active")
     search_fields = ("user__first_name", "user__last_name", "middle_name",)
     # autocomplete_fields = ("user")

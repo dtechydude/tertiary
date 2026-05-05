@@ -66,7 +66,6 @@
 		<div class="nav-header">
 			<a href="/" class="brand-logo">
 				
-				<!-- <img src="{% static 'pages/images/logo-full1.png' %}" alt="" width="80px" height="80px"> -->
 				<img src="{{ school_info.logo.url }}" alt="kwikschools" width="80px" height="auto">
 
 				
@@ -432,7 +431,14 @@
 					{% if user.is_authenticated and not user.parent %}
 					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 						<i class="flaticon-013-checkmark"></i>
+						{% if user.is_authenticated and user.is_superuser or user.is_staff %}
 							<span class="nav-text">STUDENT MGT.</span>
+						{% elif user.is_authenticated and user.lecturer %}
+						<span class="nav-text">COURSES & STDS.</span>
+						{% elif user.is_authenticated and user.student %}
+						<span class="nav-text">MY INFO.</span>
+						{% endif %}
+
 						</a>
 						<ul aria-expanded="false">
 							{% if user.is_superuser or user.is_staff %}
@@ -443,10 +449,10 @@
 							<li><a href="{% url 'students:graduate_students' %}">Move Students To Alumni</a></li>
 							<li><a href="{% url 'students:alumni_list' %}">GRADUATE/ALUMNI List</a></li>
 							
-							{% elif user.teacher %}		
-							<li><a href="{% url 'students:student-list' %}">My Students</a></li>
-							<li><a href="{% url 'staff:my_assignments' %}">My Assigned Classes</a></li>
-							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>																	
+							{% elif user.lecturer %}		
+							<li><a href="{% url 'staff:lecturer_my_courses' %}">My Courses</a></li>
+							{% comment %} <li><a href="{% url 'staff:my_assignments' %}">My Assigned Classes</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>																	 {% endcomment %}
 							
 							{% elif user.student %}	
 							{% comment %} <li><a href="{% url 'students:student_id_card' student.id %}"> My ID Card</a></li>	 {% endcomment %}
@@ -455,7 +461,7 @@
 							</li>
 							{% comment %} <li><a href="{% url 'staff:my_teacher_view' %}">My Teacher</a></li> {% endcomment %}
 							{% comment %} <li><a href="{% url 'students:my_classmates' %}">My Class Mates</a></li> {% endcomment %}
-							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
+							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	 {% endcomment %}
 
 							{% else %}
 							<li>No Access</li>
@@ -480,9 +486,9 @@
 							{% endif %}		
 	
 							{% if user.is_authenticated and user.student %}
-							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
+							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	 {% endcomment %}
 							{% endif %}
-							{% if user.teacher %}
+							{% if user.lecturer %}
 							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
 							{% endif %}
 							
@@ -560,6 +566,8 @@
 						<ul aria-expanded="false">
 							<li><a href="{% url 'lecturer_signup' %}">Signup Lecturer</a></li>
 							<li><a href="{% url 'staff:lecturer-list' %}">All Lecturers</a></li>
+							<li><a href="{% url 'staff:admin_course_assignments' %}">Lecturer Courses</a></li>
+
 
 							{% comment %} <li><a href="{% url 'staff:teacher-list' %}">All Teachers</a></li> {% endcomment %}
 							{% comment %} <li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li>  {% endcomment %}
@@ -784,8 +792,8 @@
 							<span class="nav-text">SETTINGS</span>
 						</a>
 						<ul aria-expanded="false">	
-							{% if user.teacher %}						
-							<li><a href="{% url 'staff:teacher-self-detail' %}">My Profile</a></li>
+							{% if user.lecturer %}						
+							<li><a href="{% url 'staff:lecturer_self_detail' %}">My Profile</a></li>
 							{% elif user.student %}
 							<li><a href="{% url 'students:student-self-detail' %}">My Profile</a></li>							
 							{% else %}

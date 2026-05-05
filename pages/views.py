@@ -46,7 +46,7 @@ def dashboard(request):
     num_of_program = Programme.objects.count()
     num_of_faculty = Faculty.objects.count()
     boarder_std = Student.objects.filter(student_status='active', assigned_room__isnull=False).count()
-    offcampus_std = Student.objects.filter(student_type='day_student', student_status='active').count()
+    offcampus_std = Student.objects.filter(student_status='active', assigned_room__isnull=True).count()
     inactive_std = Student.objects.filter(student_status='inactive').count()
 
     num_student_inclass = Level.objects.filter().count()
