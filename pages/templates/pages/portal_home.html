@@ -186,8 +186,8 @@
 								Admin Role Dashboard
 								{% elif user.is_authenticated and user.staff %}
 								Staff Dashboard
-								{% elif user.is_authenticated and user.teacher %}
-								Teacher Dashboard
+								{% elif user.is_authenticated and user.lecturer %}
+								Lecturers' Dashboard
 								{% elif user.is_authenticated and user.student %}
 								Student Dashboard
 								{% elif user.is_authenticated and user.parent %}
@@ -439,8 +439,7 @@
 							<li><a href="{% url 'enroll_student' %}">Enroll Student</a></li>
 							<li><a href="{% url 'students:student-list' %}">All CURRENT Students</a></li>
 							<li><a href="{% url 'students:bulk_student_id_cards' %}">Print Bulk Students ID</a></li>
-							<li><a href="{% url 'students:boarder-list' %}">All Boarders</a></li>
-							<li><a href="{% url 'students:student-in-class' %}">No. In Class</a></li>
+							<li><a href="{% url 'students:student-in-class' %}">Class Statistics</a></li>
 							<li><a href="{% url 'students:graduate_students' %}">Move Students To Alumni</a></li>
 							<li><a href="{% url 'students:alumni_list' %}">GRADUATE/ALUMNI List</a></li>
 							
@@ -472,10 +471,11 @@
 						</a>
 						<ul aria-expanded="false">
 
-							<li><a href="{% url 'pages:portal-home' %}">HOSTEL MGT</a></li>
+							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
 							
 							{% if user.is_superuser or user.is_staff %}
-							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
+							<li><a href="{% url 'students:boarder-list' %}">Hostel Students</a></li>
+							<li><a href="{% url 'students:hostel-dashboard' %}">HOSTEL MGT</a></li>
 
 							{% endif %}		
 	
@@ -559,6 +559,8 @@
 						</a>
 						<ul aria-expanded="false">
 							<li><a href="{% url 'lecturer_signup' %}">Signup Lecturer</a></li>
+							<li><a href="{% url 'staff:lecturer-list' %}">All Lecturers</a></li>
+
 							{% comment %} <li><a href="{% url 'staff:teacher-list' %}">All Teachers</a></li> {% endcomment %}
 							{% comment %} <li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li>  {% endcomment %}
 							{% comment %} <li><a href="{% url 'staff:assign_form_teacher_to_classgroup' %}">Assign FormTeacher To CLASSGROUP</a></li> {% endcomment %}

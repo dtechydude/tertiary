@@ -16,43 +16,78 @@ from django.template.loader import get_template
 # from xhtml2pdf import pisa
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from collections import Counter
-from staff.models import Teacher
+from staff.models import Lecturer
 from students.models import Student
-from curriculum.models import Standard, ClassGroup, SchoolIdentity
-from staff.forms import TeacherUpdateForm, TeacherForm, CustomUserCreationForm, StaffRegisterForm, StaffUpdateForm
+from curriculum.models import SchoolIdentity
+from staff.forms import LecturerUpdateForm, LecturerForm, CustomUserCreationForm, StaffRegisterForm, StaffUpdateForm
 from django.contrib.auth.forms import UserCreationForm
 
 
-# All Techers
-@login_required
-def teachers_list(request):
-    """
-    A view to display all users and export them to a CSV,
-    only accessible by staff users.
-    """
-    user = request.user
-    
-    # Restrict access to only staff users
-    if not user.is_staff:
-        return redirect('pages/portal_home.html') # Redirect to a safe URL for non-staff users
+import csv
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
 
-    all_teachers_list = Teacher.objects.all().order_by('last_name', 'first_name')
-    
-    # Handle CSV export request
+from staff.models import Lecturer
+
+
+# Tertiary Logic for Lecturer List
+@login_required
+def lecturers_list(request):
+    """
+    Staff-only view to display all lecturers and export data to CSV.
+    """
+
+    # 🔐 Access control (tertiary admin logic)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return redirect('pages:portal_home')
+
+    # ⚡ Optimized query for tertiary structure
+    lecturers = Lecturer.objects.select_related(
+        'user',
+        'department',
+        'position'
+    ).order_by('user__last_name', 'user__first_name')
+
+    # 📤 CSV Export
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="all_teachers.csv"'
+        response['Content-Disposition'] = 'attachment; filename="lecturers_list.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['Username', 'First Name', 'Last Name', 'Email', 'Phone', 'State Of Origin', 'User Type', 'Registered Date'])
 
-        for u in all_teachers_list:
-            writer.writerow([u.user.username, u.first_name, u.last_name, u.user.email, u.user.profile.phone, u.user.profile.state_of_origin, u.user.profile.user_type, u.user.profile.created])
+        # Header row (tertiary staff structure)
+        writer.writerow([
+            'Staff ID',
+            'Full Name',
+            'Department',
+            'Position',
+            'Gender',
+            'Phone',
+            'Email',
+            'Date Employed'
+        ])
+
+        for l in lecturers:
+            writer.writerow([
+                l.staff_id,
+                l.get_full_name(),
+                l.department.name if l.department else '',
+                l.position.name if l.position else '',
+                l.gender,
+                l.phone,
+                l.user.email,
+                l.date_employed
+            ])
+
         return response
 
-    # Normal template rendering
-    context = {'all_teachers': all_teachers_list}
-    return render(request, 'staff/teachers_list.html', context)
+    # 🖥 Normal template rendering
+    context = {
+        'lecturers': lecturers
+    }
+
+    return render(request, 'staff/lecturers_list.html', context)
 
 
 # Display only my teacher
@@ -88,9 +123,9 @@ def my_teacher_view(request):
 
 
 # Specific to the login detail
-class TeacherSelfDetailView(LoginRequiredMixin, DetailView):
+class LecturerSelfDetailView(LoginRequiredMixin, DetailView):
     template_name = 'staff/teacher_self_detail.html'
-    model = Teacher
+    model = Lecturer
 
     def get_object(self, queryset=None):
            if queryset is None:
@@ -98,25 +133,25 @@ class TeacherSelfDetailView(LoginRequiredMixin, DetailView):
            return queryset.filter(user=self.request.user).first()
 
 
-class TeacherDetailView(DetailView):
+class LecturerDetailView(DetailView):
     template_name = 'staff/teacher_self_detail.html'
-    context_object_name = 'teacher'
-    queryset = Teacher.objects.all()
+    context_object_name = 'lecturer'
+    queryset = Lecturer.objects.all()
 
     def get_object(self):
         id_ = self.kwargs.get("id")
-        return get_object_or_404(Teacher, id=id_)
+        return get_object_or_404(Lecturer, id=id_)
     
 
-class TeacherUpdateView(LoginRequiredMixin, UpdateView):
-    form_class = TeacherUpdateForm
+class LecturerUpdateView(LoginRequiredMixin, UpdateView):
+    form_class = LecturerUpdateForm
     template_name = 'students/student_update_form.html'
     # queryset = StudentDetail.objects.all()
 
 
     def get_object(self):
         id_ = self.kwargs.get("id")
-        return get_object_or_404(Teacher, id=id_)
+        return get_object_or_404(Lecturer, id=id_)
 
     def form_valid(self, form):
         print(form.cleaned_data)
@@ -128,13 +163,13 @@ class TeacherDeleteView(LoginRequiredMixin, DeleteView):
     
     def get_object(self):
         id_ = self.kwargs.get("id")
-        return get_object_or_404(Teacher, id=id_)
+        return get_object_or_404(Lecturer, id=id_)
     
 
 
 @login_required
 def my_clas(request, teacher_id, choice):
-    teacher1 = get_object_or_404(Teacher, id=teacher_id)
+    teacher1 = get_object_or_404(Lecturer, id=teacher_id)
     return render(request, 'attendance/t_clas.html', {'teacher1': teacher1, 'choice': choice})
 
 
@@ -155,10 +190,10 @@ def classroom_students(request, class_id):
 
 # Teachers Student Count In Class
 
-class TeacherStudentCountListView(ListView):
-    model = Teacher
+class LecturerStudentCountListView(ListView):
+    model = Lecturer
     template_name = 'staff/all_teachers_student_counts.html'
-    context_object_name = 'teachers'
+    context_object_name = 'lecturer'
 
     def get_queryset(self):
         return super().get_queryset().prefetch_related(
@@ -457,12 +492,12 @@ def teacher_signup_success(request):
 
 
 
-class TeacherIDCardView(LoginRequiredMixin, View):
+class LecturerIDCardView(LoginRequiredMixin, View):
     """
     Displays a printable ID card for a specific teacher.
     """
     def get(self, request, teacher_id):
-        teacher = get_object_or_404(Teacher, id=teacher_id)
+        lecturer = get_object_or_404(Lecturer, id=lecturer_id)
         
         # Retrieve school branding
         try:
@@ -471,7 +506,7 @@ class TeacherIDCardView(LoginRequiredMixin, View):
             school_identity = None
 
         context = {
-            'teacher': teacher,
+            'lectuer': lecturer,
             'school_identity': school_identity,
         }
         return render(request, 'staff/teacher_id_card.html', context)

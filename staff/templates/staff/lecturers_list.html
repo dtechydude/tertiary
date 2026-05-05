@@ -1,0 +1,145 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Lecturers Directory</title>
+{% endblock title %}
+
+{% block favicon %}
+<link href="{% static 'pages/vendor/datatables/css/jquery.dataTables.min.css' %}" rel="stylesheet">
+<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+{% endblock favicon %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+
+        <!-- HEADER -->
+        <div class="row mb-3">
+            <div class="col-12 d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">
+                    <i class="fas fa-chalkboard-teacher text-primary me-2"></i>
+                    Lecturers Directory
+                </h3>
+
+                <a href="{% url 'staff:lecturer-list' %}?export=csv" class="btn btn-success">
+                    <i class="fas fa-file-csv me-1"></i> Export CSV
+                </a>
+            </div>
+        </div>
+
+        <!-- TABLE CARD -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+
+                <div class="table-responsive">
+                    <table id="example3" class="table table-hover align-middle">
+
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Profile</th>
+                                <th>Staff Details</th>
+                                <th>Department</th>
+                                <th>Contact</th>
+                                <th>Employment</th>
+                                <th>ID Card</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for ts in lecturers %}
+                            <tr>
+
+                                <!-- S/N -->
+                                <td>{{ forloop.counter }}</td>
+
+                                <!-- PROFILE IMAGE -->
+                                <td>
+                                    <img src="{{ ts.user.profile.image_url }}"
+                                         class="rounded-circle shadow-sm"
+                                         width="45"
+                                         height="45"
+                                         alt="Lecturer">
+                                </td>
+
+                                <!-- STAFF INFO -->
+                                <td>
+                                    <div>
+                                        <strong class="text-dark">
+                                            {{ ts.get_full_name }}
+                                        </strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            @{{ ts.user.username }}
+                                        </small>
+                                    </div>
+                                </td>
+
+                                <!-- DEPARTMENT -->
+                                <td>
+                                    <span class="badge bg-primary">
+                                        {{ ts.department.name|default:"Not Assigned" }}
+                                    </span>
+                                </td>
+
+                                <!-- CONTACT -->
+                                <td>
+                                    <div>
+                                        <div>{{ ts.phone }}</div>
+                                        <small class="text-muted">{{ ts.user.email }}</small>
+                                    </div>
+                                </td>
+
+                                <!-- EMPLOYMENT -->
+                                <td>
+                                    <strong>{{ ts.date_employed|date:"d M Y" }}</strong>
+                                </td>
+
+                                <!-- ID CARD -->
+                                <td>
+                                    <a href="{% url 'staff:lecturer_id_card' ts.id %}"
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-primary">
+                                        ID Card
+                                    </a>
+                                </td>
+
+                                <!-- ACTIONS -->
+                                <td>
+                                    <div class="btn-group">
+                                        {% comment %} <a href="{% url 'staff:lecturer-detail' ts.id %}"
+                                           class="btn btn-sm btn-success">
+                                            View
+                                        </a> {% endcomment %}
+
+                                        <a href="/admin/staff/lecturer/{{ ts.id }}/change/"
+                                           class="btn btn-sm btn-warning">
+                                            Edit
+                                        </a>
+                                    </div>
+                                </td>
+
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    No lecturers found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock content_body %}

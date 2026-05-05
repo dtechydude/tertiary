@@ -34,6 +34,8 @@ from django.db import IntegrityError, transaction, models
 from datetime import date
 from django.views import View
 from django.contrib.admin.views.decorators import staff_member_required
+from curriculum.utils.identity import get_school_identity_for_student
+
 
 from django.utils import timezone
 
@@ -588,38 +590,94 @@ from django.views import View
 from .models import Student
 # Ensure SchoolIdentity is imported from the correct app
 
+# class StudentIDCardView(LoginRequiredMixin, View):
+#     """
+#     Displays a printable ID card for a specific student using Matric Number.
+#     """
+#     def get(self, request, matric_number):
+#         # Fetch using matric_number to align with your existing system logic
+#         student = get_object_or_404(
+#             Student.objects.select_related('user', 'department', 'level'), 
+#             matric_number=matric_number
+#         )
+        
+#         school_identity = SchoolIdentity.objects.first()
+
+#         context = {
+#             'student': student,
+#             'school_identity': school_identity,
+#         }
+#         return render(request, 'students/id_card_single.html', context)
+
+from curriculum.utils.identity import get_school_identity_for_student
+
+
 class StudentIDCardView(LoginRequiredMixin, View):
-    """
-    Displays a printable ID card for a specific student using Matric Number.
-    """
+
     def get(self, request, matric_number):
-        # Fetch using matric_number to align with your existing system logic
+
         student = get_object_or_404(
-            Student.objects.select_related('user', 'department', 'level'), 
+            Student.objects.select_related('user', 'department', 'level'),
             matric_number=matric_number
         )
-        
-        school_identity = SchoolIdentity.objects.first()
 
-        context = {
+        school_identity = get_school_identity_for_student(student)
+
+        return render(request, 'students/id_card_single.html', {
             'student': student,
             'school_identity': school_identity,
-        }
-        return render(request, 'students/id_card_single.html', context)
+        })
+
+
+# class BulkStudentIDCardView(LoginRequiredMixin, View):
+#     """
+#     View to generate multiple ID cards at once, filtered by tertiary parameters.
+#     """
+#     def get(self, request):
+#         # Fetching tertiary filters from the GET request
+#         level_id = request.GET.get('level')
+#         dept_id = request.GET.get('department')
+#         prog_id = request.GET.get('programme')
+
+#         # Optimizing query with select_related for level/dept/programme
+#         students = Student.objects.all().select_related('level', 'department', 'programme')
+
+#         if level_id:
+#             students = students.filter(level_id=level_id)
+#         if dept_id:
+#             students = students.filter(department_id=dept_id)
+#         if prog_id:
+#             students = students.filter(programme_id=prog_id)
+
+#         # Ensure we only show ID cards for "Active" students
+#         students = students.filter(student_status='active')
+
+#         context = {
+#             'students': students,
+#             'levels': Level.objects.all(),
+#             'departments': Department.objects.all(),
+#             'programmes': Programme.objects.all(),
+#             'selected_level': level_id,
+#             'selected_dept': dept_id,
+#             'school_identity': SchoolIdentity.objects.first(),
+#         }
+        
+#         return render(request, 'students/id_card_bulk.html', context)
+
+from curriculum.utils.identity import get_school_identity_for_student
 
 
 class BulkStudentIDCardView(LoginRequiredMixin, View):
-    """
-    View to generate multiple ID cards at once, filtered by tertiary parameters.
-    """
+
     def get(self, request):
-        # Fetching tertiary filters from the GET request
+
         level_id = request.GET.get('level')
         dept_id = request.GET.get('department')
         prog_id = request.GET.get('programme')
 
-        # Optimizing query with select_related for level/dept/programme
-        students = Student.objects.all().select_related('level', 'department', 'programme')
+        students = Student.objects.all().select_related(
+            'level', 'department', 'programme'
+        )
 
         if level_id:
             students = students.filter(level_id=level_id)
@@ -628,22 +686,21 @@ class BulkStudentIDCardView(LoginRequiredMixin, View):
         if prog_id:
             students = students.filter(programme_id=prog_id)
 
-        # Ensure we only show ID cards for "Active" students
         students = students.filter(student_status='active')
 
-        context = {
+        # 🔥 KEY FIX: dynamic identity resolution
+        first_student = students.first()
+        school_identity = get_school_identity_for_student(first_student)
+
+        return render(request, 'students/id_card_bulk.html', {
             'students': students,
             'levels': Level.objects.all(),
             'departments': Department.objects.all(),
             'programmes': Programme.objects.all(),
             'selected_level': level_id,
             'selected_dept': dept_id,
-            'school_identity': SchoolIdentity.objects.first(),
-        }
-        
-        return render(request, 'students/id_card_bulk.html', context)
-
-
+            'school_identity': school_identity,
+        })
 
 
 #TERTIARY LOGIC ============================================================

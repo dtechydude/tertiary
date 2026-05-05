@@ -1,15 +1,13 @@
 from django.urls import path
-# from staff import views as staff_views
-# from .views import(TeacherDetailView,
-#                    TeacherUpdateView,TeacherDeleteView,
-#                      TeacherSelfDetailView, TeacherStudentCountListView, TeacherIDCardView)
+from staff import views as staff_views
+from .views import(LecturerIDCardView, )
 
 
 app_name ='staff'
 
 urlpatterns = [
 
-    # path('teacher_list/', staff_views.teachers_list, name='teacher-list'),
+    path('lecturer_list/', staff_views.lecturers_list, name='lecturer-list'),
     # path('assignments/', staff_views.teacher_subjects_standards_view, name='teacher_assignments'),
     # path('<int:teacher_id>/profile/', staff_views.teacher_profile_view, name='teacher_profile'),
     # path('my-assignments/', staff_views.my_assignments_view, name='my_assignments'),
@@ -40,7 +38,7 @@ urlpatterns = [
     #  # URL to list all teachers and their student counts (class-based)
     # path('teachers/cbv_all_counts/', TeacherStudentCountListView.as_view(), name='cbv_all_teachers_student_counts'),
 
-    # path('teacher/<int:teacher_id>/id-card/', TeacherIDCardView.as_view(), name='teacher_id_card'),
+    path('lecturer/<int:lecturer_id>/id-card/', LecturerIDCardView.as_view(), name='lecturer_id_card'),
     
      
 

@@ -1,154 +1,213 @@
 {% load crispy_forms_tags %}
 {% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lecturer Onboarding | Schoolly EdTech</title>
-    
+    <title>Lecturer Onboarding | {{ school_info.name }}</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f4f7f6; color: #333; }
-        .onboarding-card { border: none; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-top: 50px; margin-bottom: 50px; }
-        .card-header-custom { background: linear-gradient(135deg, #2bc155 0%, #23a046 100%); padding: 40px; color: white; text-align: center; }
-        .nav-pills { background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
-        .nav-pills .nav-link { color: #666; font-weight: 500; transition: all 0.3s ease; margin: 0 5px; }
-        .nav-pills .nav-link.active { background-color: #2bc155 !important; color: white !important; transform: translateY(-2px); }
-        .form-control { border-radius: 8px; padding: 12px; border: 1px solid #e0e0e0; transition: border-color 0.3s; }
-        .form-control:focus { border-color: #2bc155; box-shadow: 0 0 0 0.2rem rgba(43, 193, 85, 0.15); }
-        .btn-success { background-color: #2bc155; border: none; padding: 15px 40px; border-radius: 10px; font-weight: 600; transition: transform 0.2s; }
-        .btn-success:hover { background-color: #23a046; transform: scale(1.02); }
-        .icon-badge { width: 40px; height: 40px; background: rgba(43, 193, 85, 0.1); color: #2bc155; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; margin-right: 10px; }
-        .section-divider { height: 2px; background-color: #f0f0f0; margin: 30px 0; }
+        body {
+            background: #f4f7fb;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .top-bar {
+            background: #1e3a8a;
+            color: white;
+            padding: 15px 20px;
+        }
+
+        .card {
+            border-radius: 14px;
+            border: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            color: white;
+            text-align: center;
+            padding: 35px;
+        }
+
+        .nav-pills .nav-link.active {
+            background: #1e3a8a;
+        }
+
+        .btn-main {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+        }
+
+        .btn-main:hover {
+            background: #0f2c6c;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 15px;
+            font-size: 13px;
+            color: #777;
+        }
     </style>
 </head>
+
 <body>
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-xl-10">
-            <div class="card onboarding-card">
-                <div class="card-header-custom">
-                    <i class="fas fa-user-graduate fa-3x mb-3"></i>
-                    <h2 class="fw-bold mb-0">Lecturer Enrollment Portal</h2>
-                    <p class="opacity-75">Academic Staff Onboarding System</p>
-                </div>
+<!-- TOP BAR -->
+<div class="top-bar d-flex justify-content-between">
+    <strong>{{ school_info.name }}</strong>
+    <a href="/dashboard" class="btn btn-light btn-sm">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+</div>
 
-                <div class="card-body p-4 p-md-5">
-                    {% if u_form.errors or l_form.errors %}
-                        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert">
-                            <i class="fas fa-exclamation-circle me-3 fa-lg"></i>
-                            <div>
-                                <strong>Form Error:</strong> Please review the highlighted fields in each tab.
-                            </div>
-                        </div>
-                    {% endif %}
+<div class="container py-5">
+    <div class="card">
 
-                    <form method="POST" enctype="multipart/form-data" id="enrollmentForm">
-                        {% csrf_token %}
-
-                        <ul class="nav nav-pills mb-5 justify-content-center" id="pills-tab" role="tablist">
-                            <li class="nav-item">
-                                <button class="nav-link active" id="account-tab" data-bs-toggle="pill" data-bs-target="#tab-account" type="button">
-                                    <i class="fas fa-lock me-2"></i> Account
-                                </button>
-                            </li>
-                            <li class="nav-item">
-                                <button class="nav-link" id="bio-tab" data-bs-toggle="pill" data-bs-target="#tab-bio" type="button">
-                                    <i class="fas fa-user me-2"></i> Biography
-                                </button>
-                            </li>
-                            <li class="nav-item">
-                                <button class="nav-link" id="academic-tab" data-bs-toggle="pill" data-bs-target="#tab-academic" type="button">
-                                    <i class="fas fa-award me-2"></i> Professional
-                                </button>
-                            </li>
-                        </ul>
-
-                        <div class="tab-content mt-2">
-                            <div class="tab-pane fade show active" id="tab-account">
-                                <h5 class="fw-bold mb-4 text-success"><span class="icon-badge">1</span> Login Credentials</h5>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">{{ u_form.first_name|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ u_form.last_name|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ u_form.username|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ u_form.email|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ u_form.password|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ u_form.password2|as_crispy_field }}</div>
-                                </div>
-                                <div class="text-end mt-4">
-                                    <button type="button" class="btn btn-outline-success px-4" onclick="switchTab('bio-tab')">Continue to Bio <i class="fas fa-arrow-right ms-2"></i></button>
-                                </div>
-                            </div>
-
-                            <div class="tab-pane fade" id="tab-bio">
-                                <h5 class="fw-bold mb-4 text-success"><span class="icon-badge">2</span> Personal Information</h5>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">{{ l_form.middle_name|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ l_form.date_employed|as_crispy_field }}</div>
-                                    <div class="col-md-4 mb-3">{{ l_form.department|as_crispy_field }}</div>
-                                    <div class="col-md-4 mb-3">{{ l_form.position|as_crispy_field }}</div>
-                                    <div class="col-md-4 mb-3">{{ l_form.gender|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ l_form.marital_status|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ l_form.phone|as_crispy_field }}</div>
-                                    <div class="col-md-12 mb-3">{{ l_form.address|as_crispy_field }}</div>
-                                </div>
-                                <div class="text-end mt-4">
-                                    <button type="button" class="btn btn-outline-success px-4" onclick="switchTab('academic-tab')">Continue to Professional <i class="fas fa-arrow-right ms-2"></i></button>
-                                </div>
-                            </div>
-
-                            <div class="tab-pane fade" id="tab-academic">
-                                <h5 class="fw-bold mb-4 text-success"><span class="icon-badge">3</span> Qualifications & Emergency</h5>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">{{ l_form.highest_qualification|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ l_form.institution|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ l_form.year_obtained|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ l_form.professional_body|as_crispy_field }}</div>
-                                    
-                                    <div class="section-divider"></div>
-                                    
-                                    <div class="col-md-6 mb-3">{{ l_form.guarantor_name|as_crispy_field }}</div>
-                                    <div class="col-md-6 mb-3">{{ l_form.next_of_kin_name|as_crispy_field }}</div>
-                                    <div class="col-md-12 mb-3">{{ l_form.next_of_kin_phone|as_crispy_field }}</div>
-                                </div>
-                                <div class="text-center mt-5">
-                                    <button type="submit" class="btn btn-success btn-lg shadow">
-                                        <i class="fas fa-check-circle me-2"></i> Finalize Enrollment
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <p class="text-center text-muted small">Powered by Schoolly EdTech Portal &copy; 2026</p>
+        <!-- HEADER -->
+        <div class="header">
+            {% if school_info.logo %}
+                <img src="{{ school_info.logo.url }}" width="60">
+            {% endif %}
+            <h3 class="mt-2">Lecturer Enrollment</h3>
+            <small>Academic Staff Registration</small>
         </div>
+
+        <div class="card-body p-4">
+
+            {% if u_form.errors or l_form.errors %}
+                <div class="alert alert-danger">
+                    Please fix the errors below.
+                </div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- NAV -->
+                <ul class="nav nav-pills justify-content-center mb-4">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="account-tab" data-bs-toggle="pill" data-bs-target="#account">
+                            Account
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="bio-tab" data-bs-toggle="pill" data-bs-target="#bio">
+                            Bio
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="pro-tab" data-bs-toggle="pill" data-bs-target="#pro">
+                            Professional
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- ACCOUNT -->
+                    <div class="tab-pane fade show active" id="account">
+                        <div class="row">
+                            <div class="col-md-6">{{ u_form.first_name|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ u_form.last_name|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ u_form.username|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ u_form.email|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ u_form.password|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ u_form.password2|as_crispy_field }}</div>
+                        </div>
+
+                        <!-- CONTINUE BUTTON -->
+                        <div class="text-end mt-4">
+                            <button type="button" class="btn btn-outline-primary" onclick="switchTab('bio-tab')">
+                                Continue to Bio →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BIO -->
+                    <div class="tab-pane fade" id="bio">
+                        <div class="row">
+                            <div class="col-md-6">{{ l_form.middle_name|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.date_employed|as_crispy_field }}</div>
+                            <div class="col-md-4">{{ l_form.department|as_crispy_field }}</div>
+                            <div class="col-md-4">{{ l_form.position|as_crispy_field }}</div>
+                            <div class="col-md-4">{{ l_form.gender|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.phone|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.marital_status|as_crispy_field }}</div>
+                            <div class="col-md-12">{{ l_form.address|as_crispy_field }}</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-outline-secondary" onclick="switchTab('account-tab')">
+                                ← Back
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" onclick="switchTab('pro-tab')">
+                                Continue →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PROFESSIONAL -->
+                    <div class="tab-pane fade" id="pro">
+                        <div class="row">
+                            <div class="col-md-6">{{ l_form.highest_qualification|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.institution|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.year_obtained|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.professional_body|as_crispy_field }}</div>
+
+                            <div class="col-md-6">{{ l_form.guarantor_name|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.guarantor_phone|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.next_of_kin_name|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ l_form.next_of_kin_phone|as_crispy_field }}</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-outline-secondary" onclick="switchTab('bio-tab')">
+                                ← Back
+                            </button>
+
+                            <button type="submit" class="btn btn-main">
+                                Submit Registration
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer mt-4">
+        © {{ school_info.name }} | Powered by Schoolly EdTech
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // 1. Force Username to Uppercase (Your Staff ID)
-    const usernameBox = document.querySelector('#id_username');
-    if(usernameBox) {
-        usernameBox.addEventListener('input', function() {
-            this.value = this.value.toUpperCase();
-        });
-    }
+function switchTab(tabId) {
+    var tab = new bootstrap.Tab(document.getElementById(tabId));
+    tab.show();
+    window.scrollTo(0, 0);
+}
 
-    // 2. Helper function to switch tabs via buttons
-    function switchTab(tabId) {
-        var someTabTriggerEl = document.querySelector('#' + tabId);
-        var tab = new bootstrap.Tab(someTabTriggerEl);
-        tab.show();
-        window.scrollTo(0, 0);
-    }
+// Uppercase username
+const username = document.getElementById("id_username");
+if (username) {
+    username.addEventListener("input", function () {
+        this.value = this.value.toUpperCase();
+    });
+}
 </script>
 
 </body>
