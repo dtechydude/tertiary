@@ -23,56 +23,68 @@ from tinymce.models import HTMLField
 
 # New School Identity
 class SchoolIdentity(models.Model):
-    name = models.CharField(max_length=50)
-    identity_label = models.CharField(max_length=50, help_text="e.g. Primary, Secondary, or Main", blank=True, null=True)
-    is_default = models.BooleanField(default=False, help_text="Fallback identity if no specific class identity is set.")
-    # ... (your existing address, phone, logo, signature fields) ...
-    address_line_1 = models.CharField(max_length=60)
-    address_line_2 = models.CharField(max_length=60, blank=True, null=True)
-    phone1 = models.CharField(max_length=11)
-    phone2 = models.CharField(max_length=11, blank=True, null=True)
-    email = models.CharField(max_length=50, blank=True, null=True)
-    website = models.CharField(max_length=50, blank=True, null=True)
-    logo = models.ImageField(default='school_logo.jpg', upload_to='official_pics', help_text='must not exceed 180px by 180px in size')
-    signature = models.ImageField(blank=True, null=True, upload_to='official_pics', help_text='must not exceed 180px by 180px in size')
+    name = models.CharField(max_length=100)
+    identity_label = models.CharField(
+        max_length=50,
+        help_text="e.g. Main, Faculty of Science, School of Engineering"
+    )
+    is_default = models.BooleanField(default=False)
+
+    address_line_1 = models.CharField(max_length=100)
+    address_line_2 = models.CharField(max_length=100, blank=True, null=True)
+    phone1 = models.CharField(max_length=15)
+    phone2 = models.CharField(max_length=15, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    website = models.CharField(max_length=100, blank=True, null=True)
+
+    logo = models.ImageField(upload_to='official_pics', default='school_logo.jpg')
+    signature = models.ImageField(upload_to='official_pics', blank=True, null=True)
 
     slug = models.SlugField(null=True, blank=True)
 
-
     def save(self, *args, **kwargs):
-        # Limit to 3 entries
-        if not self.pk and SchoolIdentity.objects.count() >= 3:
-            raise ValidationError("Kwikschools Portal only supports up to 3 School Identities.")
-        
-        # Ensure only one is the default
+        if not self.pk and SchoolIdentity.objects.count() >= 5:
+            raise ValidationError("Maximum of 5 identities allowed.")
+
         if self.is_default:
             SchoolIdentity.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
-            
-        super().save(*args, **kwargs)
 
-    class Meta:
-        verbose_name = "School Identity Setting"
-        verbose_name_plural = "School Identity Settings"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} ({self.identity_label})"
+ 
+    
+class AcademicIdentityMapping(models.Model):
+    """
+    Maps identity to Department or Faculty
+    """
 
+    faculty = models.ForeignKey(
+        'curriculum.Faculty',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
 
-# # Standard or another branch identity
-# class StandardIdentity(models.Model):
-#     # Link to your existing Standard/Class model
-#     standard = models.OneToOneField('Standard', on_delete=models.CASCADE, related_name='identity_mapping')
-#     # Link to one of the 3 identities
-#     school_identity = models.ForeignKey(SchoolIdentity, on_delete=models.CASCADE)
+    department = models.OneToOneField(
+        'curriculum.Department',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
 
-#     class Meta:
-#         verbose_name = "Class-Identity Mapping"
-#         verbose_name_plural = "Class-Identity Mappings"
+    school_identity = models.ForeignKey(
+        SchoolIdentity,
+        on_delete=models.CASCADE
+    )
 
-#     def __str__(self):
-#         return f"{self.standard.name} -> {self.school_identity.identity_label}"
-
-
+    def __str__(self):
+        if self.department:
+            return f"{self.department.name} → {self.school_identity.identity_label}"
+        if self.faculty:
+            return f"{self.faculty.name} → {self.school_identity.identity_label}"
+        return "Unassigned Mapping"
 
 
 class Session(models.Model):

@@ -9,8 +9,8 @@ from attendance.models import Attendance
 from staff.models import Lecturer
 from payments.models import BankDetail
 from users.models import Profile
-from curriculum.models import Level, SchoolIdentity, Semester
-from students.models import Parent
+from curriculum.models import Level, SchoolIdentity, Programme, Faculty
+from students.models import Student
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -22,6 +22,8 @@ from django.core.mail import send_mass_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from .models import Newsletter
+
+
 
 
 # Create your views here.
@@ -40,9 +42,11 @@ def dashboard(request):
     users_num = User.objects.count()
     student_num = Student.objects.count()
     student_num_current = Student.objects.filter(student_status__in=['active', 'inactive']).count()
-    num_of_classes = Level.objects.count()
-    # boarder_std = Student.objects.filter(student_type='boarder', student_status='active').count()
-    # day_std = Student.objects.filter(student_type='day_student', student_status='active').count()
+    num_of_level = Level.objects.count()
+    num_of_program = Programme.objects.count()
+    num_of_faculty = Faculty.objects.count()
+    boarder_std = Student.objects.filter(student_status='active', assigned_room__isnull=False).count()
+    offcampus_std = Student.objects.filter(student_type='day_student', student_status='active').count()
     inactive_std = Student.objects.filter(student_status='inactive').count()
 
     num_student_inclass = Level.objects.filter().count()
@@ -80,8 +84,8 @@ def dashboard(request):
        
     context = {        
         'student_num': student_num,
-        # 'boarder_std':boarder_std,
-        # 'day_std': day_std,
+        'boarder_std':boarder_std,
+        'offcampus_std': offcampus_std,
         'students' : students,
         'users_num': users_num,
         'num_inclass': num_inclass,
@@ -97,9 +101,10 @@ def dashboard(request):
         'events':events,
         'my_idcard':my_idcard,
         # 'my_students':my_students,
-        # 'no_inteacherclass': no_inteacherclass,
         'classrooms':classrooms,
-        'num_of_classes':num_of_classes,
+        'num_of_level':num_of_level,
+        'num_of_program':num_of_program,
+        'num_of_faculty':num_of_faculty,
         'student_num_current':student_num_current,
         'inactive_std ': inactive_std,
     

@@ -895,8 +895,8 @@
 													</span>
 													<div class="ms-4">
 														{% if user.is_superuser or user.is_staff %}
-														<h5 class="mb-0 font-w600">{{ users_num }}</h5>
-														<p class="mb-0 text-nowrap ">Total Users</p>
+														<h5 class="mb-0 font-w600">{{ num_of_faculty }}</h5>
+														<p class="mb-0 text-nowrap ">All Faculties</p>
 
 														{% elif user.is_authenticated and user.lecturer %}
 														<h5 class="mb-0 font-w600">{{ user.lecturer.department }}</h5>
@@ -926,8 +926,8 @@
 													</span>
 													<div class="ms-4">
 														{% if user.is_superuser or user.is_staff %}
-														<h5 class="mb-0 font-w600">{{ num_of_classes }}</h5>
-														<p class="mb-0 text-nowrap ">No. Of Class</p>
+														<h5 class="mb-0 font-w600">{{ num_of_program }}</h5>
+														<p class="mb-0 text-nowrap ">All Programmes</p>
 
 														{% elif user.is_authenticated and user.lecturer %}
 														<h5 class="mb-0 font-w600">{{ user.lecturer.position }}</h5>
@@ -1095,7 +1095,7 @@
 												<div class="card bg-secondary">
 													<div class="card-body">
 														<div class="d-flex align-items-end pb-4 justify-content-between">
-															<span class="fs-14 font-w500 text-white">Total Teachers</span>
+															<span class="fs-14 font-w500 text-white">Total Lecturers</span>
 															<span class="fs-20 font-w600 text-white"><span class="pe-2"></span>{{ teacher_num }}</span>
 														</div>
 														<div class="progress default-progress h-auto">
@@ -1115,13 +1115,13 @@
 															<div class="col-xl-3 col-sm-3 col-6 mb-4 col-xxl-6">
 																<div class="text-center">
 																	<h5 class="fs-28 font-w600">{{ boarder_std}}</h5>
-																	<span class="fs-16">Boarding Students</span>
+																	<span class="fs-16">In Hostel</span>
 																</div>
 															</div>
 															<div class="col-xl-3 col-sm-3 col-6 mb-4 col-xxl-6">
 																<div class="text-center">
-																	<h5 class="fs-28 font-w600">{{ day_std }}</h5>
-																	<span class="fs-16 wspace-no">Day Students</span>
+																	<h5 class="fs-28 font-w600">{{ offcampus_std }}</h5>
+																	<span class="fs-16 wspace-no">Off Campus</span>
 																</div>
 															</div>
 															

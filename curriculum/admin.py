@@ -9,8 +9,20 @@ from import_export.admin import ImportExportModelAdmin
 # from payments.models import StudentFeeAssignment, ClassFeeTemplate, PaymentCategory
 # from results.models import SessionResultStatus
 
-from .models import Faculty, Department, Programme, Level, Course, Session, Semester, CourseAssignment, CourseRegistration
+from .models import (
+    Faculty,
+    Department,
+    Programme,
+    Level,
+    Course,
+    Session,
+    Semester,
+    CourseAssignment,
+    CourseRegistration,
+    AcademicIdentityMapping,
+    SchoolIdentity,
 
+)
 
 
 @admin.register(Session)
@@ -102,3 +114,27 @@ class CourseRegistrationAdmin(admin.ModelAdmin):
     list_display = ("student", "course", "session", "semester")
     list_filter = ("session", "semester", "course__department")
     search_fields = ("student__matric_number", "course__course_code")
+
+
+class AcademicIdentityInline(admin.TabularInline):
+    model = AcademicIdentityMapping
+    extra = 1
+
+@admin.register(SchoolIdentity)
+class SchoolIdentityAdmin(admin.ModelAdmin):
+
+    def has_add_permission(self, request):
+        if self.model.objects.count() >= 5:
+            return False
+        return super().has_add_permission(request)
+
+    list_display = ('identity_label', 'name', 'is_default', 'phone1', 'email')
+    list_editable = ('is_default',)
+    exclude = ['slug']
+
+    inlines = [AcademicIdentityInline]
+
+@admin.register(AcademicIdentityMapping)
+class AcademicIdentityMappingAdmin(admin.ModelAdmin):
+    list_display = ('department', 'faculty', 'school_identity')
+    list_filter = ('school_identity',)
