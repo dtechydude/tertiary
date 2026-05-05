@@ -1,0 +1,59 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Lecturer Profile</title>
+{% endblock title %}
+
+{% block content_body %}
+<div class="content-body">
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between mb-3">
+        <h3>Lecturer Profile</h3>
+        <a href="{% url 'staff:lecturer-list' %}" class="btn btn-outline-secondary">
+            Back
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-md-3 text-center">
+                    <img src="{{ lecturer.user.profile.image_url }}"
+                         class="rounded-circle mb-2"
+                         width="120" height="120">
+
+                    <h5>{{ lecturer.get_full_name }}</h5>
+                    <p class="text-muted">@{{ lecturer.user.username }}</p>
+                </div>
+
+                <div class="col-md-9">
+
+                    <h6 class="text-primary">Details</h6>
+
+                    <p><strong>Department:</strong> {{ lecturer.department.name }}</p>
+                    <p><strong>Phone:</strong> {{ lecturer.phone }}</p>
+                    <p><strong>Email:</strong> {{ lecturer.user.email }}</p>
+                    <p><strong>Gender:</strong> {{ lecturer.gender }}</p>
+                    <p><strong>Employment Date:</strong> {{ lecturer.date_employed }}</p>
+
+                    <hr>
+
+                    <a href="{% url 'staff:lecturer_id_card' lecturer.id %}"
+                       class="btn btn-primary">
+                        View ID Card
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+</div>
+{% endblock content_body %}

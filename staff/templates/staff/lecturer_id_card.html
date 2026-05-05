@@ -1,0 +1,310 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Staff ID: {{ lecturer.get_full_name }}</title>
+
+<link rel="shortcut icon" href="{% static 'pages/images/favicon.png' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+:root{
+    --primary:#0f172a;
+    --accent:#1e40af;
+    --gold:#d4af37;
+}
+
+/* ===== BODY ===== */
+body{
+    background:#f5f7fb;
+    font-family:'Segoe UI',sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:20px;
+}
+
+/* ===== CARD ===== */
+.id-card{
+    width:520px;
+    background:#fff;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,0.1);
+    border:1px solid #ddd;
+    position:relative;
+}
+
+/* ===== WATERMARK ===== */
+.watermark{
+    position:absolute;
+    inset:0;
+    opacity:0.05;
+    display:flex;
+    flex-wrap:wrap;
+    transform:rotate(-25deg);
+    pointer-events:none;
+}
+
+.watermark span{
+    margin:12px;
+    font-size:12px;
+    font-weight:900;
+}
+
+/* ===== HEADER ===== */
+.header{
+    background:var(--primary);
+    color:#fff;
+    padding:15px;
+    display:flex;
+    align-items:center;
+    border-bottom:4px solid var(--gold);
+}
+
+.logo{
+    width:55px;
+    height:55px;
+    border-radius:50%;
+    background:#fff;
+    padding:5px;
+    object-fit:contain;
+    margin-right:12px;
+}
+
+.header-text h4{
+    margin:0;
+    font-size:14px;
+    font-weight:800;
+}
+
+.header-text small{
+    font-size:11px;
+    opacity:0.8;
+}
+
+/* ===== BODY ===== */
+.body{
+    display:flex;
+    padding:18px;
+    gap:15px;
+}
+
+/* PHOTO */
+.photo{
+    width:120px;
+}
+
+.photo img{
+    width:100%;
+    height:150px;
+    object-fit:cover;
+    border-radius:6px;
+    border:2px solid #eee;
+}
+
+/* DETAILS */
+.details{
+    flex:1;
+}
+
+.name{
+    font-weight:900;
+    font-size:16px;
+    color:var(--primary);
+    margin-bottom:5px;
+    text-transform:uppercase;
+}
+
+.badge-dept{
+    background:#e0ecff;
+    color:var(--accent);
+    padding:4px 8px;
+    font-size:11px;
+    border-radius:4px;
+    margin-bottom:8px;
+    display:inline-block;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    font-size:12px;
+}
+
+.label{
+    font-weight:700;
+    color:#777;
+    font-size:10px;
+    text-transform:uppercase;
+}
+
+.value{
+    font-weight:700;
+    color:#333;
+}
+
+/* QR */
+.qr{
+    width:80px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+/* ===== FOOTER ===== */
+.footer{
+    background:var(--primary);
+    color:#fff;
+    text-align:center;
+    padding:8px;
+    font-size:11px;
+    font-weight:bold;
+}
+
+.footer span{
+    display:block;
+    font-size:10px;
+    color:var(--gold);
+}
+
+/* ===== BUTTONS ===== */
+.actions{
+    margin-top:15px;
+}
+
+@media print{
+    body{background:#fff}
+    .actions{display:none}
+    .id-card{
+        box-shadow:none;
+        border:1px solid #000;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="id-card">
+
+    <!-- WATERMARK -->
+    <div class="watermark">
+        {% for i in "12345678901234567890" %}
+            <span>{{ school_identity.name }}</span>
+        {% endfor %}
+    </div>
+
+    <!-- HEADER -->
+    <div class="header">
+        {% if school_identity.logo %}
+            <img src="{{ school_identity.logo.url }}" class="logo">
+        {% else %}
+            <img src="{% static 'pages/images/logo.png' %}" class="logo">
+        {% endif %}
+
+        <div class="header-text">
+            <h4>{{ school_identity.name|upper }}</h4>
+            <small>STAFF IDENTITY CARD</small>
+        </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="body">
+
+        <!-- PHOTO -->
+        <div class="photo">
+            {% if lecturer.user.profile.image %}
+                <img src="{{ lecturer.user.profile.image.url }}">
+            {% else %}
+                <img src="{% static 'pages/images/default-avatar.png' %}">
+            {% endif %}
+        </div>
+
+        <!-- DETAILS -->
+        <div class="details">
+            <div class="name">{{ lecturer.get_full_name }}</div>
+
+            <div class="badge-dept">
+                {{ lecturer.department.name|default:"GENERAL" }}
+            </div>
+
+            <div class="grid">
+
+                <div>
+                    <div class="label">Staff ID</div>
+                    <div class="value">{{ lecturer.staff_id }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Position</div>
+                    <div class="value">
+                        {{ lecturer.position.name|default:"Lecturer" }}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="label">Gender</div>
+                    <div class="value">{{ lecturer.gender|upper }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Joined</div>
+                    <div class="value">{{ lecturer.date_employed|date:"M Y" }}</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- QR -->
+        <div class="qr">
+            <div id="qrcode"></div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        {{ school_identity.name|upper }}
+        <span>IF FOUND, CONTACT: {{ school_identity.phone1|default:"ADMIN OFFICE" }}</span>
+    </div>
+
+</div>
+
+<!-- ACTION BUTTONS -->
+<div class="actions">
+    <a href="/dashboard" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+
+    <button onclick="window.print()" class="btn btn-dark">
+        <i class="fas fa-print"></i> Print
+    </button>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+    const qrData = `
+    STAFF ID: {{ lecturer.staff_id }}
+    NAME: {{ lecturer.get_full_name }}
+    DEPT: {{ lecturer.department.name }}
+    SCHOOL: {{ school_identity.name }}
+    `;
+
+    new QRCode(document.getElementById("qrcode"), {
+        text: qrData,
+        width:70,
+        height:70
+    });
+
+});
+</script>
+
+</body>
+</html>

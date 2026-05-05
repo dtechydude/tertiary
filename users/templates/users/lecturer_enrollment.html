@@ -12,10 +12,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
     <style>
-        body {
-            background: #f4f7fb;
-            font-family: 'Segoe UI', sans-serif;
-        }
+        body { background: #f4f7fb; font-family: 'Segoe UI', sans-serif; }
 
         .top-bar {
             background: #1e3a8a;
@@ -46,15 +43,25 @@
             border: none;
         }
 
-        .btn-main:hover {
-            background: #0f2c6c;
-        }
+        .btn-main:hover { background: #0f2c6c; }
 
         .footer {
             text-align: center;
             padding: 15px;
             font-size: 13px;
             color: #777;
+        }
+
+        .error-field {
+            border: 2px solid #dc3545 !important;
+        }
+
+        .valid-field {
+            border: 2px solid #28a745 !important;
+        }
+
+        .small-text {
+            font-size: 12px;
         }
     </style>
 </head>
@@ -89,7 +96,7 @@
                 </div>
             {% endif %}
 
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" id="mainForm">
                 {% csrf_token %}
 
                 <!-- NAV -->
@@ -120,11 +127,18 @@
                             <div class="col-md-6">{{ u_form.last_name|as_crispy_field }}</div>
                             <div class="col-md-6">{{ u_form.username|as_crispy_field }}</div>
                             <div class="col-md-6">{{ u_form.email|as_crispy_field }}</div>
-                            <div class="col-md-6">{{ u_form.password|as_crispy_field }}</div>
-                            <div class="col-md-6">{{ u_form.password2|as_crispy_field }}</div>
+
+                            <div class="col-md-6">
+                                {{ u_form.password|as_crispy_field }}
+                                <small id="passHelp" class="small-text text-muted"></small>
+                            </div>
+
+                            <div class="col-md-6">
+                                {{ u_form.password2|as_crispy_field }}
+                                <small id="passMatch" class="small-text"></small>
+                            </div>
                         </div>
 
-                        <!-- CONTINUE BUTTON -->
                         <div class="text-end mt-4">
                             <button type="button" class="btn btn-outline-primary" onclick="switchTab('bio-tab')">
                                 Continue to Bio →
@@ -174,7 +188,7 @@
                                 ← Back
                             </button>
 
-                            <button type="submit" class="btn btn-main">
+                            <button type="submit" id="submitBtn" class="btn btn-main">
                                 Submit Registration
                             </button>
                         </div>
@@ -188,7 +202,7 @@
 
     <!-- FOOTER -->
     <div class="footer mt-4">
-        © {{ school_info.name }} | Powered by Schoolly EdTech
+        © {{ school_info.name }} | Powered by KwikSchools EdTech
     </div>
 </div>
 
@@ -201,13 +215,82 @@ function switchTab(tabId) {
     window.scrollTo(0, 0);
 }
 
-// Uppercase username
+/* USERNAME AUTO UPPERCASE */
 const username = document.getElementById("id_username");
 if (username) {
     username.addEventListener("input", function () {
         this.value = this.value.toUpperCase();
     });
 }
+
+/* REAL-TIME REQUIRED FIELD VALIDATION */
+document.querySelectorAll("input, select, textarea").forEach(field => {
+    field.addEventListener("blur", function () {
+        if (this.hasAttribute("required") && !this.value.trim()) {
+            this.classList.add("error-field");
+        } else {
+            this.classList.remove("error-field");
+        }
+    });
+});
+
+/* PASSWORD MATCH VALIDATION */
+const pass1 = document.getElementById("id_password");
+const pass2 = document.getElementById("id_password2");
+const matchText = document.getElementById("passMatch");
+const submitBtn = document.getElementById("submitBtn");
+
+function checkPasswordMatch() {
+    if (!pass1 || !pass2) return;
+
+    if (pass2.value === "") {
+        matchText.innerHTML = "";
+        submitBtn.disabled = false;
+        return;
+    }
+
+    if (pass1.value === pass2.value) {
+        matchText.innerHTML = "✓ Passwords match";
+        matchText.style.color = "green";
+        pass2.classList.remove("error-field");
+        pass2.classList.add("valid-field");
+        submitBtn.disabled = false;
+    } else {
+        matchText.innerHTML = "✗ Passwords do not match";
+        matchText.style.color = "red";
+        pass2.classList.add("error-field");
+        submitBtn.disabled = true;
+    }
+}
+
+if (pass1 && pass2) {
+    pass1.addEventListener("keyup", checkPasswordMatch);
+    pass2.addEventListener("keyup", checkPasswordMatch);
+}
+
+/* PREVENT EMPTY SUBMISSION + AUTO TAB SWITCH */
+document.getElementById("mainForm").addEventListener("submit", function(e) {
+    let firstError = null;
+
+    document.querySelectorAll("input[required], select[required]").forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add("error-field");
+
+            if (!firstError) {
+                firstError = field;
+
+                let tabPane = field.closest(".tab-pane");
+                let tabId = tabPane.id + "-tab";
+                switchTab(tabId);
+            }
+        }
+    });
+
+    if (firstError) {
+        e.preventDefault();
+        firstError.focus();
+    }
+});
 </script>
 
 </body>

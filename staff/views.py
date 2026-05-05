@@ -22,41 +22,48 @@ from curriculum.models import SchoolIdentity
 from staff.forms import LecturerUpdateForm, LecturerForm, CustomUserCreationForm, StaffRegisterForm, StaffUpdateForm
 from django.contrib.auth.forms import UserCreationForm
 
-
-import csv
-from django.http import HttpResponse
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-
-from staff.models import Lecturer
+from django.core.paginator import Paginator
+from django.db.models import Q
 
 
-# Tertiary Logic for Lecturer List
+
+
 @login_required
 def lecturers_list(request):
     """
-    Staff-only view to display all lecturers and export data to CSV.
+    Staff-only view with:
+    - Search
+    - Pagination
+    - CSV export
     """
 
-    # 🔐 Access control (tertiary admin logic)
+    # 🔐 Access Control
     if not (request.user.is_staff or request.user.is_superuser):
         return redirect('pages:portal_home')
 
-    # ⚡ Optimized query for tertiary structure
-    lecturers = Lecturer.objects.select_related(
-        'user',
-        'department',
-        'position'
+    # ⚡ Base Query
+    lecturers_qs = Lecturer.objects.select_related(
+        'user', 'department', 'position'
     ).order_by('user__last_name', 'user__first_name')
 
-    # 📤 CSV Export
+    # 🔍 SEARCH
+    search_query = request.GET.get('search', '').strip()
+
+    if search_query:
+        lecturers_qs = lecturers_qs.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__username__icontains=search_query) |
+            Q(user__email__icontains=search_query) |
+            Q(department__name__icontains=search_query)
+        )
+
+    # 📤 CSV EXPORT (respects search)
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="lecturers_list.csv"'
 
         writer = csv.writer(response)
-
-        # Header row (tertiary staff structure)
         writer.writerow([
             'Staff ID',
             'Full Name',
@@ -68,7 +75,7 @@ def lecturers_list(request):
             'Date Employed'
         ])
 
-        for l in lecturers:
+        for l in lecturers_qs:
             writer.writerow([
                 l.staff_id,
                 l.get_full_name(),
@@ -82,13 +89,42 @@ def lecturers_list(request):
 
         return response
 
-    # 🖥 Normal template rendering
+    # 📄 PAGINATION
+    paginator = Paginator(lecturers_qs, 10)  # 10 per page
+    page_number = request.GET.get('page')
+    lecturers = paginator.get_page(page_number)
+
     context = {
-        'lecturers': lecturers
+        'lecturers': lecturers,
+        'search_query': search_query
     }
 
     return render(request, 'staff/lecturers_list.html', context)
 
+
+
+# Tertiary ID CArd
+class LecturerIDCardView(LoginRequiredMixin, View):
+    """
+    Displays a printable ID card for a specific lecturer.
+    """
+
+    def get(self, request, lecturer_id):
+        lecturer = get_object_or_404(
+            Lecturer.objects.select_related('user', 'department'),
+            id=lecturer_id
+        )
+
+        # Get school identity (fallback safe)
+        school_identity = SchoolIdentity.objects.first()
+
+        context = {
+            'lecturer': lecturer,
+            'school_identity': school_identity,
+        }
+
+        return render(request, 'staff/lecturer_id_card.html', context)
+    
 
 # Display only my teacher
 @login_required # Ensure only logged-in users can access this view
@@ -123,24 +159,44 @@ def my_teacher_view(request):
 
 
 # Specific to the login detail
+from django.shortcuts import get_object_or_404
+from django.views.generic import DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from .models import Lecturer
+
+
+# =========================
+# 1. LOGGED-IN LECTURER VIEW
+# =========================
 class LecturerSelfDetailView(LoginRequiredMixin, DetailView):
-    template_name = 'staff/teacher_self_detail.html'
+    """
+    Lecturer views their own profile (tertiary portal logic)
+    """
     model = Lecturer
-
-    def get_object(self, queryset=None):
-           if queryset is None:
-               queryset = self.get_queryset()
-           return queryset.filter(user=self.request.user).first()
-
-
-class LecturerDetailView(DetailView):
-    template_name = 'staff/teacher_self_detail.html'
+    template_name = 'staff/lecturer_self_detail.html'
     context_object_name = 'lecturer'
-    queryset = Lecturer.objects.all()
 
     def get_object(self):
-        id_ = self.kwargs.get("id")
-        return get_object_or_404(Lecturer, id=id_)
+        return get_object_or_404(
+            Lecturer.objects.select_related('user', 'department', 'position'),
+            user=self.request.user
+        )
+    
+class LecturerDetailView(LoginRequiredMixin, DetailView):
+    """
+    Staff/Admin view for any lecturer profile
+    """
+    model = Lecturer
+    template_name = 'staff/lecturer_detail.html'
+    context_object_name = 'lecturer'
+
+    def get_object(self):
+        return get_object_or_404(
+            Lecturer.objects.select_related('user', 'department', 'position'),
+            pk=self.kwargs.get("pk")
+        )
+    
+
     
 
 class LecturerUpdateView(LoginRequiredMixin, UpdateView):
@@ -490,23 +546,3 @@ def teacher_signup_success(request):
     }
     return render(request, 'staff/teacher_signup_success.html', context)
 
-
-
-class LecturerIDCardView(LoginRequiredMixin, View):
-    """
-    Displays a printable ID card for a specific teacher.
-    """
-    def get(self, request, teacher_id):
-        lecturer = get_object_or_404(Lecturer, id=lecturer_id)
-        
-        # Retrieve school branding
-        try:
-            school_identity = SchoolIdentity.objects.first()
-        except Exception:
-            school_identity = None
-
-        context = {
-            'lectuer': lecturer,
-            'school_identity': school_identity,
-        }
-        return render(request, 'staff/teacher_id_card.html', context)

@@ -365,12 +365,12 @@
 										<svg id="icon-user2" xmlns="http://www.w3.org/2000/svg" class="text-primary" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
 										<span class="ms-2">{{user.first_name}} {{ user.last_name }} </span>
 									</a>
-									{% if user.teacher %}
-									<a href="{% url 'staff:teacher-self-detail' %}" class="dropdown-item ai-icon">
+									{% if user.lecturer %}
+									<a href="{% url 'staff:lecturer_self_detail' %}" class="dropdown-item ai-icon">
 										{% elif user.student %}
 										<a href="{% url 'students:student-self-detail' %}" class="dropdown-item ai-icon">
 										{% elif user.staff %}
-										<a href="{% url 'staff:staff-self-detail' %}" class="dropdown-item ai-icon">
+										<a href="{% url 'staff:lecturer_self_detail' %}" class="dropdown-item ai-icon">
 										{% else %}
 										<a href="/dashboard/" class="dropdown-item ai-icon">								
 										{% endif %}
@@ -420,9 +420,9 @@
 							{% if user.is_authenticated and user.student %}
 							<li><a href="{% url 'students:student-self-detail' %}">My Profile</a></li>							
 							{% endif %}
-							{% if user.teacher %}
-							<li><a href="{% url 'staff:teacher_id_card' user.teacher.id %}"> My ID Card</a></li>			
-							<li><a href="{% url 'staff:teacher-self-detail' %}">My Profile</a></li>
+							{% if user.lecturer %}
+							<li><a href="{% url 'staff:lecturer_id_card' user.lecturer.id %}"> My ID Card</a></li>			
+							<li><a href="{% url 'staff:lecturer_self_detail' %}">My Profile</a></li>
 							{% endif %}
 
 							<li><a href="{% url 'events:calendar' %}">School Events Calendar</a></li>

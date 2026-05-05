@@ -6,8 +6,6 @@
 {% endblock title %}
 
 {% block favicon %}
-<link href="{% static 'pages/vendor/datatables/css/jquery.dataTables.min.css' %}" rel="stylesheet">
-<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
 <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
 {% endblock favicon %}
 
@@ -17,24 +15,49 @@
 
         <!-- HEADER -->
         <div class="row mb-3">
-            <div class="col-12 d-flex justify-content-between align-items-center">
+            <div class="col-md-6 mb-2">
                 <h3 class="mb-0">
                     <i class="fas fa-chalkboard-teacher text-primary me-2"></i>
                     Lecturers Directory
                 </h3>
+            </div>
 
-                <a href="{% url 'staff:lecturer-list' %}?export=csv" class="btn btn-success">
-                    <i class="fas fa-file-csv me-1"></i> Export CSV
+            <div class="col-md-6 d-flex justify-content-end gap-2 flex-wrap">
+
+                <!-- SEARCH -->
+                <form method="GET" class="d-flex">
+                    <input type="text"
+                           name="search"
+                           value="{{ search_query }}"
+                           class="form-control me-2"
+                           placeholder="Search lecturer...">
+
+                    <button class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i>
+                    </button>
+
+                    {% if search_query %}
+                        <a href="{% url 'staff:lecturer-list' %}" class="btn btn-outline-secondary">
+                            Clear
+                        </a>
+                    {% endif %}
+                </form>
+
+                <!-- EXPORT -->
+                <a href="?export=csv{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="btn btn-success">
+                    <i class="fas fa-file-csv me-1"></i> Export
                 </a>
+
             </div>
         </div>
 
-        <!-- TABLE CARD -->
+        <!-- TABLE -->
         <div class="card shadow-sm border-0">
             <div class="card-body">
 
                 <div class="table-responsive">
-                    <table id="example3" class="table table-hover align-middle">
+                    <table class="table table-hover align-middle">
 
                         <thead class="table-light">
                             <tr>
@@ -50,33 +73,25 @@
                         </thead>
 
                         <tbody>
-
                             {% for ts in lecturers %}
                             <tr>
+                                <td>{{ forloop.counter0|add:lecturers.start_index }}</td>
 
-                                <!-- S/N -->
-                                <td>{{ forloop.counter }}</td>
-
-                                <!-- PROFILE IMAGE -->
+                                <!-- PROFILE -->
                                 <td>
                                     <img src="{{ ts.user.profile.image_url }}"
-                                         class="rounded-circle shadow-sm"
-                                         width="45"
-                                         height="45"
-                                         alt="Lecturer">
+                                         class="rounded-circle"
+                                         width="45" height="45">
                                 </td>
 
-                                <!-- STAFF INFO -->
+                                <!-- STAFF DETAILS (NOW CLICKABLE) -->
                                 <td>
-                                    <div>
-                                        <strong class="text-dark">
-                                            {{ ts.get_full_name }}
-                                        </strong>
-                                        <br>
-                                        <small class="text-muted">
-                                            @{{ ts.user.username }}
-                                        </small>
-                                    </div>
+                                    <a href="{% url 'staff:lecturer_detail' ts.id %}" 
+                                       class="text-decoration-none text-dark">
+                                        <strong>{{ ts.get_full_name }}</strong>
+                                    </a>
+                                    <br>
+                                    <small class="text-muted">@{{ ts.user.username }}</small>
                                 </td>
 
                                 <!-- DEPARTMENT -->
@@ -88,10 +103,8 @@
 
                                 <!-- CONTACT -->
                                 <td>
-                                    <div>
-                                        <div>{{ ts.phone }}</div>
-                                        <small class="text-muted">{{ ts.user.email }}</small>
-                                    </div>
+                                    {{ ts.phone }}<br>
+                                    <small class="text-muted">{{ ts.user.email }}</small>
                                 </td>
 
                                 <!-- EMPLOYMENT -->
@@ -109,21 +122,22 @@
                                 </td>
 
                                 <!-- ACTIONS -->
-                                <td>
-                                    <div class="btn-group">
-                                        {% comment %} <a href="{% url 'staff:lecturer-detail' ts.id %}"
-                                           class="btn btn-sm btn-success">
-                                            View
-                                        </a> {% endcomment %}
+                                <td class="d-flex gap-2">
 
-                                        <a href="/admin/staff/lecturer/{{ ts.id }}/change/"
-                                           class="btn btn-sm btn-warning">
-                                            Edit
-                                        </a>
-                                    </div>
+                                    <!-- DETAIL VIEW (NEW) -->
+                                    <a href="{% url 'staff:lecturer_detail' ts.id %}"
+                                       class="btn btn-sm btn-info">
+                                        View
+                                    </a>
+
+                                    <!-- EDIT -->
+                                    <a href="/admin/staff/lecturer/{{ ts.id }}/change/"
+                                       class="btn btn-sm btn-warning">
+                                        Edit
+                                    </a>
                                 </td>
-
                             </tr>
+
                             {% empty %}
                             <tr>
                                 <td colspan="8" class="text-center text-muted py-4">
@@ -131,11 +145,69 @@
                                 </td>
                             </tr>
                             {% endfor %}
-
                         </tbody>
 
                     </table>
                 </div>
+
+                <!-- PAGINATION -->
+                {% if lecturers.has_other_pages %}
+                <div class="d-flex justify-content-between align-items-center mt-3">
+
+                    <div class="text-muted small">
+                        Showing {{ lecturers.start_index }} - {{ lecturers.end_index }}
+                        of {{ lecturers.paginator.count }} lecturers
+                    </div>
+
+                    <nav>
+                        <ul class="pagination mb-0">
+
+                            {% if lecturers.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ lecturers.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                                        &laquo;
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">&laquo;</span>
+                                </li>
+                            {% endif %}
+
+                            {% for num in lecturers.paginator.page_range %}
+                                {% if lecturers.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > lecturers.number|add:'-3' and num < lecturers.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link"
+                                           href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if lecturers.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link"
+                                       href="?page={{ lecturers.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                                        &raquo;
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">&raquo;</span>
+                                </li>
+                            {% endif %}
+
+                        </ul>
+                    </nav>
+
+                </div>
+                {% endif %}
 
             </div>
         </div>
