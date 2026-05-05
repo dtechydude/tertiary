@@ -50,8 +50,8 @@
                                     <tr>
                                         <td>{{ forloop.counter }}</td>
                                         <td>
-                                            <img class="rounded-circle" width="35" height="35" 
-                                                 src="{{ s.user.profile.image.url|default:'/static/pages/images/default_user.png' }}" alt="">
+                                            <img class="rounded-circle" width="35" height="35"
+                                            src="{% if s.user.profile.image %}{{ s.user.profile.image.url }}{% else %}{% static 'pages/images/default_user.png' %}{% endif %}">
                                         </td>
                                         <td>
                                             <a href="{% url 'students:student-detail' s.matric_number %}" class="text-primary">
@@ -71,8 +71,14 @@
                                         </td>
                                         <td>{{ s.level.name }}</td>
                                         <td>
-                                            <span class="text-dark">{{ s.hostel_name.hostel_master.get_full_name|default:"Not Assigned" }}</span>
-                                        </td>
+                                            <span class="text-dark">
+                                                    {% if s.hostel_name and s.hostel_name.hostel_master %}
+                                                        {{ s.hostel_name.hostel_master.get_full_name }}
+                                                    {% else %}
+                                                        <span class="text-muted">Not Assigned</span>
+                                                    {% endif %}      
+                                                </span>
+                                                </td>
                                         <td>
                                             <span class="d-block">{{ s.guardian_phone }}</span>
                                             <small class="text-muted">{{ s.guardian_name }}</small>

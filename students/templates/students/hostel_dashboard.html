@@ -1,0 +1,126 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Hostel Dashboard</title>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+
+        <div class="row page-titles">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">Hostel</li>
+                <li class="breadcrumb-item active">Dashboard</li>
+            </ol>
+        </div>
+
+        {% for data in dashboard_data %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    {{ data.hostel.name }} 
+                    <small class="ms-3">
+                        {{ data.occupied }}/{{ data.capacity }} Occupied
+                    </small>
+                </h4>
+            </div>
+
+            <div class="card-body">
+
+                <div class="row">
+                    {% for r in data.rooms %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card border shadow-sm">
+
+                            <div class="card-header d-flex justify-content-between">
+                                <strong>Room {{ r.room.room_number }}</strong>
+
+                                {% if r.available_space == 0 %}
+                                    <span class="badge bg-danger">Full</span>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        {{ r.available_space }} Space Left
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <div class="card-body">
+
+                                <p class="text-muted small">
+                                    Occupants: {{ r.occupant_count }}/{{ r.room.max_occupancy }}
+                                </p>
+
+                                <ul class="list-group mb-3">
+                                    {% for s in r.occupants %}
+                                    <li class="list-group-item">
+                                        {{ s.get_full_name }}
+                                    </li>
+                                    {% empty %}
+                                    <li class="list-group-item text-muted">
+                                        No occupants
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+
+                                <!-- ASSIGN BUTTON -->
+                                <button class="btn btn-sm btn-primary w-100"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#assignModal{{ r.room.id }}">
+                                    Assign Student
+                                </button>
+
+                            </div>
+                        </div>
+                    </div>
+
+                   <!-- MODAL -->
+                    <div class="modal fade" id="assignModal{{ r.room.id }}">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+
+                                <form method="POST" action="{% url 'students:assign-room' %}">
+                                    {% csrf_token %}
+
+                                    <div class="modal-header">
+                                        <h5>Assign to Room {{ r.room.room_number }}</h5>
+                                    </div>
+
+                                    <div class="modal-body">
+
+                                        <input type="hidden" name="room_id" value="{{ r.room.id }}">
+
+                                        <label>Select Student</label>
+                                        <select name="student_id" class="form-control" required>
+                                            {% for student in students %}
+                                                <option value="{{ student.id }}">
+                                                    {{ student.get_full_name }}
+                                                </option>
+                                            {% empty %}
+                                                <option disabled>No available students</option>
+                                            {% endfor %}
+                                        </select>
+
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button class="btn btn-success">Assign</button>
+                                    </div>
+
+                                </form>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+{% endblock %}

@@ -16,6 +16,9 @@ urlpatterns = [
     # path('graduated_students_list/', students_views.graduated_students_list, name='graduated_students_list'),
     path('graduate-students/', students_views.graduate_students_view, name='graduate_students'),
 
+    path("hostel/dashboard/", students_views.hostel_dashboard, name="hostel-dashboard"),
+    path("hostel/assign-room/", students_views.assign_room, name="assign-room"),
+
     # #Students Archive
     path('students/archive/', students_views.student_archive, name='student_archive'),
 

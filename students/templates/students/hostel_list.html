@@ -1,181 +1,112 @@
 {% extends 'pages/portal_home.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    
-	<!-- PAGE TITLE HERE -->
-    {% block title %}
-	<title>Hostel List</title>
-	{% endblock title %}
-	
-	<!-- FAVICONS ICON -->
-    {% block favicon %}
-    <!-- Datatable -->
-    <link href="{% static 'pages/vendor/datatables/css/jquery.dataTables.min.css' %}" rel="stylesheet">
-    <!-- Custom Stylesheet -->
-	<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
-    <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
-    {% endblock favicon %}
+{% block title %}
+<title>Hostel List | Schoolly EdTech</title>
+{% endblock title %}
 
-</head>
-
-<body>
-
-    <!--*******************
-        Preloader start
-    ********************-->
-   <div id="preloader">
-		<div class="lds-ripple">
-			<div></div>
-			<div></div>
-		</div>
-    </div>
-    <!--*******************
-        Preloader end
-    ********************-->
+{% block favicon %}
+<link href="{% static 'pages/vendor/datatables/css/jquery.dataTables.min.css' %}" rel="stylesheet">
+<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+{% endblock favicon %}
 
 
-    <!--**********************************
-        Main wrapper start
-    ***********************************-->
-    <div id="main-wrapper">
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
 
-        <!--**********************************
-            Nav header start
-        ***********************************-->
-		
-        <!--**********************************
-            Nav header end
-        ***********************************-->
-		
-		<!--**********************************
-            Chat box start
-        ***********************************-->
-		
-		<!--**********************************
-            Chat box End
-        ***********************************-->
+        <!-- PAGE HEADER -->
+        <div class="row page-titles">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="javascript:void(0)">Hostel Management</a></li>
+                <li class="breadcrumb-item active"><a href="javascript:void(0)">Hostel List</a></li>
+            </ol>
+        </div>
 
-		
-        <!--**********************************
-            Header start
-        ***********************************-->
-       
-        <!--**********************************
-            Header end ti-comment-alt
-        ***********************************-->
+        <!-- MAIN CARD -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm">
 
-        <!--**********************************
-            Sidebar start
-        ***********************************-->
-      
-        <!--**********************************
-            Sidebar end
-        ***********************************-->
-
-        <!--**********************************
-            Content body start
-        ***********************************-->
-        {% block content_body %}
-        <div class="content-body">
-            <div class="container-fluid">				
-			                
-                <!-- row -->
-
-                <div class="row">
-                
-					<div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h4 class="card-title" style="color:green;"><i class="fas fa-bed me-2"></i> LIST OF HOSTELS </h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table id="example3" class="display" style="min-width: 845px">
-                                        <thead>
-                                            <tr>
-                                                <th>S/N</th>
-                                                <th>Hostel</th>
-                                                <th>Hostel Master</th>
-                                                <th>Description</th>
-                                            
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for s in hostel_list %}
-                                            <tr>
-                                                <td>{{ forloop.counter }}</td>												
-                                                <td>{{ s.name }}</td>
-                                                <td>{{ s.hostel_master.get_full_name }}</td>
-                                                 <td>{{ s.desc }}</td>
-                                                                                           
-                                                {% endfor %}
-                                            </tr>
-                                           
-                                           
-                                         
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                    <!-- CARD HEADER -->
+                    <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title text-success">
+                                <i class="fas fa-bed me-2"></i>Hostel Directory
+                            </h4>
+                            <p class="mb-0 small text-muted">
+                                Total Hostels: <strong>{{ hostel_list|length }}</strong>
+                            </p>
                         </div>
                     </div>
 
+                    <!-- CARD BODY -->
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="example3" class="display table table-striped" style="min-width: 845px">
 
+                                <thead>
+                                    <tr>
+                                        <th>S/N</th>
+                                        <th>Hostel Name</th>
+                                        <th>Hostel Master</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
 
-				</div>
+                                <tbody>
+                                    {% for hostel in hostel_list %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+
+                                        <td>
+                                            <span class="fw-bold text-dark">
+                                                {{ hostel.name }}
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            {% if hostel.hostel_master %}
+                                                {{ hostel.hostel_master.get_full_name }}
+                                            {% else %}
+                                                <span class="text-muted">Not Assigned</span>
+                                            {% endif %}
+                                        </td>
+
+                                        <td>
+                                            <span class="text-muted small">
+                                                {{ hostel.desc|default:"No description" }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">
+                                            No hostels available
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
-        {% endblock content_body %}
-        <!--**********************************
-            Content body end
-        ***********************************-->
 
-
-        <!--**********************************
-            Footer start
-        ***********************************-->
-       
-        <!--**********************************
-            Footer end
-        ***********************************-->
-
-        <!--**********************************
-           Support ticket button start
-        ***********************************-->
-
-        <!--**********************************
-           Support ticket button end
-        ***********************************-->
-
-        
     </div>
-    <!--**********************************
-        Main wrapper end
-    ***********************************-->
+</div>
+{% endblock content_body %}
 
-    <!--**********************************
-        Scripts
-    ***********************************-->
-    <!-- Required vendors -->
-    {% block scripts %}
-    <script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
-    <script src="{% static 'pages/vendor/chart.js/Chart.bundle.min.js' %}"></script>
-	<!-- Apex Chart -->
-	<script src="{% static 'pages/vendor/apexchart/apexchart.js' %}"></script>
-	
-    <!-- Datatable -->
-    <script src="{% static 'pages/vendor/datatables/js/jquery.dataTables.min.js' %}"></script>
-    <script src="{% static 'pages/js/plugins-init/datatables.init.js' %}"></script>
 
-	<script src="{% static 'pages/vendor/jquery-nice-select/js/jquery.nice-select.min.js' %}"></script>
-
-    <script src="{% static 'pages/js/custom.min.js' %}"></script>
-	<script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
-	<script src="{% static 'pages/js/demo.js' %}"></script>
-    <script src="{% static 'pages/js/styleSwitcher.js' %}"></script>
-    {% endblock scripts %}
-</body>
-</html>
+{% block scripts %}
+<script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
+<script src="{% static 'pages/vendor/datatables/js/jquery.dataTables.min.js' %}"></script>
+<script src="{% static 'pages/js/plugins-init/datatables.init.js' %}"></script>
+<script src="{% static 'pages/vendor/jquery-nice-select/js/jquery.nice-select.min.js' %}"></script>
+<script src="{% static 'pages/js/custom.min.js' %}"></script>
+<script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
+{% endblock scripts %}
