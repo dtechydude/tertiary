@@ -44,6 +44,36 @@
             border-radius: 6px;
             border: 1px solid #ddd;
         }
+        .alert {
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #e6fffa;
+            color: #065f46;
+            border: 1px solid #34d399;
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+        }
+
+        .alert-info {
+            background: #e0f2fe;
+            color: #075985;
+            border: 1px solid #38bdf8;
+        }
     </style>
 </head>
 
@@ -65,6 +95,25 @@
             </p>
         </div>
     </div>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+            <div class="alert 
+                {% if message.tags == 'success' %} alert-success
+                {% elif message.tags == 'error' %} alert-danger
+                {% elif message.tags == 'warning' %} alert-warning
+                {% else %} alert-info
+                {% endif %}
+                alert-dismissible fade show" role="alert">
+
+                {{ message }}
+
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
 
     <!-- DATE -->
     <div class="card mb-3">
