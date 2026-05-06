@@ -502,18 +502,21 @@
 							<i class="flaticon-013-checkmark"></i>
 							<span class="nav-text">ATTENDANCE</span>
 						</a>
-						{% comment %} <ul aria-expanded="false">
+						<ul aria-expanded="false">
+						{% comment %} 
 							{% if user.is_superuser or user.is_staff %}
 							<li><a href="/admin/attendance/attendance/" target="_blank">Take Attendance-MANUAL</a></li>
 							<li><a href="{% url 'attendance:attendance_scanner' %}"><i class="fas fa-qrcode"></i><span>Take Attendance-SCANNING</span></a>
-							</li>
-							{% elif user.lecturer %}
-							<li><a href="{% url 'attendance:take_daily_attendance' %}">Mark Attendance</a></li>
-							{% endif %}							
+							</li> 
+							
+							 {% endcomment %}	
+							 {% if user.lecturer %}
+							<li><a href="{% url 'attendance:attendance-student-list' %}">Mark Attendance</a></li>
+							{% endif %}						
 							<li><a href="{% url 'attendance:attendance_report' %}">Attendance Report</a></li>
 							<li><a href="{% url 'attendance:attendance-student-list' %}">Attendance List</a></li>
+							</ul>
 							
-							</ul> {% endcomment %}
 						{% endif %}
 					</li>
 					{% endif %}

@@ -3,298 +3,195 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title|default:"Attendance Roster" }}</title>
-    <link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
+    <title>{{ title }}</title>
 
-    <!-- Load Tailwind CSS via CDN -->
+    <link rel="shortcut icon" href="{% static 'pages/images/favicon.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
-        /* Custom styles to enhance the look and feel */
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fb; /* Light background */
-        }
-        .container-wrapper {
-            max-width: 90rem; /* Wide container */
-        }
-        .table-header {
-            background-color: #4a5568; /* Darker header */
-            color: white;
-            text-align: left;
-            position: sticky; /* Keep header visible when scrolling table body */
-            top: 0;
-            z-index: 10;
-        }
-        .action-button {
-            transition: all 0.2s ease-in-out;
-        }
-        .action-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            font-family: Inter, sans-serif;
+            background: #f5f7fb;
         }
     </style>
 </head>
+
 <body>
 
-    <div class="container-wrapper mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+<div class="max-w-7xl mx-auto mt-10 bg-white shadow-lg rounded-xl p-6">
 
-            <!-- Title Section & Dashboard Button -->
-            <div class="flex justify-between items-center mb-6 border-b-2 border-indigo-500 pb-2">
-                <div class="flex-grow">
-                    {% if school_info %}
-                    <p class="text-sm font-medium text-indigo-600 uppercase tracking-wider mb-1">
-                        {{ school_info.name|default:"School Portal" }}
-                    </p>
-                    {% endif %}
-                    <h1 class="text-3xl font-extrabold text-gray-900">
-                        {{ title|default:"Attendance Roster" }}
-                    </h1>
-                </div>
-                <!-- Back to Dashboard Button -->
-                <a href="/dashboard" class="action-button inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8m-11 5h12a2 2 0 002-2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    Back to Dashboard
-                </a>
-            </div>
-            
-            {% if students %}
-                <!-- === FILTER BAR === -->
-                <div class="mb-6 p-4 bg-gray-50 rounded-lg shadow-inner border border-gray-200">
-                    <h2 class="text-lg font-bold text-gray-700 mb-4">Filter Students</h2>
-                    
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
-                        <!-- Search Input (Student Name) -->
-                        <div class="col-span-2 md:col-span-1">
-                            <label for="studentSearch" class="block text-sm font-medium text-gray-700">Search by Name</label>
-                            <input type="text" id="studentSearch" placeholder="E.g., John Doe or J. Doe"
-                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
-                                onkeyup="filterStudents()"
-                            >
-                        </div>
-
-                        <!-- Class Filter Dropdown -->
-                        <div>
-                            <label for="classFilter" class="block text-sm font-medium text-gray-700">Filter by Class</label>
-                            <select id="classFilter" 
-                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
-                                onchange="filterStudents()">
-                                <option value="all">All Classes</option>
-                                <!-- Options populated by JavaScript -->
-                            </select>
-                        </div>
-
-                        <!-- Form Teacher Filter Dropdown (Staff Only) -->
-                        {% if is_staff %}
-                        <div>
-                            <label for="teacherFilter" class="block text-sm font-medium text-gray-700">Filter by Teacher</label>
-                            <select id="teacherFilter" 
-                                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5"
-                                onchange="filterStudents()">
-                                <option value="all">All Teachers</option>
-                                <!-- Options populated by JavaScript -->
-                            </select>
-                        </div>
-                        {% endif %}
-
-                        <!-- Clear Filter Button -->
-                        <div class="col-span-2 md:col-span-1">
-                            <button onclick="clearFilters()" class="w-full inline-flex justify-center items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition duration-150">
-                                Clear Filters
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <!-- === END FILTER BAR === -->
-
-                <!-- Responsive Table Wrapper with vertical scrolling -->
-                <div class="overflow-x-auto max-h-96 overflow-y-auto mt-4 border border-gray-200 rounded-lg shadow-md">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="table-header">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
-                                    Student Name
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
-                                    Class
-                                </th>
-                                {% if is_staff %}
-                                    <th scope="col" class="px-6 py-3 text-xs font-semibold uppercase tracking-wider">
-                                        Form Teacher
-                                    </th>
-                                {% endif %}
-                                <th scope="col" class="px-6 py-3 text-xs font-semibold uppercase tracking-wider text-center">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentTableBody" class="bg-white divide-y divide-gray-100">
-                            {% for student in students %}
-                                {% comment %} Add data attributes for filtering {% endcomment %}
-                                <tr class="hover:bg-indigo-50 transition duration-150 ease-in-out"
-                                    data-student-name="{{ student.first_name }} {{ student.last_name }}"
-                                    data-class-name="{{ student.current_class.name|default:'N/A' }}"
-                                    {% if is_staff %}
-                                    data-teacher-name="{{ student.form_teacher.user.get_full_name|default:'N/A' }}"
-                                    {% endif %}
-                                >
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {{ student.first_name }} {{ student.last_name }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ student.current_class.name|default:"N/A" }}
-                                    </td>
-                                    {% if is_staff %}
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ student.form_teacher.user.get_full_name|default:"N/A" }}
-                                        </td>
-                                    {% endif %}
-                                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                        <!-- Action Buttons -->
-                                        <a href="{% url 'attendance:student-attendance-summary' student_id=student.pk %}" 
-                                            class="action-button inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-semibold rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-2">
-                                            Summary
-                                        </a>
-                                        <a href="{% url 'attendance:student-attendance-detail' student_id=student.pk %}" 
-                                            class="action-button inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-semibold rounded-full shadow-sm text-indigo-600 bg-white border-indigo-600 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                            Detail
-                                        </a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <!-- No Students Found Alert -->
-                <div class="p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-lg" role="alert">
-                    <p class="font-bold">No Records Found</p>
-                    <p class="text-sm mt-1">No student attendance records could be retrieved for your account.</p>
-                    {% if not is_staff %}
-                        <small class="block mt-2 opacity-75">If you believe this is an error, please contact the administrator.</small>
-                    {% endif %}
-                </div>
-            {% endif %}
+    <!-- HEADER -->
+    <div class="flex justify-between items-center border-b pb-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">{{ title }}</h1>
+            <p class="text-sm text-gray-500">Lecturer Attendance Dashboard</p>
         </div>
 
-        <!-- Footer Section -->
-        <footer class="mt-10 pt-4 border-t border-gray-300 text-center text-gray-600 text-sm">
-           
-                <p class="font-semibold text-gray-800">Powered By: <a href="https://kwikschools.com">KwikSchools EdTech</a></p>
-        
-                <p>&copy; {{ "now"|date:"Y" }} Attendance Management</p>
-        
-        </footer>
+        <a href="/dashboard"
+           class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+            Dashboard
+        </a>
     </div>
 
-    <!-- Client-Side Filtering JavaScript -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tableBody = document.getElementById('studentTableBody');
-            if (!tableBody) return; // Exit if no students are present
+    <!-- ================= COURSE CARDS ================= -->
+    <div class="mb-8">
+        <h2 class="text-lg font-semibold mb-4 text-gray-700">My Assigned Courses</h2>
 
-            const rows = tableBody.getElementsByTagName('tr');
-            
-            // Collect unique options for dropdowns
-            const uniqueClasses = new Set();
-            const uniqueTeachers = new Set();
+        <div class="grid md:grid-cols-3 gap-4">
 
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                uniqueClasses.add(row.getAttribute('data-class-name'));
-                
-                {% if is_staff %}
-                const teacherName = row.getAttribute('data-teacher-name');
-                if (teacherName) {
-                    uniqueTeachers.add(teacherName);
-                }
-                {% endif %}
-            }
+            {% for ca in assigned_courses %}
+            <div class="border rounded-lg p-4 bg-gray-50 shadow-sm">
 
-            // Populate the Class Filter
-            const classFilter = document.getElementById('classFilter');
-            uniqueClasses.forEach(className => {
-                if (className && className !== 'N/A') {
-                    const option = document.createElement('option');
-                    option.value = className;
-                    option.textContent = className;
-                    classFilter.appendChild(option);
-                }
-            });
+                <h3 class="font-bold text-gray-800">
+                    {{ ca.course.course_code }}
+                </h3>
 
-            // Populate the Teacher Filter (if staff)
-            {% if is_staff %}
-            const teacherFilter = document.getElementById('teacherFilter');
-            uniqueTeachers.forEach(teacherName => {
-                if (teacherName && teacherName !== 'N/A') {
-                    const option = document.createElement('option');
-                    option.value = teacherName;
-                    option.textContent = teacherName;
-                    teacherFilter.appendChild(option);
-                }
-            });
-            {% endif %}
-        });
+                <p class="text-sm text-gray-600 mb-2">
+                    {{ ca.course.title }}
+                </p>
 
-        function filterStudents() {
-            const searchInput = document.getElementById('studentSearch');
-            const classFilter = document.getElementById('classFilter');
-            const teacherFilter = document.getElementById('teacherFilter');
-            const tableBody = document.getElementById('studentTableBody');
+                <p class="text-xs text-gray-500 mb-4">
+                    {{ ca.course.department.name }}
+                </p>
 
-            if (!tableBody) return;
+                <!-- ✅ TAKE ATTENDANCE BUTTON -->
+                <a href="{% url 'attendance:take_course_attendance' ca.course.id %}"
+                   class="block text-center bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 text-sm">
+                    Take Attendance
+                </a>
 
-            // Get current filter values
-            const searchText = searchInput.value.toLowerCase();
-            const selectedClass = classFilter.value;
-            
-            let selectedTeacher = 'all';
-            if (teacherFilter) {
-                selectedTeacher = teacherFilter.value;
-            }
+            </div>
+            {% empty %}
+                <p class="text-gray-500">No assigned courses.</p>
+            {% endfor %}
 
-            const rows = tableBody.getElementsByTagName('tr');
+        </div>
+    </div>
 
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                
-                // 1. Name Filter Check
-                const studentName = row.getAttribute('data-student-name').toLowerCase();
-                const nameMatch = studentName.includes(searchText);
+    <!-- ================= FILTERS ================= -->
+    <div class="grid md:grid-cols-3 gap-4 mb-6">
 
-                // 2. Class Filter Check
-                const studentClass = row.getAttribute('data-class-name');
-                const classMatch = selectedClass === 'all' || studentClass === selectedClass;
+        <!-- SEARCH -->
+        <input type="text"
+               id="searchInput"
+               placeholder="Search student..."
+               class="border rounded-lg px-4 py-2"
+               onkeyup="filterTable()">
 
-                // 3. Teacher Filter Check (only if staff)
-                let teacherMatch = true;
-                if (teacherFilter) {
-                    const studentTeacher = row.getAttribute('data-teacher-name');
-                    teacherMatch = selectedTeacher === 'all' || studentTeacher === selectedTeacher;
-                }
+        <!-- COURSE FILTER -->
+        <select id="courseFilter"
+                class="border rounded-lg px-4 py-2"
+                onchange="filterTable()">
 
-                // Show or hide the row based on all conditions
-                if (nameMatch && classMatch && teacherMatch) {
-                    row.style.display = ""; // Show row
-                } else {
-                    row.style.display = "none"; // Hide row
-                }
-            }
-        }
+            <option value="all">All Courses</option>
 
-        function clearFilters() {
-            document.getElementById('studentSearch').value = '';
-            document.getElementById('classFilter').value = 'all';
-            
-            const teacherFilter = document.getElementById('teacherFilter');
-            if (teacherFilter) {
-                teacherFilter.value = 'all';
-            }
-            
-            filterStudents(); // Re-run filter to show all students
-        }
-    </script>
+            {% for ca in assigned_courses %}
+                <option value="{{ ca.course.id }}">
+                    {{ ca.course.course_code }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <!-- DEPARTMENT FILTER -->
+        <select id="deptFilter"
+                class="border rounded-lg px-4 py-2"
+                onchange="filterTable()">
+
+            <option value="all">All Departments</option>
+
+            {% for d in departments %}
+                <option value="{{ d.name }}">{{ d.name }}</option>
+            {% endfor %}
+        </select>
+
+    </div>
+
+    <!-- ================= STUDENT TABLE ================= -->
+    {% if students %}
+
+    <div class="overflow-x-auto border rounded-lg">
+
+        <table class="min-w-full text-sm">
+
+            <thead class="bg-gray-800 text-white text-left">
+                <tr>
+                    <th class="p-3">Student</th>
+                    <th class="p-3">Matric</th>
+                    <th class="p-3">Department</th>
+                    <th class="p-3">Level</th>
+                </tr>
+            </thead>
+
+            <tbody id="studentTable">
+
+                {% for student in students %}
+                <tr class="border-b hover:bg-gray-50"
+
+                    data-name="{{ student.user.get_full_name|lower }}"
+                    data-dept="{{ student.department.name }}"
+                    data-courses="{% for c in student.course_registrations.all %}{{ c.course.id }},{% endfor %}"
+
+                >
+
+                    <td class="p-3 font-medium">
+                        {{ student.user.get_full_name }}
+                    </td>
+
+                    <td class="p-3">
+                        {{ student.matric_number }}
+                    </td>
+
+                    <td class="p-3">
+                        {{ student.department.name }}
+                    </td>
+
+                    <td class="p-3">
+                        {{ student.level.name }}
+                    </td>
+
+                </tr>
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    {% else %}
+        <div class="p-6 bg-yellow-100 border-l-4 border-yellow-500 rounded">
+            <p class="font-bold">No Students Found</p>
+            <p class="text-sm">No students under your assigned courses.</p>
+        </div>
+    {% endif %}
+
+</div>
+
+<!-- ================= JS FILTER ================= -->
+<script>
+function filterTable() {
+
+    const search = document.getElementById("searchInput").value.toLowerCase();
+    const course = document.getElementById("courseFilter").value;
+    const dept = document.getElementById("deptFilter").value;
+
+    const rows = document.querySelectorAll("#studentTable tr");
+
+    rows.forEach(row => {
+
+        const name = row.dataset.name;
+        const department = row.dataset.dept;
+        const courses = row.dataset.courses;
+
+        const matchName = name.includes(search);
+        const matchDept = dept === "all" || department === dept;
+        const matchCourse = course === "all" || courses.includes(course);
+
+        row.style.display =
+            (matchName && matchDept && matchCourse) ? "" : "none";
+    });
+}
+</script>
 
 </body>
 </html>

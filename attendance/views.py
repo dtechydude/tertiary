@@ -1,4 +1,3 @@
-
 #=================================================================================================
 # NEW TERTIARY ATTENDANCE TAKING LOGIC
 #=======================================================================================
@@ -13,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .forms import AttendanceReportForm
 from .models import Attendance
 from students.models import Student
-from curriculum.models import Course, Semester, Session
+from curriculum.models import Course, Semester, CourseAssignment, Department, Session
 from staff.models import Lecturer
 from .utils import get_student_attendance_metrics
 import json
@@ -25,18 +24,38 @@ from django.contrib.auth.decorators import login_required
 
 
 
+# def is_authorized_to_view_student(user, student_id):
+#     if user.is_staff or user.is_superuser:
+#         return True
+#     try:
+#         student = Student.objects.get(pk=student_id)
+#         # Check if the user is the student or their form lecturer
+#         if student.user == user: return True
+#         if student.form_lecturer and student.form_lecturer.user == user: return True
+#     except Student.DoesNotExist:
+#         pass
+#     return False
+
 def is_authorized_to_view_student(user, student_id):
     if user.is_staff or user.is_superuser:
         return True
+
     try:
         student = Student.objects.get(pk=student_id)
-        # Check if the user is the student or their form lecturer
-        if student.user == user: return True
-        if student.form_lecturer and student.form_lecturer.user == user: return True
+
+        # Student can view self
+        if student.user == user:
+            return True
+
+        # Lecturer check via department (safe tertiary fallback)
+        if hasattr(user, 'lecturer'):
+            if student.department == user.lecturer.department:
+                return True
+
     except Student.DoesNotExist:
         pass
-    return False
 
+    return False
 
 # ==========================================
 # ACCESS CONTROL HELPER
@@ -61,42 +80,212 @@ def can_manage_attendance(user, course):
 # ==========================================
 # 1. TAKE COURSE ATTENDANCE
 # ==========================================
+# @login_required
+# def take_course_attendance(request, course_id):
+#     course = get_object_or_404(Course, id=course_id)
+
+#     # SECURITY: Verify assigned lecturer or admin status
+#     if not can_manage_attendance(request.user, course):
+#         messages.error(request, "Access Denied: You are not authorized to manage attendance for this course.")
+#         return redirect('dashboard')
+
+#     # Get date from GET request or default to today
+#     selected_date_str = request.GET.get('date')
+#     if selected_date_str:
+#         try:
+#             selected_date = timezone.datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+#         except ValueError:
+#             selected_date = timezone.localdate()
+#     else:
+#         selected_date = timezone.localdate()
+
+#     # Filter students by Department and Level (matching your Course model structure)
+#     students = Student.objects.filter(
+#         department=course.department, 
+#         level=course.level
+#     ).order_by('last_name', 'first_name')
+
+#     # Atomically ensure records exist for all students for this course/date
+#     initial_ids = []
+#     for student in students:
+#         record, _ = Attendance.objects.get_or_create(
+#             student=student,
+#             course=course,
+#             date=selected_date,
+#             defaults={'status': Attendance.Status.ABSENT} # Default to Absent in tertiary
+#         )
+#         initial_ids.append(record.id)
+
+#     AttendanceFormSet = modelformset_factory(
+#         Attendance,
+#         fields=('status', 'remarks'),
+#         extra=0
+#     )
+
+#     if request.method == 'POST':
+#         formset = AttendanceFormSet(request.POST, queryset=Attendance.objects.filter(id__in=initial_ids))
+#         if formset.is_valid():
+#             with transaction.atomic():
+#                 instances = formset.save(commit=False)
+#                 for instance in instances:
+#                     # Update marked_by to the lecturer currently submitting
+#                     if hasattr(request.user, 'lecturer'):
+#                         instance.marked_by = request.user.lecturer
+#                     instance.save()
+#             messages.success(request, f"Attendance for {course.course_code} on {selected_date} saved.")
+#             return redirect('attendance:course_list') # Adjust to your actual course list URL
+#     else:
+#         formset = AttendanceFormSet(queryset=Attendance.objects.filter(id__in=initial_ids))
+
+#     # Pair forms with student objects for the template display
+#     student_forms = zip(students, formset)
+
+#     context = {
+#         'course': course,
+#         'formset': formset,
+#         'student_forms': student_forms,
+#         'selected_date': selected_date,
+#     }
+#     return render(request, 'attendance/take_attendance.html', context)
+
+
+# @login_required
+# def take_course_attendance(request, course_id):
+#     course = get_object_or_404(Course, id=course_id)
+
+#     # SECURITY CHECK
+#     if not can_manage_attendance(request.user, course):
+#         messages.error(request, "Access Denied: Not authorized.")
+#         return redirect('dashboard')
+
+#     # DATE HANDLING
+#     selected_date = request.GET.get('date')
+#     try:
+#         selected_date = timezone.datetime.strptime(selected_date, '%Y-%m-%d').date()
+#     except:
+#         selected_date = timezone.localdate()
+
+#     # ✔ FIXED STUDENT FILTER (NO form_lecturer ERROR)
+#     students = Student.objects.filter(
+#         department=course.department,
+#         level=course.level
+#     ).order_by('user__last_name', 'user__first_name')
+
+#     # Ensure attendance records exist
+#     attendance_ids = []
+#     for student in students:
+#         record, _ = Attendance.objects.get_or_create(
+#             student=student,
+#             course=course,
+#             date=selected_date,
+#             defaults={'status': Attendance.Status.ABSENT}
+#         )
+#         attendance_ids.append(record.id)
+
+#     AttendanceFormSet = modelformset_factory(
+#         Attendance,
+#         fields=('status', 'remarks'),
+#         extra=0
+#     )
+
+#     queryset = Attendance.objects.filter(id__in=attendance_ids)
+
+#     if request.method == 'POST':
+#         formset = AttendanceFormSet(request.POST, queryset=queryset)
+
+#         if formset.is_valid():
+#             with transaction.atomic():
+#                 instances = formset.save(commit=False)
+#                 for obj in instances:
+#                     if hasattr(request.user, 'lecturer'):
+#                         obj.marked_by = request.user.lecturer
+#                     obj.save()
+
+#             messages.success(request, "Attendance saved successfully.")
+#             return redirect('attendance:course_list')
+
+#     else:
+#         formset = AttendanceFormSet(queryset=queryset)
+
+#     student_forms = zip(students, formset)
+
+#     return render(request, 'attendance/take_attendance.html', {
+#         'course': course,
+#         'formset': formset,
+#         'student_forms': student_forms,
+#         'selected_date': selected_date,
+#     })
+
 @login_required
 def take_course_attendance(request, course_id):
     course = get_object_or_404(Course, id=course_id)
 
-    # SECURITY: Verify assigned lecturer or admin status
-    if not can_manage_attendance(request.user, course):
-        messages.error(request, "Access Denied: You are not authorized to manage attendance for this course.")
+    # --------------------------------------------------
+    # SECURITY: Lecturer must be assigned to this course
+    # --------------------------------------------------
+    is_assigned = CourseAssignment.objects.filter(
+        lecturer=request.user.lecturer,
+        course=course
+    ).exists() if hasattr(request.user, 'lecturer') else False
+
+    if not (request.user.is_staff or request.user.is_superuser or is_assigned):
+        messages.error(request, "Access Denied: You are not assigned to this course.")
         return redirect('dashboard')
 
-    # Get date from GET request or default to today
-    selected_date_str = request.GET.get('date')
-    if selected_date_str:
-        try:
-            selected_date = timezone.datetime.strptime(selected_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            selected_date = timezone.localdate()
-    else:
+    # --------------------------------------------------
+    # DATE HANDLING
+    # --------------------------------------------------
+    date_str = request.GET.get('date')
+    try:
+        selected_date = timezone.datetime.strptime(date_str, '%Y-%m-%d').date()
+    except:
         selected_date = timezone.localdate()
 
-    # Filter students by Department and Level (matching your Course model structure)
+    # --------------------------------------------------
+    # STUDENTS: ONLY THOSE REGISTERED FOR THIS COURSE
+    # --------------------------------------------------
     students = Student.objects.filter(
-        department=course.department, 
-        level=course.level
-    ).order_by('last_name', 'first_name')
+        course_registrations__course=course
+    ).select_related('user').distinct().order_by(
+        'user__last_name',
+        'user__first_name'
+    )
 
-    # Atomically ensure records exist for all students for this course/date
-    initial_ids = []
+    # --------------------------------------------------
+    # ENSURE ATTENDANCE RECORDS EXIST
+    # --------------------------------------------------
+    attendance_qs = Attendance.objects.filter(
+        course=course,
+        date=selected_date,
+        student__in=students
+    )
+
+    existing_student_ids = set(attendance_qs.values_list('student_id', flat=True))
+
+    new_records = []
     for student in students:
-        record, _ = Attendance.objects.get_or_create(
-            student=student,
-            course=course,
-            date=selected_date,
-            defaults={'status': Attendance.Status.ABSENT} # Default to Absent in tertiary
-        )
-        initial_ids.append(record.id)
+        if student.id not in existing_student_ids:
+            new_records.append(
+                Attendance(
+                    student=student,
+                    course=course,
+                    date=selected_date,
+                    status=Attendance.Status.ABSENT
+                )
+            )
 
+    if new_records:
+        Attendance.objects.bulk_create(new_records)
+
+    attendance_qs = Attendance.objects.filter(
+        course=course,
+        date=selected_date,
+        student__in=students
+    )
+
+    # --------------------------------------------------
+    # FORMSET
+    # --------------------------------------------------
     AttendanceFormSet = modelformset_factory(
         Attendance,
         fields=('status', 'remarks'),
@@ -104,30 +293,30 @@ def take_course_attendance(request, course_id):
     )
 
     if request.method == 'POST':
-        formset = AttendanceFormSet(request.POST, queryset=Attendance.objects.filter(id__in=initial_ids))
-        if formset.is_valid():
-            with transaction.atomic():
-                instances = formset.save(commit=False)
-                for instance in instances:
-                    # Update marked_by to the lecturer currently submitting
-                    if hasattr(request.user, 'lecturer'):
-                        instance.marked_by = request.user.lecturer
-                    instance.save()
-            messages.success(request, f"Attendance for {course.course_code} on {selected_date} saved.")
-            return redirect('attendance:course_list') # Adjust to your actual course list URL
-    else:
-        formset = AttendanceFormSet(queryset=Attendance.objects.filter(id__in=initial_ids))
+        formset = AttendanceFormSet(request.POST, queryset=attendance_qs)
 
-    # Pair forms with student objects for the template display
+        if formset.is_valid():
+            instances = formset.save(commit=False)
+
+            for obj in instances:
+                obj.marked_by = getattr(request.user, 'lecturer', None)
+                obj.save()
+
+            messages.success(request, "Attendance successfully saved.")
+            return redirect('attendance:attendance-student-list')
+
+    else:
+        formset = AttendanceFormSet(queryset=attendance_qs)
+
+    # Pair students with forms for template rendering
     student_forms = zip(students, formset)
 
-    context = {
+    return render(request, 'attendance/take_attendance.html', {
         'course': course,
         'formset': formset,
         'student_forms': student_forms,
         'selected_date': selected_date,
-    }
-    return render(request, 'attendance/take_attendance.html', context)
+    })
 
 # ==========================================
 # 2. SCAN ATTENDANCE AJAX
@@ -240,42 +429,187 @@ def attendance_report(request):
     return render(request, 'attendance/test_attendance_report.html', context)
 
 
+# @login_required
+# def student_list_view(request):
+#     """
+#     Displays a list of students the logged-in user is authorized to see.
+#     Admins see everyone; Lecturers see their assigned students.
+#     """
+#     user = request.user
+#     title = "Attendance Roster"
+    
+#     # 1. Staff/Admin View (See All)
+#     if user.is_staff or user.is_superuser:
+#         students = Student.objects.select_related('current_class', 'department').all().order_by('current_class', 'last_name')
+#         title = "All Students Attendance Records"
+    
+#     # 2. Lecturer View (Filtered by their assigned Department or Form Class)
+#     else:
+#         try:
+#             lecturer_profile = user.lecturer
+#             # This filters students who have this lecturer as their "Form Lecturer"
+#             # OR students within the lecturer's department.
+#             students = Student.objects.filter(
+#                 form_lecturer=lecturer_profile
+#             ).select_related('current_class', 'department').order_by('last_name')
+#             title = f"Roster: {lecturer_profile.user.get_full_name()}'s Students"
+            
+#         except Lecturer.DoesNotExist:
+#             # Fallback if a non-lecturer/non-staff user tries to access this
+#             messages.error(request, "Lecturer profile not found.")
+#             return redirect('dashboard')
+
+#     context = {
+#         'students': students,
+#         'title': title,
+#         'is_staff': user.is_staff,
+#     }
+#     return render(request, 'attendance/student_attendance_list.html', context)
+
+from django.db.models import Q
+
+# @login_required
+# def student_list_view(request):
+#     """
+#     Attendance roster view:
+#     - Admin/Superuser: sees all students
+#     - Lecturer: sees students in courses assigned to them
+#     """
+
+#     user = request.user
+#     title = "Attendance Roster"
+
+    
+#     # ==============================
+#     # 1. ADMIN / STAFF VIEW
+#     # ==============================
+#     if user.is_staff or user.is_superuser:
+#         students = Student.objects.select_related(
+#             'department', 'level', 'user'
+#         ).all().order_by('user__last_name')
+
+#         title = "All Students Attendance Records"
+
+#     # ==============================
+#     # 2. LECTURER VIEW (TERTIARY LOGIC)
+#     # ==============================
+#     else:
+#         try:
+#             lecturer = user.lecturer
+
+#             # Get all courses assigned to this lecturer
+#             assigned_courses = CourseAssignment.objects.filter(
+#                 lecturer=lecturer
+#             ).values_list('course', flat=True)
+
+#             # Get students registered for those courses
+#             students = Student.objects.filter(
+#                 course_registrations__course_id__in=assigned_courses
+#             ).distinct().select_related(
+#                 'department', 'level', 'user'
+#             ).order_by('user__last_name')
+
+#             title = f"Roster: {lecturer.user.get_full_name()}"
+
+#         except Lecturer.DoesNotExist:
+#             messages.error(request, "Lecturer profile not found.")
+#             return redirect('dashboard')
+        
+#     assigned_courses = CourseAssignment.objects.filter(lecturer=lecturer).select_related('course', 'course__department')
+#     departments = Department.objects.filter(course__assignments__lecturer=lecturer).distinct()
+
+#     context = {
+#         'students': students,
+#         'title': title,
+#         'is_staff': user.is_staff,
+#         'assigned_courses':assigned_courses,
+#         'departments':departments,
+#     }
+
+#     return render(request, 'attendance/student_attendance_list.html', context)
+
+
 @login_required
 def student_list_view(request):
     """
-    Displays a list of students the logged-in user is authorized to see.
-    Admins see everyone; Lecturers see their assigned students.
+    Attendance roster view:
+    - Admin/Superuser: sees all students
+    - Lecturer: sees students registered to their assigned courses
     """
+
     user = request.user
     title = "Attendance Roster"
-    
-    # 1. Staff/Admin View (See All)
+
+    students = Student.objects.none()
+    assigned_courses = CourseAssignment.objects.none()
+    departments = Department.objects.none()
+
+    # ==============================
+    # 1. ADMIN / STAFF VIEW
+    # ==============================
     if user.is_staff or user.is_superuser:
-        students = Student.objects.select_related('current_class', 'department').all().order_by('current_class', 'last_name')
+
+        students = Student.objects.select_related(
+            'department', 'level', 'user'
+        ).all().order_by('user__last_name')
+
         title = "All Students Attendance Records"
-    
-    # 2. Lecturer View (Filtered by their assigned Department or Form Class)
+
+        # optional filters still available for UI consistency
+        assigned_courses = CourseAssignment.objects.select_related(
+            'course', 'course__department', 'lecturer'
+        )
+
+        departments = Department.objects.all()
+
+    # ==============================
+    # 2. LECTURER VIEW
+    # ==============================
     else:
         try:
-            lecturer_profile = user.lecturer
-            # This filters students who have this lecturer as their "Form Lecturer"
-            # OR students within the lecturer's department.
+            lecturer = user.lecturer
+
+            # Courses assigned to lecturer
+            assigned_courses = CourseAssignment.objects.filter(
+                lecturer=lecturer
+            ).select_related('course', 'course__department')
+
+            course_ids = assigned_courses.values_list('course_id', flat=True)
+
+            # Students registered to those courses
             students = Student.objects.filter(
-                form_lecturer=lecturer_profile
-            ).select_related('current_class', 'department').order_by('last_name')
-            title = f"Roster: {lecturer_profile.user.get_full_name()}'s Students"
-            
+                course_registrations__course_id__in=course_ids
+            ).distinct().select_related(
+                'department', 'level', 'user'
+            ).order_by('user__last_name')
+
+            # Departments linked to assigned courses
+            departments = Department.objects.filter(
+                course__assignments__lecturer=lecturer
+            ).distinct()
+
+            title = f"Roster: {lecturer.user.get_full_name()}"
+
         except Lecturer.DoesNotExist:
-            # Fallback if a non-lecturer/non-staff user tries to access this
             messages.error(request, "Lecturer profile not found.")
             return redirect('dashboard')
 
+    # ==============================
+    # CONTEXT
+    # ==============================
     context = {
         'students': students,
         'title': title,
         'is_staff': user.is_staff,
+
+        # for template filters
+        'assigned_courses': assigned_courses,
+        'departments': departments,
     }
+
     return render(request, 'attendance/student_attendance_list.html', context)
+
+
 
 @login_required
 def student_attendance_summary(request, student_id):

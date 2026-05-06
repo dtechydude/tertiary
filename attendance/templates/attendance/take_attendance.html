@@ -1,139 +1,173 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" class="h-100">
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Kwikschool : School Management System" />
-    
+
     <title>Mark Attendance | {{ course.course_code }}</title>
-    
-    <link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
+
+    <link rel="shortcut icon" href="{% static 'pages/images/favicon.png' %}">
     <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
-    
+
     <style>
-        .student-row {
-            display: flex;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-            transition: background 0.2s;
+        body {
+            background: #f5f7fb;
         }
-        .student-row:hover { background-color: #f9f9f9; }
-        .status-col { width: 140px; text-align: center; }
-        .info-col { flex: 1; padding-left: 10px; }
-        .form-errors ul { list-style-type: none; padding: 0; color: red; font-size: 12px; }
-        
-        /* Styling the Status Select to look better in the row */
-        .status-select-input {
-            border: 1px solid #e2e2e2;
-            border-radius: 4px;
-            padding: 4px;
+
+        .card {
+            border-radius: 10px;
+        }
+
+        table {
             width: 100%;
+        }
+
+        th {
+            background: #f1f3f6;
+            font-weight: 600;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        select {
+            width: 100%;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
         }
     </style>
 </head>
 
-<body class="h-100">
-    <div class="vh-100">
-        <div class="container h-100">
-            <div class="row justify-content-center h-100 align-items-center">
-                <div class="col-md-9 col-lg-8">
-                    
-                    <div style="text-align: center;" class="mb-4">
-                        <img src="{% static 'pages/images/kwikschool_logo.png' %}" alt="Logo" style="width: 120px;">
-                    </div>
-                    
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-body p-4 text-center">
-                            <h4 class="mb-1 text-black">{{ course.course_code }}: {{ course.title }}</h4>
-                            <p class="text-muted mb-0">Lecturer: <strong>{{ teacher.get_full_name }}</strong></p>
-                        </div>
-                    </div>
+<body>
 
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
+<div class="container py-4">
 
-                    <div class="card mb-3">
-                        <div class="card-body py-3">
-                            <form method="get" class="row align-items-center" action="{% url 'attendance:take_daily_attendance' course.id %}">
-                                <div class="col-sm-4">
-                                    <p class="mb-0 font-w600">Lecture Date:</p>
-                                </div>
-                                <div class="col-sm-5">
-                                    <input type="date" name="date" class="form-control" value="{{ selected_date|date:'Y-m-d' }}">
-                                </div>
-                                <div class="col-sm-3">
-                                    <button type="submit" class="btn btn-secondary btn-sm w-100">Change Date</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <p class="lead text-center mb-3">Recording for: <span class="text-primary font-w600">{{ selected_date|date:"l, d F Y" }}</span></p>
-
-                    <form method="post">
-                        {% csrf_token %}
-                        {{ formset.management_form }}
-
-                        <div class="card">
-                            <div class="card-header bg-light py-2">
-                                <div class="row w-100 no-gutters align-items-center">
-                                    <div class="col-7 col-sm-8 font-w700">Student Name / Matric</div>
-                                    <div class="col-5 col-sm-4 text-center font-w700">Status</div>
-                                </div>
-                            </div>
-                            
-                            <ul class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
-                                {% for form in formset %}
-                                    <li class="list-group-item student-row">
-                                        <div class="row w-100 no-gutters align-items-center">
-                                            <div class="info-col col-7 col-sm-8">
-                                                {{ form.id }}
-                                                <span class="d-block font-w500">{{ form.student_full_name }}</span>
-                                                </div>
-                                            <div class="status-col col-5 col-sm-4">
-                                                {{ form.status }}
-                                                {% if form.status.errors %}
-                                                    <div class="form-errors">{{ form.status.errors }}</div>
-                                                {% endif %}
-                                            </div>
-                                            
-                                            {% if form.non_field_errors or form.errors %}
-                                                <div class="col-12 mt-2 px-3">
-                                                    <div class="alert alert-danger py-1 mb-0 small">
-                                                        {% for field, errors in form.errors.items %}{{ errors }}{% endfor %}
-                                                    </div>
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-                            <a href="/dashboard/" class="text-muted"><i class="fas fa-chevron-left"></i> Back to Dashboard</a>
-                            <button type="submit" class="btn btn-primary btn-lg shadow">Save Attendance</button>
-                        </div>
-                    </form>
-                    
-                </div>
-            </div>
+    <!-- HEADER -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body text-center">
+            <h4>{{ course.course_code }} - {{ course.title }}</h4>
+            <p class="text-muted mb-0">
+                Lecturer:
+                {% if request.user.lecturer %}
+                    {{ request.user.lecturer.get_full_name }}
+                {% else %}
+                    {{ request.user.get_full_name }}
+                {% endif %}
+            </p>
         </div>
     </div>
 
-    <script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
-    <script src="{% static 'pages/js/custom.min.js' %}"></script>
-    <script src="{% static 'pages/js/dlabnav-init.js' %}"></script>
-    <script src="{% static 'pages/js/styleSwitcher.js' %}"></script>
+    <!-- DATE -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-center">
+                <div class="col-md-4">
+                    <strong>Lecture Date</strong>
+                </div>
+                <div class="col-md-5">
+                    <input type="date" name="date"
+                           value="{{ selected_date|date:'Y-m-d' }}"
+                           class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-secondary w-100">
+                        Change Date
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <p class="text-center text-primary mb-3">
+        Recording for:
+        <strong>{{ selected_date|date:"l, d F Y" }}</strong>
+    </p>
+
+    <!-- FORM -->
+    <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+
+                <table class="table mb-0">
+
+                    <!-- HEADER -->
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student Name</th>
+                            <th>Matric No</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+
+                    <!-- BODY -->
+                    <tbody>
+
+                        {% for form in formset %}
+                        <tr>
+
+                            <td>{{ forloop.counter }}</td>
+
+                            <td>
+                                {{ form.id }}
+                                <strong>
+                                    {{ form.instance.student.user.get_full_name }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                {{ form.instance.student.matric_number }}
+                            </td>
+
+                            <td class="text-center">
+                                {{ form.status }}
+
+                                {% if form.status.errors %}
+                                    <div class="text-danger small">
+                                        {{ form.status.errors }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="d-flex justify-content-between mt-4">
+            <a href="/dashboard/" class="btn btn-light">
+                ← Back
+            </a>
+
+            <button type="submit" class="btn btn-primary px-4">
+                Save Attendance
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+<script src="{% static 'pages/vendor/global/global.min.js' %}"></script>
+<script src="{% static 'pages/js/custom.min.js' %}"></script>
+
 </body>
 </html>
