@@ -15,19 +15,15 @@ urlpatterns = [
     path('students/', include('students.urls', namespace='students')), 
     path('staff/', include('staff.urls', namespace='staff')),
     path('curriculum/', include('curriculum.urls', namespace='curriculum')),
-    path('results/', include('results.urls', namespace='results')),
     path('attendance/', include('attendance.urls', namespace='attendance')),
     path('cbt/', include('cbt.urls', namespace='cbt')),
     path('tickets/', include('tickets.urls', namespace='tickets')),
     path('events/', include('events.urls', namespace='events')),
     path('payments/', include('payments.urls', namespace='payments')),
-
-
-
-
-
-
-    
+    # path for result API
+    # path('results/', include('results.urls', namespace='results')),
+    # path('api/results/', include('results.urls')),    
+    path('api/results/', include(('results.urls', 'results'), namespace='results')),     
 
      # Add this line below to fix the NoReverseMatch error
     path("ckeditor5/", include('django_ckeditor_5.urls'), name="ck_editor_5_upload_file"),

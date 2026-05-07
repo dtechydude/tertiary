@@ -458,7 +458,10 @@
 							{% comment %} <li><a href="{% url 'students:student_id_card' student.id %}"> My ID Card</a></li>	 {% endcomment %}
 							<li>
 								<a href="{% url 'students:student_id_card' matric_number=request.user.student.matric_number %}"> My ID Card </a>
+								
 							</li>
+							<li><a href="{% url 'attendance:attendance_report' %}">Attendance Report</a></li>
+
 							{% comment %} <li><a href="{% url 'staff:my_teacher_view' %}">My Teacher</a></li> {% endcomment %}
 							{% comment %} <li><a href="{% url 'students:my_classmates' %}">My Class Mates</a></li> {% endcomment %}
 							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	 {% endcomment %}

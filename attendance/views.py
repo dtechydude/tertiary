@@ -19,6 +19,8 @@ import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+import csv
+from django.http import HttpResponse
 
 
 
@@ -150,9 +152,7 @@ def take_course_attendance(request, course_id):
             for obj in instances:
                 obj.marked_by = getattr(request.user, 'lecturer', None)
                 obj.save()
-
-            # messages.success(request, "Attendance successfully saved.")
-            # return redirect('attendance:attendance-student-list')
+            
             messages.success(request, "Attendance successfully saved.")
             return redirect(request.path + f'?date={selected_date}')
 
@@ -214,72 +214,664 @@ def scan_attendance_ajax(request, usn):
         return JsonResponse({'status': 'error', 'message': f'Matric No. "{usn}" not found.'})
     
 
+# Tertiary Attenance Report
+# @login_required
+# def attendance_report(request):
+#     """
+#     Attendance Report:
+#     - Admin: sees everything
+#     - Lecturer: sees only their assigned courses
+#     - Supports filtering by course, class, date
+#     """
+
+#     user = request.user
+#     is_superuser = user.is_superuser
+#     lecturer = getattr(user, 'lecturer', None)
+
+#     report_form = AttendanceReportForm(
+#         request.GET or None,
+#         lecturer=lecturer,
+#         is_superuser=is_superuser
+#     )
+
+#     attendance_data = {}
+#     student_summary = {}
+
+#     # -----------------------------
+#     # DATE RANGE DEFAULT
+#     # -----------------------------
+#     today = timezone.localdate()
+
+#     if report_form.is_valid():
+#         start_date = report_form.cleaned_data.get('start_date') or today - timezone.timedelta(days=7)
+#         end_date = report_form.cleaned_data.get('end_date') or today
+#     else:
+#         start_date = today - timezone.timedelta(days=7)
+#         end_date = today
+
+#     # ✅ NEW: Precompute date list (performance + consistency)
+#     date_list = [
+#         start_date + timezone.timedelta(days=i)
+#         for i in range((end_date - start_date).days + 1)
+#     ]
+
+#     # -----------------------------
+#     # QUERY
+#     # -----------------------------
+#     if report_form.is_valid():
+
+#         selected_student = report_form.cleaned_data.get('student')
+#         selected_course = report_form.cleaned_data.get('course')
+#         selected_department = report_form.cleaned_data.get('department')
+
+#         records = Attendance.objects.filter(
+#             date__range=(start_date, end_date)
+#         )
+
+#         # -----------------------------
+#         # LECTURER ACCESS CONTROL
+#         # -----------------------------
+#         if not is_superuser and lecturer:
+#             assigned_courses = CourseAssignment.objects.filter(
+#                 lecturer=lecturer
+#             ).values_list('course_id', flat=True)
+
+#             records = records.filter(course_id__in=assigned_courses)
+
+#         # -----------------------------
+#         # FILTERS
+#         # -----------------------------
+#         if selected_student:
+#             records = records.filter(student=selected_student)
+
+#         if selected_course:
+#             records = records.filter(course=selected_course)
+
+#         if selected_department:
+#             records = records.filter(student__department=selected_department)
+
+#         # -----------------------------
+#         # OPTIMIZATION
+#         # -----------------------------
+#         records = records.select_related(
+#             'student__user',
+#             'course'
+#         ).order_by(
+#             'student__user__last_name',
+#             'date'
+#         )
+
+#         # -----------------------------
+#         # BUILD DATA STRUCTURE
+#         # -----------------------------
+#         for record in records:
+#             student = record.student
+
+#             if student not in attendance_data:
+#                 attendance_data[student] = {}
+#                 student_summary[student] = {
+#                     'P': 0, 'A': 0, 'L': 0, 'E': 0, 'total': 0
+#                 }
+
+#             # ✅ IMPORTANT: string key to match template
+#             date_key = record.date.strftime("%Y-%m-%d")
+#             attendance_data[student][date_key] = record
+
+#             # Summary counts
+#             status = record.status
+#             student_summary[student][status] += 1
+#             student_summary[student]['total'] += 1
+
+#     context = {
+#         'report_form': report_form,
+#         'attendance_data': attendance_data,
+#         'student_summary': student_summary,
+#         'start_date': start_date,
+#         'end_date': end_date,
+#         'date_list': date_list,  # ✅ NEW (use this in template)
+#     }
+
+#     return render(request, 'attendance/attendance_report.html', context)
+
+# @login_required
+# def attendance_report(request):
+
+#     user = request.user
+#     is_superuser = user.is_superuser
+#     lecturer = getattr(user, 'lecturer', None)
+#     student_user = getattr(user, 'student', None)  # 👈 for student view
+
+#     report_form = AttendanceReportForm(
+#         request.GET or None,
+#         lecturer=lecturer,
+#         is_superuser=is_superuser
+#     )
+
+#     attendance_data = {}
+#     student_summary = {}
+
+#     today = timezone.localdate()
+
+#     if report_form.is_valid():
+#         start_date = report_form.cleaned_data.get('start_date') or today - timezone.timedelta(days=7)
+#         end_date = report_form.cleaned_data.get('end_date') or today
+#     else:
+#         start_date = today - timezone.timedelta(days=7)
+#         end_date = today
+
+#     if report_form.is_valid():
+
+#         selected_student = report_form.cleaned_data.get('student')
+#         selected_course = report_form.cleaned_data.get('course')
+#         selected_department = report_form.cleaned_data.get('department')
+
+#         records = Attendance.objects.filter(
+#             date__range=(start_date, end_date)
+#         )
+
+#         # 🔒 ROLE CONTROL
+#         if student_user:
+#             records = records.filter(student=student_user)
+
+#         elif not is_superuser and lecturer:
+#             assigned_courses = CourseAssignment.objects.filter(
+#                 lecturer=lecturer
+#             ).values_list('course_id', flat=True)
+
+#             records = records.filter(course_id__in=assigned_courses)
+
+#         # 🔍 FILTERS
+#         if selected_student:
+#             records = records.filter(student=selected_student)
+
+#         if selected_course:
+#             records = records.filter(course=selected_course)
+
+#         if selected_department:
+#             records = records.filter(student__department=selected_department)
+
+#         records = records.select_related(
+#             'student__user',
+#             'course'
+#         ).order_by(
+#             'student__user__last_name',
+#             'date'
+#         )
+
+#         # -----------------------------
+#         # ✅ CSV EXPORT
+#         # -----------------------------
+#         if 'export' in request.GET:
+#             response = HttpResponse(content_type='text/csv')
+#             response['Content-Disposition'] = 'attachment; filename="attendance_report.csv"'
+
+#             writer = csv.writer(response)
+#             writer.writerow(['Student', 'Matric No', 'Course', 'Date', 'Status', 'Remarks'])
+
+#             for record in records:
+#                 writer.writerow([
+#                     record.student.user.get_full_name(),
+#                     record.student.matric_number,
+#                     record.course.course_code,
+#                     record.date,
+#                     record.status,
+#                     record.remarks or ''
+#                 ])
+
+#             return response
+
+#         # -----------------------------
+#         # BUILD DATA (UNCHANGED)
+#         # -----------------------------
+#         for record in records:
+#             student = record.student
+
+#             if student not in attendance_data:
+#                 attendance_data[student] = {}
+#                 student_summary[student] = {
+#                     'P': 0, 'A': 0, 'L': 0, 'E': 0, 'total': 0
+#                 }
+
+#             key = record.date.strftime("%Y-%m-%d")
+#             attendance_data[student][key] = record
+
+#             status = record.status
+#             student_summary[student][status] += 1
+#             student_summary[student]['total'] += 1
+
+#     context = {
+#         'report_form': report_form,
+#         'attendance_data': attendance_data,
+#         'student_summary': student_summary,
+#         'start_date': start_date,
+#         'end_date': end_date,
+#     }
+
+#     return render(request, 'attendance/attendance_report.html', context)
+
+# @login_required
+# def attendance_report(request):
+#     """
+#     Attendance Report:
+#     - Admin: sees everything
+#     - Lecturer: sees only their assigned courses
+#     - Student: sees ONLY their own attendance
+#     """
+
+#     user = request.user
+#     is_superuser = user.is_superuser
+#     lecturer = getattr(user, 'lecturer', None)
+#     student_user = getattr(user, 'student', None)
+
+#     report_form = AttendanceReportForm(
+#         request.GET or None,
+#         lecturer=lecturer,
+#         is_superuser=is_superuser,
+#         student_user=student_user   # ✅ NEW
+#     )
+
+#     attendance_data = {}
+#     student_summary = {}
+
+#     today = timezone.localdate()
+
+#     if report_form.is_valid():
+#         start_date = report_form.cleaned_data.get('start_date') or today - timezone.timedelta(days=7)
+#         end_date = report_form.cleaned_data.get('end_date') or today
+#     else:
+#         start_date = today - timezone.timedelta(days=7)
+#         end_date = today
+
+#     if report_form.is_valid():
+
+#         selected_student = report_form.cleaned_data.get('student')
+#         selected_course = report_form.cleaned_data.get('course')
+#         selected_department = report_form.cleaned_data.get('department')
+
+#         records = Attendance.objects.filter(
+#             date__range=(start_date, end_date)
+#         )
+
+#         # -----------------------------
+#         # ACCESS CONTROL
+#         # -----------------------------
+#         if student_user:
+#             records = records.filter(student=student_user)
+
+#         elif not is_superuser and lecturer:
+#             assigned_courses = CourseAssignment.objects.filter(
+#                 lecturer=lecturer
+#             ).values_list('course_id', flat=True)
+
+#             records = records.filter(course_id__in=assigned_courses)
+
+#         # -----------------------------
+#         # FILTERS
+#         # -----------------------------
+#         if selected_student:
+#             records = records.filter(student=selected_student)
+
+#         if selected_course:
+#             records = records.filter(course=selected_course)
+
+#         if selected_department:
+#             records = records.filter(student__department=selected_department)
+
+#         # -----------------------------
+#         # OPTIMIZATION
+#         # -----------------------------
+#         records = records.select_related(
+#             'student__user',
+#             'course'
+#         ).order_by(
+#             'student__user__last_name',
+#             'date'
+#         )
+
+#         # -----------------------------
+#         # BUILD DATA STRUCTURE
+#         # -----------------------------
+#         for record in records:
+#             student = record.student
+
+#             if student not in attendance_data:
+#                 attendance_data[student] = {}
+#                 student_summary[student] = {
+#                     'P': 0, 'A': 0, 'L': 0, 'E': 0, 'total': 0
+#                 }
+
+#             key = record.date.strftime("%Y-%m-%d")  # ✅ FIXED KEY
+#             attendance_data[student][key] = record
+
+#             student_summary[student][record.status] += 1
+#             student_summary[student]['total'] += 1
+
+#     context = {
+#         'report_form': report_form,
+#         'attendance_data': attendance_data,
+#         'student_summary': student_summary,
+#         'start_date': start_date,
+#         'end_date': end_date,
+#     }
+
+#     return render(request, 'attendance/attendance_report.html', context)
+
+# from django.contrib.auth.decorators import login_required
+# from django.shortcuts import render
+# from django.utils import timezone
+# from django.http import HttpResponse
+# import csv
+
+# @login_required
+# def attendance_report(request):
+#     user = request.user
+#     is_superuser = user.is_superuser
+#     lecturer = getattr(user, 'lecturer', None)
+#     student_user = getattr(user, 'student', None)
+
+#     report_form = AttendanceReportForm(
+#         request.GET or None,
+#         lecturer=lecturer,
+#         is_superuser=is_superuser,
+#         student=student_user
+#     )
+
+#     attendance_data = {}
+#     student_summary = {}
+
+#     today = timezone.localdate()
+
+#     if report_form.is_valid():
+#         start_date = report_form.cleaned_data.get('start_date') or today - timezone.timedelta(days=7)
+#         end_date = report_form.cleaned_data.get('end_date') or today
+#     else:
+#         start_date = today - timezone.timedelta(days=7)
+#         end_date = today
+
+#     if report_form.is_valid():
+
+#         selected_course = report_form.cleaned_data.get('course')
+#         selected_department = report_form.cleaned_data.get('department')
+
+#         records = Attendance.objects.filter(
+#             date__range=(start_date, end_date)
+#         )
+
+#         # -----------------------------
+#         # ROLE-BASED ACCESS CONTROL
+#         # -----------------------------
+#         if student_user:
+#             records = records.filter(student=student_user)
+
+#         elif not is_superuser and lecturer:
+#             assigned_courses = CourseAssignment.objects.filter(
+#                 lecturer=lecturer
+#             ).values_list('course_id', flat=True)
+
+#             records = records.filter(course_id__in=assigned_courses)
+
+#         # -----------------------------
+#         # FILTERS
+#         # -----------------------------
+#         if selected_course:
+#             records = records.filter(course=selected_course)
+
+#         if selected_department:
+#             records = records.filter(student__department=selected_department)
+
+#         # -----------------------------
+#         # OPTIMIZATION
+#         # -----------------------------
+#         records = records.select_related(
+#             'student__user',
+#             'course'
+#         ).order_by(
+#             'student__user__last_name',
+#             'date'
+#         )
+
+#         # -----------------------------
+#         # BUILD DATA
+#         # -----------------------------
+#         for record in records:
+#             student = record.student
+#             date_key = record.date.strftime("%Y-%m-%d")
+
+#             if student not in attendance_data:
+#                 attendance_data[student] = {}
+#                 student_summary[student] = {
+#                     'P': 0, 'A': 0, 'L': 0, 'E': 0, 'total': 0
+#                 }
+
+#             attendance_data[student][date_key] = record
+
+#             status = record.status
+#             student_summary[student][status] += 1
+#             student_summary[student]['total'] += 1
+
+#         # -----------------------------
+#         # CSV EXPORT
+#         # -----------------------------
+#         if request.GET.get('export') == '1':
+#             response = HttpResponse(content_type='text/csv')
+#             response['Content-Disposition'] = 'attachment; filename="attendance_report.csv"'
+
+#             writer = csv.writer(response)
+#             writer.writerow(['Student', 'Matric', 'Date', 'Course', 'Status'])
+
+#             for student, records_dict in attendance_data.items():
+#                 for date_key, record in records_dict.items():
+#                     writer.writerow([
+#                         student.user.get_full_name(),
+#                         student.matric_number,
+#                         date_key,
+#                         record.course.course_code,
+#                         record.status
+#                     ])
+
+#             return response
+
+#     context = {
+#         'report_form': report_form,
+#         'attendance_data': attendance_data,
+#         'student_summary': student_summary,
+#         'start_date': start_date,
+#         'end_date': end_date,
+#     }
+
+#     return render(request, 'attendance/attendance_report.html', context)
+
+# @login_required
+# def attendance_report(request):
+
+#     user = request.user
+#     is_superuser = user.is_superuser
+#     lecturer = getattr(user, 'lecturer', None)
+#     student = getattr(user, 'student', None)
+
+#     report_form = AttendanceReportForm(
+#         request.GET or None,
+#         lecturer=lecturer,
+#         is_superuser=is_superuser,
+#         student=student
+#     )
+
+#     attendance_data = {}
+#     student_summary = {}
+
+#     today = timezone.localdate()
+
+#     if report_form.is_valid():
+#         start_date = report_form.cleaned_data['start_date']
+#         end_date = report_form.cleaned_data['end_date']
+#         selected_course = report_form.cleaned_data.get('course')
+#         selected_department = report_form.cleaned_data.get('department')
+#         selected_student = report_form.cleaned_data.get('student')
+#     else:
+#         start_date = today - timezone.timedelta(days=7)
+#         end_date = today
+#         selected_course = selected_department = selected_student = None
+
+#     # ---------------- BASE QUERY ----------------
+#     records = Attendance.objects.filter(date__range=(start_date, end_date))
+
+#     # ---------------- ROLE FILTER ----------------
+#     if lecturer:
+#         records = records.filter(course__assignments__lecturer=lecturer)
+
+#     if student:
+#         records = records.filter(student=student)
+
+#     # ---------------- FORM FILTERS ----------------
+#     if selected_course:
+#         records = records.filter(course=selected_course)
+
+#     if selected_department:
+#         records = records.filter(student__department=selected_department)
+
+#     if selected_student:
+#         records = records.filter(student=selected_student)
+
+#     records = records.select_related('student__user', 'course').order_by(
+#         'student__user__last_name',
+#         'date'
+#     )
+
+#     # ---------------- BUILD MATRIX ----------------
+#     for record in records:
+#         stud = record.student
+
+#         if stud not in attendance_data:
+#             attendance_data[stud] = {}
+#             student_summary[stud] = {'P': 0, 'A': 0, 'L': 0, 'E': 0, 'total': 0}
+
+#         attendance_data[stud][record.date.strftime("%Y-%m-%d")] = record
+#         student_summary[stud][record.status] += 1
+#         student_summary[stud]['total'] += 1
+
+#     context = {
+#         'report_form': report_form,
+#         'attendance_data': attendance_data,
+#         'student_summary': student_summary,
+#         'start_date': start_date,
+#         'end_date': end_date,
+#     }
+
+#     return render(request, 'attendance/attendance_report.html', context)
+
 @login_required
 def attendance_report(request):
-    """
-    Refactored Global Report View for Admins and Lecturers.
-    Supports filtering by Date, Student, and Course.
-    """
+
     user = request.user
-    is_superuser = user.is_superuser
+    is_admin = user.is_superuser
     lecturer = getattr(user, 'lecturer', None)
+    student = getattr(user, 'student', None)
 
-    # Initialize your existing form
-    # Note: Ensure your AttendanceReportForm is updated to include a 'course' field
-    report_form = AttendanceReportForm(request.GET or None, lecturer=lecturer, is_superuser=is_superuser)
-    
+    report_form = AttendanceReportForm(
+        request.GET or None,
+        lecturer=lecturer,
+        is_superuser=is_admin,
+        student=student
+    )
+
     attendance_data = {}
-    student_summary = {} 
-    
-    # Date Range Setup
+    student_summary = {}
+    attendance_percentage = {}
+
     today = timezone.localdate()
-    start_date = report_form.cleaned_data.get('start_date') if report_form.is_valid() else today - timezone.timedelta(days=7)
-    end_date = report_form.cleaned_data.get('end_date') if report_form.is_valid() else today
 
+    # ---------------- DATE RANGE ----------------
     if report_form.is_valid():
-        selected_student = report_form.cleaned_data.get('student')
+        start_date = report_form.cleaned_data['start_date']
+        end_date = report_form.cleaned_data['end_date']
         selected_course = report_form.cleaned_data.get('course')
-        selected_class = report_form.cleaned_data.get('current_class')
+        selected_department = report_form.cleaned_data.get('department')
+        selected_student = report_form.cleaned_data.get('student')
+    else:
+        start_date = today - timezone.timedelta(days=7)
+        end_date = today
+        selected_course = selected_department = selected_student = None
 
-        # Base Query
-        records = Attendance.objects.filter(date__range=(start_date, end_date))
+    # ---------------- BASE QUERY ----------------
+    records = Attendance.objects.filter(date__range=(start_date, end_date))
 
-        # Apply Filters
-        if selected_student:
-            records = records.filter(student=selected_student)
-        elif not is_superuser and lecturer:
-            # If lecturer, only show students in courses they teach
-            records = records.filter(course__lecturer=lecturer)
-        
-        if selected_course:
-            records = records.filter(course=selected_course)
-        
-        if selected_class:
-            records = records.filter(student__current_class=selected_class)
+    # ---------------- ROLE SECURITY ----------------
+    if lecturer:
+        records = records.filter(course__assignments__lecturer=lecturer)
 
-        # Process data for the table
-        for record in records.select_related('student', 'course').order_by('student__user__last_name', 'date'):
-            student = record.student
-            if student not in attendance_data:
-                attendance_data[student] = {}
-                student_summary[student] = {'P': 0, 'A': 0, 'L': 0, 'E': 0, 'total': 0}
+    if student:
+        records = records.filter(student=student)
 
-            attendance_data[student][record.date] = record
-            
-            # Increment the specific status count (P, A, L, or E)
-            status = record.status
-            student_summary[student][status] = student_summary[student].get(status, 0) + 1
-            student_summary[student]['total'] += 1
+    # ---------------- FILTERS ----------------
+    if selected_course:
+        records = records.filter(course=selected_course)
+
+    if selected_department:
+        records = records.filter(student__department=selected_department)
+
+    if selected_student:
+        records = records.filter(student=selected_student)
+
+    records = records.select_related('student__user', 'course')
+
+    # ---------------- BUILD MATRIX ----------------
+    for record in records:
+
+        stud = record.student
+        day = record.date   # 🔥 IMPORTANT: KEEP AS DATE OBJECT
+
+        if stud not in attendance_data:
+            attendance_data[stud] = {}
+            student_summary[stud] = {'P': 0, 'A': 0, 'L': 0, 'E': 0, 'total': 0}
+
+        attendance_data[stud][day] = record
+
+        student_summary[stud][record.status] += 1
+        student_summary[stud]['total'] += 1
+
+    # ---------------- PERCENTAGE CALC ----------------
+    for stud, summary in student_summary.items():
+        total_days = summary['total'] or 1
+        present = summary['P']
+
+        attendance_percentage[stud] = round((present / total_days) * 100, 2)
+
+    # ---------------- CSV EXPORT ----------------
+    if request.GET.get("export") == "1":
+        return export_attendance_csv(attendance_data, start_date, end_date)
 
     context = {
         'report_form': report_form,
         'attendance_data': attendance_data,
         'student_summary': student_summary,
+        'attendance_percentage': attendance_percentage,
         'start_date': start_date,
         'end_date': end_date,
     }
-    return render(request, 'attendance/test_attendance_report.html', context)
 
+    return render(request, 'attendance/attendance_report.html', context)
+
+import csv
+from django.http import HttpResponse
+
+def export_attendance_csv(data, start_date, end_date):
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="attendance_report.csv"'
+
+    writer = csv.writer(response)
+
+    writer.writerow(["Student", "Date", "Status"])
+
+    for student, days in data.items():
+        for date, record in days.items():
+            writer.writerow([
+                student.user.get_full_name(),
+                date,
+                record.status
+            ])
+
+    return response
 
 
 # tertiary list attendance
@@ -419,6 +1011,7 @@ def student_attendance_summary(request, student_id):
 
     return render(request, 'attendance/student_attendance_summary.html', context)
 
+
 @login_required
 def student_attendance_detail(request, student_id):
     """
@@ -475,38 +1068,6 @@ def self_attendance_detail(request):
         return redirect('dashboard')
 
 
-# # Attendance Scanner    
-# @login_required
-# def attendance_scanner_view(request, course_id=None):
-#     """
-#     Renders the QR scanner interface. 
-#     If course_id is None, it provides a selection of available courses.
-#     """
-#     # 1. Handle the "Selection" phase if no course_id is provided
-#     if course_id is None:
-#         if request.user.is_superuser or request.user.is_staff:
-#             courses = Course.objects.all()
-#         else:
-#             # Assuming you have a 'teacher' relationship to Course
-#             courses = Course.objects.filter(teacher__user=request.user)
-            
-#         return render(request, 'attendance/scanner_course_select.html', {
-#             'courses': courses
-#         })
-
-#     # 2. Handle the "Scanner" phase if course_id is provided
-#     course = get_object_or_404(Course, id=course_id)
-    
-#     if not can_manage_attendance(request.user, course):
-#         messages.error(request, "You are not authorized to scan for this course.")
-#         return redirect('attendance:attendance_scanner_view') # Redirect back to select
-
-#     return render(request, 'attendance/attendance_scanner.html', {
-#         'course': course,
-#         'today': timezone.localdate(),
-#     })
-
-# attendance/views.py
 
 @login_required
 def attendance_scanner_view(request, course_id=None):
