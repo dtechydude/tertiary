@@ -11,14 +11,18 @@ from .models import (
     Result,
     ResultScore,
     ResultAuditLog,
+    GraduationPolicy,
+    ClassificationScheme,
+    ClassificationBand,
+    ProgrammeClassificationScheme,
 )
 
 
 @admin.register(AssessmentComponent)
 class AssessmentComponentAdmin(admin.ModelAdmin):
-    list_display = ("name", "code", "is_active")
+    list_display = ("name", "code", "is_exam_component", "is_active")
     search_fields = ("name", "code")
-    list_filter = ("is_active",)
+    list_filter = ("is_active", "is_exam_component")
 
 
 class GradingSchemeComponentInline(admin.TabularInline):
@@ -96,3 +100,30 @@ class ResultAdmin(admin.ModelAdmin):
         from .services.grading import GradingService
         for result in queryset:
             GradingService.compute_result(result)
+
+
+@admin.register(GraduationPolicy)
+class GraduationPolicyAdmin(admin.ModelAdmin):
+    list_display = (
+        "programme", "minimum_cgpa_to_graduate",
+        "minimum_credit_units_to_graduate", "max_sessions_to_complete",
+    )
+    search_fields = ("programme__name",)
+
+
+class ClassificationBandInline(admin.TabularInline):
+    model = ClassificationBand
+    extra = 1
+
+
+@admin.register(ClassificationScheme)
+class ClassificationSchemeAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_default", "is_active")
+    list_filter = ("is_default", "is_active")
+    inlines = [ClassificationBandInline]
+
+
+@admin.register(ProgrammeClassificationScheme)
+class ProgrammeClassificationSchemeAdmin(admin.ModelAdmin):
+    list_display = ("programme", "scheme")
+    list_filter = ("scheme",)

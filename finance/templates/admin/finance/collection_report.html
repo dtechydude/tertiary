@@ -1,0 +1,48 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p style="font-size: 1.2em;"><strong>Grand Total Collected:</strong> {{ grand_total }}</p>
+
+<h2>Collected by Fee Category</h2>
+<table style="width: 100%; border-collapse: collapse;">
+  <thead>
+    <tr style="text-align: left; border-bottom: 2px solid #444;">
+      <th style="padding: 6px;">Category</th>
+      <th style="padding: 6px;">Total Collected</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in by_category %}
+    <tr style="border-bottom: 1px solid #ddd;">
+      <td style="padding: 6px;">{{ row.category_label }}</td>
+      <td style="padding: 6px;">{{ row.total_collected }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="2" style="padding: 6px;">No successful payments recorded yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2 style="margin-top: 2em;">Collected by Course</h2>
+<table style="width: 100%; border-collapse: collapse;">
+  <thead>
+    <tr style="text-align: left; border-bottom: 2px solid #444;">
+      <th style="padding: 6px;">Course Code</th>
+      <th style="padding: 6px;">Course Title</th>
+      <th style="padding: 6px;">Total Collected</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in by_course %}
+    <tr style="border-bottom: 1px solid #ddd;">
+      <td style="padding: 6px;">{{ row.course_code }}</td>
+      <td style="padding: 6px;">{{ row.course_title }}</td>
+      <td style="padding: 6px;">{{ row.total_collected }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3" style="padding: 6px;">No course fee payments recorded yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

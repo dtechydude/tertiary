@@ -20,6 +20,7 @@ urlpatterns = [
     path('tickets/', include('tickets.urls', namespace='tickets')),
     path('events/', include('events.urls', namespace='events')),
     path('payments/', include('payments.urls', namespace='payments')),
+    path('finance/', include('finance.urls', namespace='finance')),
     # path for result API
     # path('results/', include('results.urls', namespace='results')),
     # path('api/results/', include('results.urls')),    

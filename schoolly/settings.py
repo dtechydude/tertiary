@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'results.apps.ResultsConfig',
     'tickets.apps.TicketsConfig',
     'payments.apps.PaymentsConfig',
+    'finance.apps.FinanceConfig',
 
 
 

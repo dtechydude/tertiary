@@ -106,7 +106,30 @@ class GradingService:
         Upserts one or more ResultScore rows (component_id -> raw_score)
         then recomputes the grade in a single atomic operation, and logs
         the edit for audit purposes.
+
+        Before touching any component flagged `is_exam_component=True`,
+        this checks the student's fee-clearance status via the finance
+        app (ExamEligibilityService). Non-exam components (CA, quiz,
+        practical, etc.) are never blocked by this — only the actual
+        written-exam component is, since those often happen before fees
+        are fully cleared.
         """
+        exam_component_ids = set(
+            GradingSchemeComponent.objects.filter(
+                scheme=result.scheme, component__is_exam_component=True
+            ).values_list("component_id", flat=True)
+        )
+        if exam_component_ids & set(component_scores.keys()):
+            from finance.services.exam_eligibility import ExamEligibilityService
+            if not ExamEligibilityService.is_course_exam_eligible(
+                result.student, result.course, result.session, result.semester
+            ):
+                raise ValidationError(
+                    f"{result.student} has outstanding mandatory fees for {result.course.course_code} "
+                    f"({result.session}/{result.semester}) and cannot be scored for the examination "
+                    f"component until cleared."
+                )
+
         for component_id, raw_score in component_scores.items():
             ResultScore.objects.update_or_create(
                 result=result, component_id=component_id,

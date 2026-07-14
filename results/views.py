@@ -24,6 +24,7 @@ from .permissions import IsCourseLecturer
 from .serializers import BulkScoreEntrySerializer, ResultSerializer, ResultWorkflowActionSerializer
 from .services.gpa import GPAService
 from .services.grading import GradingService
+from .services.graduation import GraduationService
 from .services.workflow import ResultWorkflowService
 
 
@@ -80,7 +81,7 @@ class BulkScoreEntryView(APIView):
             )
 
         scheme = GradingService.resolve_scheme(course)
-        processed, skipped = [], []
+        processed, skipped, blocked = [], [], []
 
         for entry in data["entries"]:
             is_registered = CourseRegistration.objects.filter(
@@ -100,12 +101,12 @@ class BulkScoreEntryView(APIView):
                 GradingService.record_scores(result, entry["scores"], actor=request.user)
                 processed.append(result.id)
             except ValidationError as e:
-                return Response(
-                    {"error": str(e), "student_id": entry["student_id"]},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                # One student's outstanding fees (or any other validation
+                # issue) shouldn't block the rest of the class from being
+                # scored — record it and keep going.
+                blocked.append({"student_id": entry["student_id"], "reason": str(e)})
 
-        return Response({"processed": processed, "skipped_unregistered": skipped})
+        return Response({"processed": processed, "skipped_unregistered": skipped, "blocked": blocked})
 
 
 class ResultWorkflowActionView(APIView):
@@ -164,6 +165,43 @@ class StudentGPASummaryView(APIView):
         return Response({"cgpa": str(GPAService.calculate_cgpa(student))})
 
 
+class StudentGraduationEvaluationView(APIView):
+    """
+    Registrar-facing (also viewable by the student themself): is this
+    student eligible to graduate, and under what classification?
+    Delegates entirely to GraduationService — this view makes no
+    decisions about thresholds or band names.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, student_id):
+        from students.models import Student
+        student = get_object_or_404(Student, pk=student_id)
+
+        is_owner = getattr(request.user, "student", None) and request.user.student.id == student.id
+        if not is_owner and not request.user.has_perm("results.publish_result"):
+            return Response(
+                {"error": "You do not have permission to view this student's graduation evaluation."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            evaluation = GraduationService.evaluate(student)
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "cgpa": str(evaluation.cgpa),
+            "total_credit_units": evaluation.total_credit_units,
+            "minimum_cgpa_required": str(evaluation.minimum_cgpa_required),
+            "minimum_credit_units_required": evaluation.minimum_credit_units_required,
+            "meets_cgpa_requirement": evaluation.meets_cgpa_requirement,
+            "meets_credit_requirement": evaluation.meets_credit_requirement,
+            "is_eligible_to_graduate": evaluation.is_eligible_to_graduate,
+            "classification": evaluation.classification,
+        })
+
+
 # ---------------------------------------------------------------------------
 # Template views — thin; all logic delegates to services
 # ---------------------------------------------------------------------------
@@ -201,6 +239,7 @@ def lecturer_submit_scores(request, course_id):
     components = list(scheme.schemecomponents.select_related("component"))
 
     if request.method == "POST":
+        blocked = []
         with transaction.atomic():
             for reg in registrations:
                 component_scores = {
@@ -212,8 +251,19 @@ def lecturer_submit_scores(request, course_id):
                     session=assignment.session, semester=assignment.semester,
                     defaults={"scheme": scheme, "credit_unit": course.credit_unit},
                 )
-                GradingService.record_scores(result, component_scores, actor=request.user)
+                try:
+                    GradingService.record_scores(result, component_scores, actor=request.user)
+                except ValidationError as e:
+                    # Don't let one student's outstanding fees stop the
+                    # rest of the class from being scored.
+                    blocked.append({"student": reg.student, "reason": str(e)})
 
+        if blocked:
+            return render(request, "results/lecturer/submit_scores.html", {
+                "registrations": registrations, "course": course,
+                "assignment": assignment, "components": components,
+                "blocked": blocked,
+            })
         return redirect("results:lecturer_submit_scores", course_id=course_id)
 
     return render(request, "results/lecturer/submit_scores.html", {

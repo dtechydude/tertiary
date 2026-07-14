@@ -8,10 +8,6 @@ from curriculum.models import SchoolIdentity
 from .views import SafePasswordResetView
 
 
-# app_name ='users'
-# We fetch the school data once here or inside the view
-# school_data = SchoolIdentity.objects.first()
-
 urlpatterns = [
     path('', auth_views.LoginView.as_view(template_name='users/login.html'), name="login"),
     path('register/', user_views.user_registration, name="user-registeration"),

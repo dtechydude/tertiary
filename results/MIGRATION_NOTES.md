@@ -127,6 +127,16 @@ dashboard should read `result.grade`, `result.total_score` etc. — same field n
 `Result`, so only the lecturer entry form template actually needs a rewrite. Say the word and I'll
 do that next.
 
+## Finance integration (added after initial delivery)
+
+`AssessmentComponent` now has an `is_exam_component` boolean (default `False` — purely
+additive, no prompt on migrate). Set it `True` on your "Examination" component only.
+`GradingService.record_scores()` now checks `finance.services.exam_eligibility.ExamEligibilityService`
+before accepting a score for any component flagged this way, and raises if the student
+has outstanding mandatory fees for that course/semester. This means the `finance` app
+must be installed and migrated before `results` for this check to import successfully
+— see the finance app's own README for setup order.
+
 ## Suggested next steps
 
 1. Run `makemigrations`/`migrate`, wire the data migration above to your real state.

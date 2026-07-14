@@ -39,29 +39,6 @@ from students.models import Student
 from curriculum.models import Course, Session, Semester, Programme
 
 
-
-
-
-
-class Examination(models.Model):
-    name = models.CharField(max_length=150, blank=True)
-    programme = models.ForeignKey(Programme, on_delete=models.CASCADE, blank=True, null=True)
-    semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name='exams') # Link to semester  
-    session = models.ForeignKey(Session, on_delete=models.CASCADE) 
-  
-    date = models.DateField(null=True) 
-    description = models.CharField(max_length=150, blank=True)  
-
-    def __str__ (self):
-        return f'{self.name} - {self.promgramme.name} - {self.semester}'
-    
-    class Meta:
-        verbose_name = 'Examinations'
-        verbose_name_plural = 'Examinations'
-        unique_together = ('name', 'semester', 'date')
-        ordering = ['semester__start_date', 'date', 'name']
-    
-
 # ---------------------------------------------------------------------------
 # Assessment configuration
 # ---------------------------------------------------------------------------
@@ -76,6 +53,12 @@ class AssessmentComponent(models.Model):
     code = models.SlugField(max_length=20, unique=True, help_text="Short code, e.g. CA, EXAM, QUIZ")
     description = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
+    is_exam_component = models.BooleanField(
+        default=False,
+        help_text="Mark True for the component(s) representing the actual written examination. "
+                   "Used to gate this component specifically on the student's fee-clearance/exam-eligibility "
+                   "status (via the finance app), without blocking CA/quiz/practical entry.",
+    )
 
     class Meta:
         ordering = ["name"]
@@ -234,11 +217,11 @@ class Result(models.Model):
     session = models.ForeignKey(Session, on_delete=models.PROTECT, related_name="results")
     semester = models.ForeignKey(Semester, on_delete=models.PROTECT, related_name="results")
     scheme = models.ForeignKey(
-        GradingScheme, on_delete=models.PROTECT, null=True, blank=True, related_name="results",
+        GradingScheme, on_delete=models.PROTECT, related_name="results",
         help_text="Snapshot of the scheme this result was graded under.",
     )
 
-    credit_unit = models.PositiveSmallIntegerField( null=True, blank=True,
+    credit_unit = models.PositiveSmallIntegerField(
         help_text="Snapshot of the course's credit unit at the time this result was created."
     )
     attempt_number = models.PositiveSmallIntegerField(default=1, help_text="1 for a first sit, 2+ for a resit/carry-over.")
@@ -320,6 +303,122 @@ class ResultScore(models.Model):
 
     def __str__(self):
         return f"{self.result} - {self.component.name}: {self.raw_score}"
+
+
+class GraduationPolicy(models.Model):
+    """
+    Per-programme graduation gate: the minimum CGPA (and, optionally,
+    minimum total credit units) a student must accumulate to be eligible
+    to graduate at all — independent of which named classification band
+    they end up falling into. This is deliberately a separate concept
+    from ClassificationBand below: a programme could, in principle, want
+    a graduation floor that sits below its lowest classification label.
+    """
+    programme = models.OneToOneField(Programme, on_delete=models.CASCADE, related_name="graduation_policy")
+    minimum_cgpa_to_graduate = models.DecimalField(
+        max_digits=3, decimal_places=2,
+        help_text="e.g. 2.00 on a 5.00 scale, or 1.50 on a 4.00 scale — whatever CGPA scale this institution uses.",
+    )
+    minimum_credit_units_to_graduate = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Optional: total credit units a student must have passed to graduate, independent of CGPA.",
+    )
+    max_sessions_to_complete = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Optional cap on how many academic sessions a student may take to finish this programme.",
+    )
+
+    class Meta:
+        verbose_name = "Graduation Policy"
+        verbose_name_plural = "Graduation Policies"
+
+    def __str__(self):
+        return f"{self.programme} — min CGPA {self.minimum_cgpa_to_graduate}"
+
+
+class ClassificationScheme(models.Model):
+    """
+    A named, reusable set of degree/diploma classification bands, e.g.
+    "Standard Degree Classification" (First Class / Second Upper / ...)
+    or "Diploma Classification" (Distinction / Upper Credit / Lower
+    Credit / Pass). Reusable across programmes, exactly like
+    GradingScheme is reusable across courses — nothing here assumes a
+    single national grading convention.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    is_default = models.BooleanField(
+        default=False,
+        help_text="Fallback scheme used when a programme has no explicit classification scheme assigned.",
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Classification Scheme"
+        verbose_name_plural = "Classification Schemes"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            ClassificationScheme.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
+
+
+class ClassificationBand(models.Model):
+    """
+    One named band within a ClassificationScheme, e.g. "Second Class
+    Upper Division" (3.50-4.49) or "Upper Credit" (3.00-3.49).
+    Institutions define their own names and boundaries; nothing here
+    assumes a fixed set of band names or a particular CGPA scale.
+    """
+    scheme = models.ForeignKey(ClassificationScheme, on_delete=models.CASCADE, related_name="bands")
+    name = models.CharField(
+        max_length=100,
+        help_text="e.g. 'Second Class Upper Division', 'Upper Credit', 'Distinction'",
+    )
+    min_cgpa = models.DecimalField(max_digits=3, decimal_places=2)
+    max_cgpa = models.DecimalField(max_digits=3, decimal_places=2)
+    is_graduating_class = models.BooleanField(
+        default=True,
+        help_text="Uncheck for a band that represents 'below graduating minimum' if you want it labelled rather than simply absent.",
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("scheme", "name")
+        ordering = ["-min_cgpa"]
+        indexes = [models.Index(fields=["scheme", "min_cgpa", "max_cgpa"])]
+        verbose_name = "Classification Band"
+        verbose_name_plural = "Classification Bands"
+
+    def clean(self):
+        if self.min_cgpa > self.max_cgpa:
+            raise ValidationError("min_cgpa cannot exceed max_cgpa.")
+        overlapping = ClassificationBand.objects.filter(scheme=self.scheme).exclude(pk=self.pk).filter(
+            min_cgpa__lte=self.max_cgpa, max_cgpa__gte=self.min_cgpa
+        )
+        if overlapping.exists():
+            raise ValidationError(
+                f"CGPA range {self.min_cgpa}-{self.max_cgpa} overlaps an existing band in this scheme."
+            )
+
+    def __str__(self):
+        return f"{self.scheme.name}: {self.name} ({self.min_cgpa}-{self.max_cgpa})"
+
+
+class ProgrammeClassificationScheme(models.Model):
+    """
+    Which ClassificationScheme a programme uses. Falls back to the
+    global is_default=True scheme if unset — resolved the same way
+    GradingService.resolve_scheme() resolves a course's grading scheme.
+    """
+    programme = models.OneToOneField(Programme, on_delete=models.CASCADE, related_name="classification_scheme_link")
+    scheme = models.ForeignKey(ClassificationScheme, on_delete=models.PROTECT, related_name="programme_links")
+
+    def __str__(self):
+        return f"{self.programme} → {self.scheme.name}"
 
 
 class ResultAuditLog(models.Model):

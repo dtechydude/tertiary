@@ -35,4 +35,9 @@ urlpatterns = [
         views.StudentGPASummaryView.as_view(),
         name="api_student_gpa",
     ),
+    path(
+        "api/v1/students/<int:student_id>/graduation-evaluation/",
+        views.StudentGraduationEvaluationView.as_view(),
+        name="api_student_graduation_evaluation",
+    ),
 ]
