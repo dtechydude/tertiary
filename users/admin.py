@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from django.contrib import admin
 from users.models import Profile, Dept
 from django.contrib.auth import get_user_model
@@ -6,6 +8,9 @@ import csv, datetime
 from import_export.admin import ImportExportModelAdmin
 from django.contrib.auth.admin import UserAdmin as DefaultUserAdmin # Import the default UserAdmin
 from import_export import resources # You might need this if you customize resource
+
+import logging
+import os
 
 
 User = get_user_model()
@@ -54,7 +59,192 @@ class CustomUserAdmin(ImportExportModelAdmin, DefaultUserAdmin): # Inherit from 
 #         if self.value():
 #             return queryset.filter(user__student__current_class_id=self.value())
 #         return queryset
- 
+
+
+
+"""
+admin.py — Profile Admin with Auto Image Cleanup
+KwikSchools — Smarter Schools!
+
+Merge this into your existing users/admin.py.
+The save_model() override handles old image deletion independently
+of the signals.py logic — works for both inline and standalone admin saves.
+"""
+# from __future__ import annotations
+
+
+User = get_user_model()
+logger = logging.getLogger(__name__)
+
+DEFAULT_IMAGE_NAME = 'default.jpg'
+
+
+def _delete_old_image_if_changed(old_image_field, new_image_field) -> None:
+    """
+    Delete the old profile image file from disk when it has been replaced.
+    Safe: never deletes the default image, never raises on missing files.
+    """
+    if not old_image_field:
+        return
+
+    old_name = str(old_image_field)
+    new_name = str(new_image_field) if new_image_field else ''
+
+    if old_name == new_name:
+        return  # image unchanged — nothing to do
+
+    if os.path.basename(old_name) == DEFAULT_IMAGE_NAME:
+        return  # never delete the fallback default
+
+    try:
+        old_path = old_image_field.path
+        if os.path.isfile(old_path):
+            os.remove(old_path)
+            logger.info(f'[Admin] Deleted old profile image: {old_path}')
+        else:
+            logger.debug(f'[Admin] Old image already missing from disk: {old_path}')
+    except (ValueError, AttributeError):
+        pass  # blank/empty ImageField — nothing to delete
+    except OSError as e:
+        logger.warning(f'[Admin] Could not delete old profile image "{old_name}": {e}')
+
+
+# ── Inline: edit Profile directly from the User admin page ───────────────────
+
+class ProfileInline(admin.StackedInline):
+    model   = Profile
+    can_delete  = False
+    verbose_name = 'Profile'
+    verbose_name_plural = 'Profile'
+    extra   = 0
+    fields  = (
+        'image', 'phone', 'user_type', 'state_of_origin',
+        'address', 'bio', 'activate',
+    )
+
+    # ── Inline save hook ──────────────────────────────────────────────────────
+    def save_model(self, request, obj, form, change):
+        """Called when saving the inline from the User change page."""
+        if change and 'image' in form.changed_data:
+            try:
+                old = Profile.objects.get(pk=obj.pk)
+                _delete_old_image_if_changed(old.image, obj.image)
+            except Profile.DoesNotExist:
+                pass
+        super().save_model(request, obj, form, change)
+
+    def save_formset(self, request, form, formset, change):
+        """
+        save_formset is what actually fires for inlines — override this
+        in addition to save_model for full inline coverage.
+        """
+        instances = formset.save(commit=False)
+        for instance in instances:
+            if instance.pk:
+                try:
+                    old = Profile.objects.get(pk=instance.pk)
+                    _delete_old_image_if_changed(old.image, instance.image)
+                except Profile.DoesNotExist:
+                    pass
+            instance.save()
+        formset.save_m2m()
+
+
+# ── Standalone Profile admin ──────────────────────────────────────────────────
+
+@admin.register(Profile)
+# class ProfileAdmin(admin.ModelAdmin):
+class ProfileAdmin(ImportExportModelAdmin):
+    list_display  = (
+        'get_username', 'get_full_name', 'user_type',
+        'phone', 'state_of_origin', 'activate', 'has_custom_photo',
+    )
+    list_filter   = ('user_type', 'activate',)
+    search_fields = (
+        'user__username', 'user__first_name',
+        'user__last_name', 'user__email', 'phone',
+    )
+    readonly_fields  = ('code', 'created', 'updated', 'get_current_image_preview')
+    list_per_page    = 50
+    ordering         = ('user__last_name', 'user__first_name')
+
+    fieldsets = (
+        ('User Account', {
+            'fields': ('user',),
+        }),
+        ('Profile Photo', {
+            'fields': ('get_current_image_preview', 'image'),
+            'description': (
+                'Uploading a new image will automatically delete '
+                'the previous one from the server.'
+            ),
+        }),
+        ('Personal Details', {
+            'fields': ('phone', 'state_of_origin', 'address', 'bio'),
+        }),
+        ('Account Settings', {
+            'fields': ('user_type', 'activate', 'recommended_by'),
+        }),
+        ('System Info', {
+            'fields': ('code', 'created', 'updated'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    # ── Display helpers ───────────────────────────────────────────────────────
+
+    @admin.display(description='Username', ordering='user__username')
+    def get_username(self, obj):
+        return obj.user.username
+
+    @admin.display(description='Full Name', ordering='user__last_name')
+    def get_full_name(self, obj):
+        return f'{obj.user.last_name} {obj.user.first_name}'.strip() or '—'
+
+    @admin.display(description='Has Photo', boolean=True)
+    def has_custom_photo(self, obj):
+        return bool(obj.image) and os.path.basename(str(obj.image)) != DEFAULT_IMAGE_NAME
+
+    @admin.display(description='Current Photo')
+    def get_current_image_preview(self, obj):
+        """Show a small thumbnail of the current photo in the change form."""
+        from django.utils.html import format_html
+        if obj.image:
+            try:
+                url = obj.image.url
+                return format_html(
+                    '<img src="{}" style="'
+                    'width:80px;height:80px;object-fit:cover;'
+                    'border-radius:8px;border:2px solid #e2e8f0;'
+                    '" />',
+                    url,
+                )
+            except Exception:
+                pass
+        return '— no photo —'
+
+    # ── Core save hook — fires for every admin save ───────────────────────────
+
+    def save_model(self, request, obj, form, change):
+        """
+        Override the admin save to delete the old image whenever
+        the image field has changed.
+
+        `change` is True  → existing record being updated
+        `change` is False → brand-new profile being created
+        """
+        if change and 'image' in form.changed_data:
+            try:
+                # Re-fetch from DB to get the CURRENT (old) image before saving
+                old_profile = Profile.objects.get(pk=obj.pk)
+                _delete_old_image_if_changed(old_profile.image, obj.image)
+            except Profile.DoesNotExist:
+                pass  # shouldn't happen on `change=True`, but guard anyway
+
+        super().save_model(request, obj, form, change)
+
+
+
 
 class UserProfileAdmin(ImportExportModelAdmin):
            
@@ -84,5 +274,5 @@ class DeptAdmin(ImportExportModelAdmin):
 
 
 # Register your models here.
-admin.site.register(Profile, UserProfileAdmin)
+# admin.site.register(Profile, UserProfileAdmin)
 admin.site.register(Dept, DeptAdmin)

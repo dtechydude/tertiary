@@ -1,21 +1,38 @@
 from django.urls import path
+
 from . import views
-from django.urls import path
-from results.views import ResultEntryView, StudentResultView
-from results.views import TestView
 
-from django.views.generic import TemplateView # For a simple placeholder home page
-
-
-app_name ='results'
+app_name = "results"
 
 urlpatterns = [
-    path('lecturer/submit-scores/', ResultEntryView.as_view(), name='lecturer_submit_scores'),
-    path('student/results/', StudentResultView.as_view(), name='student_view_results'),
+    # --- Template views ---
+    path("dashboard/", views.student_dashboard, name="student_dashboard"),
+    path("course/<int:course_id>/submit/", views.lecturer_submit_scores, name="lecturer_submit_scores"),
 
-    #test DRF
-    path('test/', TestView.as_view()),
-
+    # --- API v1 ---
+    path(
+        "api/v1/lecturer/course/<int:course_id>/results/",
+        views.LecturerCourseResultListView.as_view(),
+        name="api_lecturer_course_results",
+    ),
+    path(
+        "api/v1/lecturer/scores/bulk/",
+        views.BulkScoreEntryView.as_view(),
+        name="api_bulk_score_entry",
+    ),
+    path(
+        "api/v1/results/<int:result_id>/workflow/",
+        views.ResultWorkflowActionView.as_view(),
+        name="api_result_workflow",
+    ),
+    path(
+        "api/v1/student/results/",
+        views.StudentResultListView.as_view(),
+        name="api_student_results",
+    ),
+    path(
+        "api/v1/student/gpa-summary/",
+        views.StudentGPASummaryView.as_view(),
+        name="api_student_gpa",
+    ),
 ]
-
-

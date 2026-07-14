@@ -1,0 +1,57 @@
+{% extends 'results/base.html' %}
+
+{% block title %}Submit Scores{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-4">Enter Student Scores</h2>
+
+<div class="card card-shadow p-4">
+
+<form method="POST">
+    {% csrf_token %}
+
+    <table class="table table-bordered">
+
+        <thead>
+            <tr>
+                <th>Matric Number</th>
+                <th>Student Name</th>
+                <th>TMA Score</th>
+                <th>Exam Score</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for reg in registrations %}
+            <tr>
+                <td>{{ reg.student.matric_number }}</td>
+                <td>{{ reg.student.full_name }}</td>
+
+                <td>
+                    <input
+                        type="number"
+                        name="tma_{{ reg.student.id }}"
+                        class="form-control"
+                        min="0"
+                        max="100"
+                    >
+                </td>
+
+                <td>
+                    <input
+                        type="number"
+                        name="exam_{{ reg.student.id }}"
+                        class="form-control"
+                        min="0"
+                        max="100"
+                    >
+                </td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+{% endblock %}

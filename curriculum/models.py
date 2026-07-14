@@ -164,23 +164,121 @@ class Department(models.Model):
         return self.name
 
 # Program
-class Programme(models.Model):
-    OND = "OND"
-    HND = "HND"
-    CERTIFICATE = "CERTIFICATE"
-    OTHERS = "OTHERS"
+class QualificationType(models.Model):
+    """
+    Configurable catalogue of qualifications this institution awards —
+    e.g. National Diploma, Higher National Diploma, Bachelor's Degree,
+    Postgraduate Diploma, Master's Degree, Professional Certificate, or
+    anything else the school wants to add later, without a code change.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    short_code = models.CharField(max_length=20, unique=True, help_text="e.g. ND, HND, BSc, PGD, MSc, CERT")
+    award_title = models.CharField(
+        max_length=150, blank=True,
+        help_text="Full title printed on certificates/transcripts, e.g. 'Higher National Diploma'",
+    )
+    duration_years = models.DecimalField(
+        max_digits=3, decimal_places=1, default=2,
+        help_text="Standard duration for this qualification, e.g. 2, 2.5, 4, 5",
+    )
+    is_active = models.BooleanField(default=True)
 
-    PROGRAMME_TYPES = [
-        (OND, "OND"),
-        (HND, "HND"),
-        (CERTIFICATE, "CERTIFICATE"),
-        (OTHERS, "OTHERS"),
-    ]
-
-    name = models.CharField(max_length=20, choices=PROGRAMME_TYPES)
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Qualification Type"
+        verbose_name_plural = "Qualification Types"
 
     def __str__(self):
         return self.name
+
+
+class Programme(models.Model):
+    """
+    A specific academic programme, e.g. "Computer Science", "Accountancy",
+    "Public Health" — no longer tied to a fixed 4-choice list. What *kind*
+    of award it is (Diploma, Degree, Certificate, Masters, or anything
+    else the institution wants) is driven entirely by `qualification_type`,
+    which is admin-managed data, not code.
+
+    NOTE — breaking change from the previous version: `name` used to be
+    restricted to OND/HND/CERTIFICATE/OTHERS via `choices=`. It's now a
+    free-text title. See PATCH_NOTES.md for the migration path: existing
+    rows need `qualification_type` backfilled (their old `name` value maps
+    directly onto a QualificationType you create once), and their `name`
+    should then be updated to the programme's actual title.
+    """
+    qualification_type = models.ForeignKey(
+        QualificationType, on_delete=models.PROTECT, related_name="programmes",
+        help_text="What kind of award this is — Diploma, Degree, Certificate, Masters, or anything else configured.",
+    )
+    name = models.CharField(
+        max_length=150,
+        help_text="The programme's actual title, e.g. 'Computer Science', 'Accountancy', 'Public Health'.",
+    )
+
+    class Meta:
+        ordering = ["qualification_type__name", "name"]
+        verbose_name = "Programme"
+        verbose_name_plural = "Programmes"
+
+    def __str__(self):
+        if self.qualification_type_id:
+            return f"{self.qualification_type.short_code} {self.name}"
+        return self.name
+
+
+class RegistrationPolicy(models.Model):
+    """
+    How many credit units a student may/must register per semester.
+    Resolution order: Level-specific override -> Programme-wide default.
+    Mirrors the resolution pattern used by the results app's grading
+    scheme (course override -> programme default -> global default), so
+    a final-year level can carry a lower cap than its programme's general
+    rule without any special-casing in the registration app's validators.
+
+    NOTE: once a dedicated `registration` app exists (per the project's
+    module list), this is a natural candidate to move there. It lives in
+    curriculum for now because it's configured alongside Programme/Level,
+    which already live here.
+    """
+    programme = models.ForeignKey(
+        Programme, on_delete=models.CASCADE, related_name="registration_policies",
+        null=True, blank=True,
+        help_text="Programme-wide default. Leave blank if this policy is only for a specific level.",
+    )
+    level = models.OneToOneField(
+        "Level", on_delete=models.CASCADE, related_name="registration_policy",
+        null=True, blank=True,
+        help_text="Overrides the programme default for this specific level only.",
+    )
+
+    min_units_per_semester = models.PositiveSmallIntegerField(default=12)
+    max_units_per_semester = models.PositiveSmallIntegerField(default=24)
+    max_carryover_units = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Extra units allowed above the max, reserved for carry-over/resit courses. 0 = no allowance.",
+    )
+
+    class Meta:
+        verbose_name = "Registration Policy"
+        verbose_name_plural = "Registration Policies"
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(min_units_per_semester__lte=models.F("max_units_per_semester")),
+                name="curriculum_min_units_lte_max_units",
+            ),
+        ]
+
+    def clean(self):
+        if not self.programme_id and not self.level_id:
+            raise ValidationError("A RegistrationPolicy must be tied to at least a Programme or a Level.")
+        if self.min_units_per_semester > self.max_units_per_semester:
+            raise ValidationError("min_units_per_semester cannot exceed max_units_per_semester.")
+
+    def __str__(self):
+        scope = self.level or self.programme
+        return f"{scope} — {self.min_units_per_semester}-{self.max_units_per_semester} units"
+
 
 # Level
 class Level(models.Model):

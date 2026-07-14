@@ -21,6 +21,8 @@ from .models import (
     CourseRegistration,
     AcademicIdentityMapping,
     SchoolIdentity,
+    QualificationType,
+    RegistrationPolicy,
 
 )
 
@@ -46,8 +48,20 @@ class DepartmentAdmin(admin.ModelAdmin):
 
 @admin.register(Programme)
 class ProgrammeAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ('name', 'qualification_type')
+    list_filter = ('qualification_type',)
     search_fields = ('name',)
+
+@admin.register(QualificationType)
+class QualificationTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'short_code', 'duration_years', 'is_active')
+    search_fields = ('name', 'short_code')
+    list_filter = ('is_active',)
+
+@admin.register(RegistrationPolicy)
+class RegistrationPolicyAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'programme', 'level', 'min_units_per_semester', 'max_units_per_semester', 'max_carryover_units')
+    list_filter = ('programme', 'level')
 
 @admin.register(Level)
 class LevelAdmin(admin.ModelAdmin):
