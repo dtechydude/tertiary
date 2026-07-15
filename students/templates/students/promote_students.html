@@ -43,7 +43,21 @@
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="from_level" value="{{ request.GET.level }}">
-            
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <label class="form-label fw-bold small">Promote To Level</label>
+                    <select name="to_level" class="form-select form-select-sm" required style="max-width: 320px;">
+                        <option value="">-- Select Target Level --</option>
+                        {% for l in levels %}
+                        {% if l.id != selected_from_level.id %}
+                        <option value="{{ l.id }}">{{ l.name }}</option>
+                        {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
             <div class="card shadow-sm">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Eligible Students</h5>
@@ -69,7 +83,7 @@
                                     <td><input type="checkbox" name="selected_students" value="{{ student.id }}" class="student-checkbox"></td>
                                     <td>{{ student.get_full_name }}</td>
                                     <td><span class="badge light badge-dark">{{ student.matric_number }}</span></td>
-                                    <td>{{ student.current_level.name }}</td>
+                                    <td>{{ student.level.name }}</td>
                                     <td>{{ student.department.name }}</td>
                                 </tr>
                                 {% endfor %}
@@ -82,4 +96,30 @@
         {% endif %}
     </div>
 </div>
+
+{% block scripts %}
+<script>
+    (function() {
+        const selectAll = document.getElementById('select-all');
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        const promoteBtn = document.getElementById('promote-btn');
+        const countLabel = document.getElementById('selected-count');
+
+        function updateState() {
+            const checked = document.querySelectorAll('.student-checkbox:checked').length;
+            if (countLabel) countLabel.textContent = checked;
+            if (promoteBtn) promoteBtn.disabled = checked === 0;
+        }
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => { cb.checked = selectAll.checked; });
+                updateState();
+            });
+        }
+        checkboxes.forEach(cb => cb.addEventListener('change', updateState));
+        updateState();
+    })();
+</script>
+{% endblock scripts %}
 {% endblock %}

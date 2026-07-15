@@ -49,6 +49,22 @@
         </div>
         {% endif %}
 
+        {% if unit_policy %}
+        <div class="alert alert-secondary border-0 shadow-sm mb-4">
+            <i class="fas fa-layer-group me-2"></i>
+            You may register between <strong>{{ unit_policy.min_units_per_semester }}</strong> and
+            <strong>{{ unit_policy.max_units_per_semester }}</strong> units this semester.
+        </div>
+        {% endif %}
+
+        {% if fee_clearance and not fee_clearance.fully_cleared_for_exams %}
+        <div class="alert alert-danger border-0 shadow-sm mb-4">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            You have outstanding mandatory fees. Courses you register for will not be exam-eligible until
+            they're cleared — see <a href="{% url 'students:student-self-detail' %}" class="alert-link">My Profile</a> for details.
+        </div>
+        {% endif %}
+
         <div class="row mb-4 align-items-center">
             <div class="col-md-7">
                 <h3 class="fw-bold text-black mb-1">Course Registration</h3>
@@ -65,8 +81,9 @@
             </div>
         </div>
 
-        <form method="post" id="regForm">
+        <form method="post" id="regForm" data-max-units="{{ unit_policy.max_units_per_semester|default:'' }}">
             {% csrf_token %}
+            <input type="hidden" name="action" value="register">
             <input type="hidden" id="late-fee-hidden" value="{{ late_fee }}">
             
             <div class="row">
@@ -106,6 +123,124 @@
             </div>
             {% endif %}
         </form>
+
+        {% if is_student and outstanding_items %}
+        <div class="card shadow-sm border-0 mt-3" id="pay-fees">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-wallet me-2 text-success"></i>Pay Your Fees</h5>
+                <p class="text-muted small mb-0">Select what you'd like to pay for now — you don't have to clear everything in one payment.</p>
+            </div>
+            <div class="card-body">
+                <form method="post" id="payForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="submit_payment">
+
+                    <div class="table-responsive mb-3">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th>Item</th>
+                                    <th class="text-end">Balance Due</th>
+                                    <th class="text-end" style="width: 180px;">Amount to Pay</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in outstanding_items %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="pay-check" name="pay_items" value="{{ item.id }}" data-balance="{{ item.balance }}">
+                                    </td>
+                                    <td>
+                                        {{ item.label }}
+                                        {% if item.is_mandatory_for_exam %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">Blocks Exams</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">₦{{ item.balance|floatformat:2 }}</td>
+                                    <td class="text-end">
+                                        <input type="number" step="0.01" min="0" max="{{ item.balance }}"
+                                               name="amount_{{ item.id }}" class="form-control form-control-sm pay-amount text-end"
+                                               value="{{ item.balance }}" disabled>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Payment Method</label>
+                            <select name="method" class="form-select">
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="card">Card</option>
+                                <option value="ussd">USSD</option>
+                                <option value="cash">Cash (Bursary Office)</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Payment Reference</label>
+                            <input type="text" name="reference" class="form-control" placeholder="e.g. bank transfer reference/teller no." required>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <p class="mb-1 small text-muted">Total to submit</p>
+                            <h4 class="text-success mb-2">₦<span id="pay-total">0.00</span></h4>
+                            <button type="submit" class="btn btn-success" id="submit-pay-btn" disabled>
+                                <i class="fas fa-paper-plane me-1"></i> Submit Payment for Approval
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-muted small mt-3 mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Submitting doesn't clear you instantly — a bursary officer verifies and approves it first.
+                        Track its status below.
+                    </p>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if recent_payments %}
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">My Payment Submissions</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Reference</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-center">Status</th>
+                            <th class="pe-3">Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in recent_payments %}
+                        <tr>
+                            <td class="ps-3">{{ payment.reference }}</td>
+                            <td class="text-end">₦{{ payment.amount|floatformat:2 }}</td>
+                            <td class="text-center">
+                                {% if payment.status == "successful" %}
+                                <span class="badge bg-success">Approved</span>
+                                {% elif payment.status == "pending" %}
+                                <span class="badge bg-warning text-dark">Pending Review</span>
+                                {% elif payment.status == "failed" %}
+                                <span class="badge bg-danger">Rejected</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ payment.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-3">{{ payment.created_at|date:"M j, Y g:i A" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock content_body %}
@@ -133,12 +268,50 @@
                 minimumFractionDigits: 2, 
                 maximumFractionDigits: 2
             }));
+
+            const maxUnits = parseInt($('#regForm').data('max-units'));
+            if (maxUnits && units > maxUnits) {
+                $('#unit-count').addClass('text-danger').removeClass('text-primary');
+            } else {
+                $('#unit-count').addClass('text-primary').removeClass('text-danger');
+            }
         }
 
         $(document).ready(function() {
             updateTotals();
             $('.course-check').on('change', updateTotals);
         });
+
+        // --- Pay Your Fees form ---
+        function updatePayTotal() {
+            let total = 0;
+            $('.pay-check').each(function() {
+                const row = $(this).closest('tr');
+                const amountInput = row.find('.pay-amount');
+                if ($(this).is(':checked')) {
+                    amountInput.prop('disabled', false);
+                    total += parseFloat(amountInput.val()) || 0;
+                } else {
+                    amountInput.prop('disabled', true);
+                }
+            });
+            $('#pay-total').text(total.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }));
+            $('#submit-pay-btn').prop('disabled', total <= 0);
+        }
+
+        $('.pay-check').on('change', updatePayTotal);
+        $('.pay-amount').on('input', function() {
+            const max = parseFloat($(this).attr('max')) || 0;
+            let val = parseFloat($(this).val()) || 0;
+            if (val > max) {
+                $(this).val(max);
+            }
+            updatePayTotal();
+        });
+        updatePayTotal();
     })(jQuery);
 </script>
 {% endblock scripts %}

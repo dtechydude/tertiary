@@ -2,13 +2,8 @@
 
 {% block object-tools-items %}
   <li>
-    <a href="{% url 'finance:pending_payments' %}" class="button">
-      Review Pending Payments
-    </a>
-  </li>
-  <li>
     <a href="{% url 'admin:finance_collection_report' %}" class="button">
-      Collection Report
+      Income Report (Course Fees &amp; Mandatory Fees)
     </a>
   </li>
   {{ block.super }}

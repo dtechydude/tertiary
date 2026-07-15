@@ -102,10 +102,29 @@ class FinanceService:
     @staticmethod
     @transaction.atomic
     def confirm_payment(payment: Payment) -> Payment:
-        """Marks a pending payment (e.g. an async gateway callback) as successful."""
+        """Marks a pending payment (e.g. an async gateway callback, or a
+        student-submitted claim a bursary officer has verified) as
+        successful. Its allocations immediately start counting toward
+        each PaymentItem's amount_paid/is_cleared — and therefore exam
+        eligibility — since those are computed live, not cached."""
         payment.status = Payment.Status.SUCCESSFUL
         payment.paid_at = timezone.now()
         payment.save(update_fields=["status", "paid_at"])
+        return payment
+
+    @staticmethod
+    @transaction.atomic
+    def reject_payment(payment: Payment) -> Payment:
+        """
+        Rejects a PENDING claim that turns out not to be valid (fake or
+        unverifiable reference, wrong amount, etc.) — distinct from
+        reverse_payment, which is for a payment that *was* successful and
+        later bounced/was refunded. A rejected payment's allocations
+        never counted toward any balance in the first place (only
+        SUCCESSFUL payments do), so nothing else needs to change.
+        """
+        payment.status = Payment.Status.FAILED
+        payment.save(update_fields=["status"])
         return payment
 
     @staticmethod

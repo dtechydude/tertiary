@@ -55,4 +55,9 @@ urlpatterns = [
         views.exam_attendance_list_html,
         name="exam_attendance_list_html",
     ),
+
+    # --- Staff: review and approve/reject student-submitted payments ---
+    path("payments/pending/", views.pending_payments_view, name="pending_payments"),
+    path("payments/<int:payment_id>/approve/", views.approve_payment_view, name="approve_payment"),
+    path("payments/<int:payment_id>/reject/", views.reject_payment_view, name="reject_payment"),
 ]

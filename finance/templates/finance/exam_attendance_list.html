@@ -59,11 +59,8 @@
               {% endif %}
             </td>
             <td>
-              {% for item in row.outstanding_items %}
-                {{ item }}{% if not forloop.last %}, {% endif %}
-              {% empty %}
-                —
-              {% endfor %}
+              {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              {% if not row.reasons %}—{% endif %}
             </td>
             <td class="no-print" style="min-width: 120px;"></td>
           </tr>

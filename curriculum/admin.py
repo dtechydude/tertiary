@@ -6,8 +6,8 @@ from django.shortcuts import render, redirect
 from django import forms
 from django.db import transaction
 from import_export.admin import ImportExportModelAdmin
-# from payments.models import StudentFeeAssignment, ClassFeeTemplate, PaymentCategory
-# from results.models import SessionResultStatus
+from django.utils import timezone
+
 
 from .models import (
     Faculty,
@@ -77,6 +77,7 @@ class CourseAdmin(admin.ModelAdmin):
         'department',
         'programme',
         'level',
+        'session',
         'semester',
         'credit_unit',
         'lecturer'
@@ -133,12 +134,55 @@ class CourseAssignmentAdmin(admin.ModelAdmin):
 
 
 # COURSE REGISTRATION
+# @admin.register(CourseRegistration)
+# class CourseRegistrationAdmin(admin.ModelAdmin):
+#     list_display = ("student", "course", "session", "semester")
+#     list_filter = ("session", "semester", "course__department")
+#     search_fields = ("student__matric_number", "course__course_code")
+#     raw_id_fields = ('student', 'course',)
+
+"""
+Drop-in replacement for CourseRegistrationAdmin in curriculum/admin.py.
+Requires `from django.utils import timezone` and `from django.contrib import
+admin, messages` at the top of that file (the latter is almost certainly
+already there).
+
+The "Income Report" button reuses the collection-report admin view already
+built in the finance app (admin:finance_collection_report) — it shows totals
+by fee category AND by course, so this doesn't duplicate that logic, it just
+surfaces it from where a registrar is already looking.
+"""
+
 @admin.register(CourseRegistration)
 class CourseRegistrationAdmin(admin.ModelAdmin):
-    list_display = ("student", "course", "session", "semester")
-    list_filter = ("session", "semester", "course__department")
+    list_display = (
+        "student", "course", "session", "semester",
+        "is_validated", "validated_by", "registered_at",
+    )
+    list_filter = ("session", "semester", "course__department", "is_validated")
     search_fields = ("student__matric_number", "course__course_code")
     raw_id_fields = ('student', 'course',)
+    actions = ["validate_selected", "unvalidate_selected"]
+    change_list_template = "admin/curriculum/courseregistration/change_list.html"
+
+    @admin.action(description="Validate selected registrations (allow exam eligibility)")
+    def validate_selected(self, request, queryset):
+        if not request.user.has_perm("curriculum.validate_registration"):
+            self.message_user(request, "You do not have permission to validate registrations.", level=messages.ERROR)
+            return
+        updated = queryset.update(
+            is_validated=True, validated_by=request.user, validated_at=timezone.now()
+        )
+        self.message_user(request, f"{updated} registration(s) validated.", level=messages.SUCCESS)
+
+    @admin.action(description="Revoke validation on selected registrations")
+    def unvalidate_selected(self, request, queryset):
+        if not request.user.has_perm("curriculum.validate_registration"):
+            self.message_user(request, "You do not have permission to modify validation status.", level=messages.ERROR)
+            return
+        updated = queryset.update(is_validated=False, validated_by=None, validated_at=None)
+        self.message_user(request, f"{updated} registration(s) had validation revoked.", level=messages.WARNING)
+
 
 
 class AcademicIdentityInline(admin.TabularInline):

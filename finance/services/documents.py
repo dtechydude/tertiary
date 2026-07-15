@@ -53,22 +53,27 @@ def build_registration_slip_pdf(student, session, semester, registrations) -> by
         Spacer(1, 0.5 * cm),
     ]
 
-    data = [["Course Code", "Course Title", "Units", "Exam Eligible"]]
+    data = [["Course Code", "Course Title", "Units", "Exam Eligible", "Reason (if not eligible)"]]
     for reg in registrations:
-        eligible = ExamEligibilityService.is_course_exam_eligible(student, reg.course, session, semester)
-        data.append([reg.course.course_code, reg.course.title, str(reg.course.credit_unit), "Yes" if eligible else "No"])
+        result = ExamEligibilityService.check(student, reg.course, session, semester)
+        reason_text = "; ".join(result.reasons) if not result.is_eligible else ""
+        data.append([
+            reg.course.course_code, reg.course.title, str(reg.course.credit_unit),
+            "Yes" if result.is_eligible else "No", reason_text,
+        ])
 
     total_units = sum(reg.course.credit_unit for reg in registrations)
-    data.append(["", "Total Units", str(total_units), ""])
+    data.append(["", "Total Units", str(total_units), "", ""])
 
-    table = Table(data, colWidths=[3 * cm, 8 * cm, 2.5 * cm, 3 * cm])
+    table = Table(data, colWidths=[2.3 * cm, 5.5 * cm, 1.7 * cm, 2 * cm, 5 * cm])
     table.setStyle(_base_table_style())
     elements.append(table)
 
     elements.append(Spacer(1, 1 * cm))
     elements.append(Paragraph(
-        "Courses marked 'No' under Exam Eligible have outstanding mandatory fees. "
-        "Clear them before the examination period to be admitted to sit the paper.",
+        "Courses marked 'No' under Exam Eligible have outstanding mandatory fees and/or are pending "
+        "registrar validation — see the Reason column. Resolve these before the examination period "
+        "to be admitted to sit the paper.",
         styles["Italic"],
     ))
 

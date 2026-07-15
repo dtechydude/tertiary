@@ -15,7 +15,6 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from students.models import Student, Hostel, GraduationRecord
 from staff.models import Lecturer
 from students.forms import StudentUpdateForm, SuperUserStudentUpdateForm
-# from payments.models import Payment, CategoryFee # Import Payment and CategoryFee models
 
 from users.forms import UserRegisterForm
 from curriculum.models import Session, Semester, Programme, SchoolIdentity, Level, Department, CourseRegistration, Course
@@ -31,13 +30,15 @@ from django.template.loader import get_template
 from xhtml2pdf import pisa
 
 from django.db import IntegrityError, transaction, models
+from django.core.exceptions import ValidationError
 from datetime import date
 from django.views import View
 from django.contrib.admin.views.decorators import staff_member_required
 from curriculum.utils.identity import get_school_identity_for_student
-
+from curriculum.services.registration import validate_unit_load, resolve_registration_policy
 
 from django.utils import timezone
+from decimal import Decimal, InvalidOperation
 
 
 
@@ -111,11 +112,21 @@ class StudentDetailView(LoginRequiredMixin, DetailView):
         matric_number = self.kwargs.get("matric_number")
         return get_object_or_404(Student, matric_number=matric_number)
 
+    def get_context_data(self, **kwargs):
+        from students.services.dashboard import build_student_dashboard_context
+
+        context = super().get_context_data(**kwargs)
+        context.update(build_student_dashboard_context(self.object))
+        return context
+
 
 # TERTIARY LOGIC===================================================
 class StudentSelfDetailView(LoginRequiredMixin, DetailView):
     """
-    Used by the logged-in student to view their own profile.
+    Used by the logged-in student to view their own profile — including
+    their current course registration, fee clearance status, and
+    published results/GPA (pulled from the finance and results apps via
+    students.services.dashboard).
     """
     model = Student
     template_name = 'students/student_self_detail.html'
@@ -130,6 +141,13 @@ class StudentSelfDetailView(LoginRequiredMixin, DetailView):
 
     def get_object(self, queryset=None):
         return self.request.user.student
+
+    def get_context_data(self, **kwargs):
+        from students.services.dashboard import build_student_dashboard_context
+
+        context = super().get_context_data(**kwargs)
+        context.update(build_student_dashboard_context(self.object))
+        return context
 
 
 # TERTIARY LOGIC ===============================
@@ -175,30 +193,6 @@ def student_search_list(request):
     
     return render(request, 'students/search_student_list.html', context)
 
-
-# TERTIARY LOGIC FOR BORDERS ================================================
-# For Boading Students
-# @login_required
-# def student_boarder_list(request):
-#     # Security Check: Ensure only staff/superusers proceed
-#     if not (request.user.is_superuser or request.user.is_staff):
-#         return render(request, 'pages/portal_home.html')
-
-#     # Optimization: Use select_related to join 'hostel_name' and 'level' 
-#     # so they are fetched in a single database query.
-#     boarder_students = Student.objects.filter(
-#         student_type='boarder'
-#     ).exclude(
-#         student_status='graduated'
-#     ).select_related(
-#         'hostel_name', 'level', 'programme'
-#     ).order_by('-date_admitted')
-
-#     context = {
-#         'boarder_students': boarder_students
-#     }
-
-#     return render(request, 'students/student_boarder_list.html', context)
 
 @login_required
 def student_boarder_list(request):
@@ -378,44 +372,60 @@ def is_authorized_to_manage(user):
 @user_passes_test(is_authorized_to_manage)
 def promote_students_view(request):
     """
-    Refactored for Tertiary: Promotes students to the next level within their department.
+    Promotes selected students from one Level to another within a
+    Department. Staff pick both the source and target level explicitly
+    rather than relying on an inferred "next level," since Level has no
+    ordering/rank field in the current curriculum schema — guessing the
+    "next" level from name alone would be unreliable across programmes.
     """
-    levels = Level.objects.all().order_by('rank') # Assuming 'rank' replaces promotion_order
+    levels = Level.objects.all().order_by('name')
     departments = Department.objects.all()
+    students = Student.objects.none()
+    selected_from_level = None
+
+    from_level_id = request.GET.get('level')
+    dept_id = request.GET.get('dept')
+    if from_level_id:
+        selected_from_level = get_object_or_404(Level, id=from_level_id)
+        students = Student.objects.filter(
+            level=selected_from_level, student_status='active'
+        ).select_related('user', 'department').order_by('user__last_name')
+        if dept_id:
+            students = students.filter(department_id=dept_id)
 
     if request.method == 'POST':
         from_level_id = request.POST.get('from_level')
-        dept_id = request.POST.get('department')
+        to_level_id = request.POST.get('to_level')
         selected_student_ids = request.POST.getlist('selected_students')
 
-        if not from_level_id or not selected_student_ids:
-            messages.error(request, "Please select a level and at least one student.")
+        if not from_level_id or not to_level_id or not selected_student_ids:
+            messages.error(request, "Please select a source level, a target level, and at least one student.")
+            return redirect('students:promote_students')
+
+        if from_level_id == to_level_id:
+            messages.error(request, "Source and target level cannot be the same.")
             return redirect('students:promote_students')
 
         try:
-            current_level = Level.objects.get(id=from_level_id)
-            # Find the next level by rank
-            next_level = Level.objects.filter(rank__gt=current_level.rank).order_by('rank').first()
+            from_level = get_object_or_404(Level, id=from_level_id)
+            to_level = get_object_or_404(Level, id=to_level_id)
 
             with transaction.atomic():
-                students = Student.objects.filter(id__in=selected_student_ids, current_level=current_level)
-                
-                if next_level:
-                    count = students.count()
-                    students.update(current_level=next_level)
-                    messages.success(request, f"Successfully promoted {count} students to {next_level.name}.")
-                else:
-                    # If no next level exists, they should likely be moved to the graduation workflow
-                    messages.warning(request, f"{current_level.name} is the final level. Use the Graduation module to graduate these students.")
-            
+                qs = Student.objects.filter(id__in=selected_student_ids, level=from_level)
+                count = qs.count()
+                qs.update(level=to_level)
+
+            messages.success(request, f"Successfully promoted {count} students to {to_level.name}.")
         except Exception as e:
             messages.error(request, f"Promotion failed: {str(e)}")
-            
+
         return redirect('students:promote_students')
 
     context = {
         'levels': levels,
         'departments': departments,
+        'students': students,
+        'selected_from_level': selected_from_level,
         'title': 'Level Promotion',
     }
     return render(request, 'students/promote_students.html', context)
@@ -532,7 +542,7 @@ class StudentDeleteView(LoginRequiredMixin, DeleteView):
     
 
 class MyTeacherDetailView(DetailView):
-    template_name = 'student/my_teacher_detail.html'
+    template_name = 'students/my_teacher_detail.html'
     context_object_name = 'teacher'
     queryset = Lecturer.objects.all()
 
@@ -711,57 +721,6 @@ from django.shortcuts import render
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import models
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Student, Session
-
-# --- Helper Function for CSV Export ---
-def export_students_csv(queryset):
-    """
-    Generates a CSV response from a student queryset with Tertiary fields.
-    """
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="tertiary_student_archive.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow([
-        "Matric Number",
-        "Full Name",
-        "Gender",
-        "Status",
-        "Department",
-        "Programme",
-        "Entry Level",
-        "Date Admitted",
-        "Graduation Session",
-    ])
-
-    for s in queryset:
-        # Using select_related in the view makes these lookups efficient
-        dept_name = s.department.name if s.department else "N/A"
-        prog_name = s.programme.name if s.programme else "N/A"
-        session_name = s.graduated_session.name if s.graduated_session else "N/A"
-        
-        writer.writerow([
-            s.matric_number,
-            f"{s.last_name} {s.first_name} {s.middle_name or ''}".strip(),
-            s.gender,
-            s.student_status,
-            dept_name,
-            prog_name,
-            s.level.name if s.level else "N/A",
-            s.date_admitted,
-            session_name,
-        ])
-
-    return response
-
-# --------------------------------------------------
-
-import csv
-from django.http import HttpResponse
-from django.shortcuts import render
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db import models
-from django.contrib.admin.views.decorators import staff_member_required
 from .models import Student, Session, Department
 
 # --- Helper Function for CSV Export ---
@@ -789,7 +748,7 @@ def export_students_csv(queryset):
         full_name = f"{s.user.last_name} {s.user.first_name} {s.middle_name or ''}".strip()
         dept_name = s.department.name if s.department else "N/A"
         prog_name = s.programme.name if s.programme else "N/A"
-        
+
         writer.writerow([
             s.matric_number,
             full_name.upper(),
@@ -814,11 +773,11 @@ def student_archive(request):
     archived_status = ['graduated', 'dropped', 'expelled', 'suspended', 'alumni']
 
     # 2. Base Queryset
-    # FIXED: Accessing 'user__last_name' for ordering
-    # FIXED: Removed 'graduated_session' from select_related as per FieldError
     students = Student.objects.filter(
         student_status__in=archived_status
-    ).select_related('user', 'department', 'programme', 'level').order_by('-date_admitted', 'user__last_name')
+    ).select_related('user', 'department', 'programme', 'level').prefetch_related(
+        'graduation_records__session'
+    ).order_by('-date_admitted', 'user__last_name')
 
     # --- GET FILTERS ---
     q = request.GET.get('q')
@@ -839,11 +798,11 @@ def student_archive(request):
     if status_filter and status_filter != "all":
         students = students.filter(student_status=status_filter)
 
-    # Note: verify if session filtering should target a specific FK on your model
+    # Filters by the session in which the student's GraduationRecord was
+    # created — Student itself has no direct session FK; that history
+    # lives in GraduationRecord (students.models).
     if session_filter and session_filter != "all":
-        # If your model has no graduated_session FK, this filter might need 
-        # to target the related name (e.g., graduation_records__session_id)
-        pass 
+        students = students.filter(graduation_records__session_id=session_filter).distinct()
         
     if dept_filter and dept_filter != "all":
         students = students.filter(department_id=dept_filter)
@@ -885,13 +844,16 @@ def student_archive(request):
 # Course registration
 @login_required
 def course_registration_view(request):
+    from finance.services.payments import FinanceService
+    from finance.services.exam_eligibility import ExamEligibilityService
+
     user = request.user
     student = getattr(user, 'student', None)
     is_admin = user.is_superuser or user.is_staff
 
     if not student and not is_admin:
         messages.error(request, "Access denied.")
-        return redirect("pages:portal_home")
+        return redirect("pages:portal-home")
 
     current_session = Session.objects.filter(is_current=True).first()
     current_semester = Semester.objects.filter(is_current=True).first()
@@ -925,43 +887,137 @@ def course_registration_view(request):
         else:
             debug_msg = "Dates not configured."
 
-    # --- POST HANDLER (Sync Pattern) ---
+    # --- POST HANDLER ---
     if request.method == "POST":
         if not student:
             messages.error(request, "Admins cannot modify records.")
-            return redirect("course-registration")
-        
-        if reg_phase == "CLOSED":
-            messages.error(request, "The portal is currently closed.")
-            return redirect("course-registration")
+            return redirect("students:course-registration")
 
-        selected_courses = request.POST.getlist("courses")
-        try:
-            with transaction.atomic():
-                # Sync: Delete all existing then recreate
-                CourseRegistration.objects.filter(
-                    student=student, session=current_session, semester=current_semester
-                ).delete()
+        action = request.POST.get("action", "register")
 
-                if selected_courses:
-                    new_regs = [
-                        CourseRegistration(
-                            student=student, course_id=int(c_id),
-                            session=current_session, semester=current_semester
-                        ) for c_id in selected_courses
-                    ]
-                    CourseRegistration.objects.bulk_create(new_regs)
-                    messages.success(request, "Course registration updated successfully.")
-                else:
-                    messages.warning(request, "Your registration has been cleared.")
-            return redirect("course-registration")
-        except Exception as e:
-            messages.error(request, f"System Error: {e}")
+        # ---------------------------------------------------------
+        # ACTION 1: Save course registration (unchanged sync pattern)
+        # ---------------------------------------------------------
+        if action == "register":
+            if reg_phase == "CLOSED":
+                messages.error(request, "The portal is currently closed.")
+                return redirect("students:course-registration")
+
+            selected_course_ids = [int(c_id) for c_id in request.POST.getlist("courses")]
+
+            # Enforce the programme/level's min/max unit policy before
+            # touching the database (curriculum.RegistrationPolicy).
+            if selected_course_ids:
+                selected_courses = Course.objects.filter(id__in=selected_course_ids)
+                total_units = sum(c.credit_unit for c in selected_courses)
+                try:
+                    validate_unit_load(student.level, total_units, is_carryover=False)
+                except ValidationError as e:
+                    messages.error(request, str(e))
+                    return redirect("students:course-registration")
+
+            try:
+                with transaction.atomic():
+                    # Sync: Delete all existing then recreate
+                    CourseRegistration.objects.filter(
+                        student=student, session=current_session, semester=current_semester
+                    ).delete()
+
+                    if selected_course_ids:
+                        new_regs = [
+                            CourseRegistration(
+                                student=student, course_id=c_id,
+                                session=current_session, semester=current_semester
+                            ) for c_id in selected_course_ids
+                        ]
+                        created_regs = CourseRegistration.objects.bulk_create(new_regs)
+
+                        # Bill each newly registered course's fee (finance app) —
+                        # without this, a course with a nonzero cost would never
+                        # show up as something the student owes.
+                        for reg in created_regs:
+                            FinanceService.ensure_course_fee_item(reg)
+
+                        messages.success(request, "Course registration updated successfully.")
+                    else:
+                        messages.warning(request, "Your registration has been cleared.")
+                return redirect("students:course-registration")
+            except Exception as e:
+                messages.error(request, f"System Error: {e}")
+
+        # ---------------------------------------------------------
+        # ACTION 2: Submit a payment claim covering one or more
+        # outstanding items (course fees and/or mandatory fees),
+        # selected and optionally part-paid by the student.
+        # ---------------------------------------------------------
+        elif action == "submit_payment":
+            from finance.models import PaymentItem
+
+            reference = request.POST.get("reference", "").strip()
+            method = request.POST.get("method", "bank_transfer")
+            selected_item_ids = request.POST.getlist("pay_items")
+
+            if not reference:
+                messages.error(request, "Please provide a payment reference (e.g. your bank transfer reference).")
+                return redirect("students:course-registration")
+
+            if not selected_item_ids:
+                messages.error(request, "Select at least one fee to pay for.")
+                return redirect("students:course-registration")
+
+            allocations = {}
+            total_amount = Decimal("0.00")
+            for item_id in selected_item_ids:
+                item = get_object_or_404(PaymentItem, pk=item_id, student=student)
+                raw_amount = request.POST.get(f"amount_{item_id}", "").strip()
+                try:
+                    amount = Decimal(raw_amount) if raw_amount else item.balance
+                except InvalidOperation:
+                    amount = item.balance
+                # Never allow paying more than what's actually owed, and
+                # never a non-positive amount.
+                amount = min(amount, item.balance)
+                if amount > 0:
+                    allocations[item.id] = amount
+                    total_amount += amount
+
+            if not allocations:
+                messages.error(request, "Nothing to pay — the selected item(s) are already cleared.")
+                return redirect("students:course-registration")
+
+            try:
+                FinanceService.record_payment(
+                    student=student,
+                    reference=reference,
+                    amount=total_amount,
+                    method=method,
+                    allocations=allocations,
+                    mark_successful=False,  # goes to PENDING until a bursary officer approves it
+                )
+                messages.success(
+                    request,
+                    f"Payment of ₦{total_amount:,.2f} submitted for approval. "
+                    f"You'll be cleared once a bursary officer confirms it."
+                )
+            except ValidationError as e:
+                messages.error(request, str(e))
+            except IntegrityError:
+                messages.error(
+                    request,
+                    "That payment reference has already been submitted. "
+                    "If you're re-submitting proof of the same transaction, please contact the bursary office."
+                )
+
+            return redirect("students:course-registration")
 
     # --- GET DATA ---
     total_cost = float(late_fee)
     available_courses = []
     registered_course_ids = []
+    unit_policy = None
+    fee_clearance = None
+    outstanding_items = []
+    recent_payments = []
 
     if student:
         available_courses = Course.objects.filter(
@@ -973,6 +1029,37 @@ def course_registration_view(request):
         registered_course_ids = list(regs.values_list('course_id', flat=True))
         for r in regs:
             total_cost += float(r.course.cost or 0)
+
+        # Unit policy shown to the student so the limits aren't a surprise
+        # only on submit.
+        try:
+            unit_policy = resolve_registration_policy(student.level)
+        except ValidationError:
+            unit_policy = None
+
+        # Outstanding mandatory fees (from the finance app) — shown as a
+        # banner so a student understands *why* a course might not be
+        # exam-eligible, without needing to leave this page.
+        if current_session and current_semester:
+            from finance.models import Payment as FinancePayment
+
+            try:
+                FinanceService.ensure_semester_fee_items(student, current_session, current_semester)
+                fee_clearance = ExamEligibilityService.semester_clearance_summary(
+                    student, current_session, current_semester
+                )
+            except Exception:
+                # No FeeAssignment configured yet for this session/semester —
+                # don't let that block the registration page from loading.
+                fee_clearance = None
+
+            # Everything the student can choose to pay for right now —
+            # course fees for whatever they're registered for, plus every
+            # resolved mandatory/optional fee category.
+            from students.services.dashboard import build_outstanding_items
+            outstanding_items = build_outstanding_items(student, current_session, current_semester)
+
+            recent_payments = FinancePayment.objects.filter(student=student).order_by('-created_at')[:10]
 
     return render(request, "students/course_registration.html", {
         "available_courses": available_courses,
@@ -986,6 +1073,10 @@ def course_registration_view(request):
         "is_student": student is not None,
         "is_admin": is_admin,
         "today": today,
+        "unit_policy": unit_policy,
+        "fee_clearance": fee_clearance,
+        "outstanding_items": outstanding_items,
+        "recent_payments": recent_payments,
     })
 
 

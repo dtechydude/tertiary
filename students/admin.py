@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from .models import Student, GraduationRecord, Hostel, Room
+from .resources import StudentResource
 from import_export.admin import ImportExportModelAdmin
 from django.shortcuts import render, redirect
 from django import forms
@@ -16,6 +17,7 @@ from curriculum.models import Session
 
 @admin.register(Student)
 class StudentsAdmin(ImportExportModelAdmin):
+    resource_class = StudentResource
     list_display = ("matric_number", "get_full_name", "department", "programme", "level", "student_status")
     list_filter = ("department", "programme", "level", "student_status")
     search_fields = ("matric_number", "user__first_name", "user__last_name", "middle_name")

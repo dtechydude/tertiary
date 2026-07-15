@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.db.models.signals import post_save, post_delete
 from datetime import timedelta
 from django.template.defaultfilters import slugify
@@ -294,6 +295,7 @@ class Course(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     programme = models.ForeignKey("Programme", on_delete=models.CASCADE)
     level = models.ForeignKey("Level", on_delete=models.CASCADE)
+    session = models.ForeignKey(Session, on_delete=models.CASCADE)
     semester = models.ForeignKey("Semester", on_delete=models.CASCADE)
 
     title = models.CharField(max_length=200)
@@ -324,6 +326,39 @@ class CourseAssignment(models.Model):
  
 
 
+# # Students Course Registrations
+# class CourseRegistration(models.Model):
+#     student = models.ForeignKey(
+#         "students.Student",
+#         on_delete=models.CASCADE,
+#         related_name="course_registrations"
+#     )
+#     course = models.ForeignKey(
+#         Course,
+#         on_delete=models.CASCADE,
+#         related_name="registrations"
+#     )
+#     session = models.ForeignKey(Session, on_delete=models.CASCADE)
+#     semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
+
+#     registered_at = models.DateTimeField(auto_now_add=True)
+
+#     class Meta:
+#         unique_together = ("student", "course", "session", "semester")
+
+#     def __str__(self):
+#         return f"{self.student} - {self.course} ({self.session} / {self.semester})"
+
+"""
+Drop-in replacement for the CourseRegistration model in curriculum/models.py.
+Only additive fields — no existing field removed or renamed, so this is a
+safe, non-breaking migration (see MIGRATION_NOTE.md in this patch).
+
+Make sure `from django.conf import settings` is imported at the top of
+curriculum/models.py (it's needed for validated_by) — most projects already
+have this for AUTH_USER_MODEL elsewhere; add it if not.
+"""
+
 # Students Course Registrations
 class CourseRegistration(models.Model):
     student = models.ForeignKey(
@@ -341,13 +376,29 @@ class CourseRegistration(models.Model):
 
     registered_at = models.DateTimeField(auto_now_add=True)
 
+    # --- Registrar validation gate ---
+    # A registration must be explicitly validated by a registrar/admin
+    # before the student is exam-eligible for it — this is a separate
+    # gate from fee clearance (handled by the finance app); both must
+    # hold for a student to actually be allowed to sit the exam.
+    is_validated = models.BooleanField(
+        default=False,
+        help_text="Registrar has confirmed this registration is correct. Required (alongside fee clearance) for exam eligibility.",
+    )
+    validated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="validated_registrations",
+    )
+    validated_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         unique_together = ("student", "course", "session", "semester")
+        permissions = [
+            ("validate_registration", "Can validate course registrations"),
+        ]
 
     def __str__(self):
         return f"{self.student} - {self.course} ({self.session} / {self.semester})"
-
-
 
 
 

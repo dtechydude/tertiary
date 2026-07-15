@@ -43,6 +43,7 @@
             <th>Course Title</th>
             <th class="text-center">Units</th>
             <th class="text-center">Exam Eligible</th>
+            <th>Reason (if not eligible)</th>
           </tr>
         </thead>
         <tbody>
@@ -58,23 +59,27 @@
                 <span class="badge bg-danger">No</span>
               {% endif %}
             </td>
+            <td class="small text-muted">
+              {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
+            </td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="text-center text-muted">No courses registered for this session/semester.</td></tr>
+          <tr><td colspan="5" class="text-center text-muted">No courses registered for this session/semester.</td></tr>
           {% endfor %}
         </tbody>
         <tfoot>
           <tr>
             <th colspan="2" class="text-end">Total Units</th>
             <th class="text-center">{{ total_units }}</th>
-            <th></th>
+            <th colspan="2"></th>
           </tr>
         </tfoot>
       </table>
 
       <p class="text-muted small mt-3 mb-0">
-        Courses marked <strong>No</strong> under Exam Eligible have outstanding mandatory fees.
-        Clear them before the examination period to be admitted to sit the paper.
+        Courses marked <strong>No</strong> under Exam Eligible have outstanding mandatory fees and/or are
+        pending registrar validation — see the Reason column. Resolve these before the examination
+        period to be admitted to sit the paper.
       </p>
     </div>
   </div>

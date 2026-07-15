@@ -3,10 +3,16 @@ finance.services.exam_eligibility
 ===================================
 
 The gate: can this student sit the exam for this course, this semester?
-Combines the course's own fee (if any) with every fee category the
-institution has flagged `is_mandatory_for_exam=True`. This is what
-enforces "courses that are not registered and paid for will not be able
-to take exams for them."
+Two independent conditions must both hold:
+  1. Fee clearance — the course's own fee (if any) and every fee category
+     flagged `is_mandatory_for_exam=True` are paid off.
+  2. Registrar validation — curriculum.CourseRegistration.is_validated is
+     True. Registering and paying doesn't automatically grant exam
+     eligibility; a registrar must explicitly sign off on the
+     registration itself (course allocation correct, no clashes, etc.).
+
+This is what enforces "courses that are not registered, not validated,
+and not paid for will not be able to take exams for them."
 """
 
 from dataclasses import dataclass, field
@@ -18,20 +24,47 @@ from ..models import PaymentItem
 @dataclass
 class ExamEligibilityResult:
     is_eligible: bool
+    is_registered: bool = True
+    is_validated: bool = True
     outstanding_items: List[PaymentItem] = field(default_factory=list)
+
+    @property
+    def reasons(self) -> List[str]:
+        """Human-readable reasons this student is/isn't eligible — used
+        by the registration slip and attendance list so 'No' never shows
+        up unexplained."""
+        if not self.is_registered:
+            return ["Not registered for this course/semester."]
+
+        reasons = []
+        if not self.is_validated:
+            reasons.append("Registration pending registrar validation.")
+        for item in self.outstanding_items:
+            label = (
+                item.fee_assignment.category.name
+                if item.fee_assignment_id else item.course_registration.course.course_code
+            )
+            reasons.append(f"Outstanding: {label} (₦{item.balance})")
+        return reasons
 
 
 class ExamEligibilityService:
 
     @staticmethod
     def check(student, course, session, semester) -> ExamEligibilityResult:
+        from curriculum.models import CourseRegistration
+
+        registration = CourseRegistration.objects.filter(
+            student=student, course=course, session=session, semester=semester
+        ).first()
+
+        if not registration:
+            return ExamEligibilityResult(is_eligible=False, is_registered=False, is_validated=False)
+
         outstanding = []
 
         course_item = PaymentItem.objects.filter(
-            course_registration__student=student,
-            course_registration__course=course,
-            course_registration__session=session,
-            course_registration__semester=semester,
+            course_registration=registration
         ).select_related("fee_assignment").first()
         if course_item and not course_item.is_cleared:
             outstanding.append(course_item)
@@ -42,7 +75,14 @@ class ExamEligibilityService:
         ).select_related("fee_assignment__category")
         outstanding.extend(item for item in mandatory_items if not item.is_cleared)
 
-        return ExamEligibilityResult(is_eligible=not outstanding, outstanding_items=outstanding)
+        is_eligible = (not outstanding) and registration.is_validated
+
+        return ExamEligibilityResult(
+            is_eligible=is_eligible,
+            is_registered=True,
+            is_validated=registration.is_validated,
+            outstanding_items=outstanding,
+        )
 
     @classmethod
     def is_course_exam_eligible(cls, student, course, session, semester) -> bool:
@@ -51,7 +91,10 @@ class ExamEligibilityService:
     @staticmethod
     def semester_clearance_summary(student, session, semester) -> dict:
         """Every billable item for this student this semester, cleared or
-        not — backs a student-facing 'my fees' screen."""
+        not — backs a student-facing 'my fees' screen. (Registration
+        validation status is shown separately, per-course, since it's not
+        a billable item — see course_attendance_list / the registration
+        slip for that.)"""
         items = PaymentItem.objects.filter(
             student=student, session=session, semester=semester
         ).select_related("fee_assignment__category", "course_registration__course")
@@ -96,6 +139,8 @@ class ExamEligibilityService:
             rows.append({
                 "student": reg.student,
                 "is_eligible": result.is_eligible,
+                "is_validated": result.is_validated,
+                "reasons": result.reasons,
                 "outstanding_items": result.outstanding_items,
             })
         return rows

@@ -651,7 +651,7 @@
 							<li><a href="{% url 'cbt:lecturer-results-view' %}"> Students CBT Scores</a></li>							
 						
 							{% elif user.is_authenticated and user.student %}
-							<li><a href="{% url 'cbt:cbt_student_home' %}"> My CBT Exams</a></li>
+							{% comment %} <li><a href="{% url 'cbt:cbt_student_home' %}"> My CBT Exams</a></li> {% endcomment %}
 																
 							{% endif %}
 						</ul>					

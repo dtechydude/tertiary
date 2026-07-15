@@ -2,13 +2,51 @@
 {% load static %}
 
 {% block title %}
-<title>Academic Profile | {{ student.matric_number }}</title>
+<title>My Profile | {{ student.matric_number }}</title>
 {% endblock title %}
 
 {% block favicon %}
 <link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
 <link href="{% static 'pages/vendor/lightgallery/css/lightgallery.min.css' %}" rel="stylesheet">
 <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    .clearance-ok { color: #0f9d58; }
+    .clearance-bad { color: #d93025; }
+
+    .student-avatar {
+        width: 64px;
+        height: 64px;
+        min-width: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4b6cb7, #182848);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-block .stat-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .stat-block .stat-label {
+        font-size: 0.78rem;
+        color: #8a92a6;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    @media (min-width: 768px) {
+        .stat-block.with-divider {
+            border-left: 1px solid #eef0f4;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content_body %}
@@ -17,92 +55,138 @@
         <div class="row page-titles">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item active"><a href="javascript:void(0)">My Portal</a></li>
-                <li class="breadcrumb-item"><a href="javascript:void(0)">Comprehensive Profile</a></li>
+                <li class="breadcrumb-item"><a href="javascript:void(0)">My Profile</a></li>
             </ol>
         </div>
 
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="profile card card-body px-3 pt-3 pb-0">
-                    <div class="profile-head">
-                        <div class="photo-content">
-                            <div class="cover-photo rounded" style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('{% static 'pages/images/profile/cover.jpg' %}'); background-size: cover;"></div>
-                        </div>
-                        <div class="profile-info">
-                            <div class="profile-photo">
-                                <img src="{{ student.user.profile.image.url|default:'/static/pages/images/default_user.png' }}" class="img-fluid rounded-circle" alt="Profile Picture" style="width: 110px; height: 110px; object-fit: cover; border: 4px solid #fff;">
-                            </div>
-                            <div class="profile-details">
-                                <div class="profile-name px-3 pt-2">
-                                    <h4 class="text-primary mb-0">{{ student.get_full_name|upper }}</h4>
-                                    <p class="mb-0">Matric: <span class="badge badge-primary">{{ student.matric_number }}</span></p>
-                                </div>
-                                <div class="profile-email px-2 pt-2">
-                                    <h4 class="text-muted mb-0">{{ student.programme.name|default:"Programme Not Set" }}</h4>
-                                    <p>{{ student.department.name }} | {{ student.faculty.name|default:"Faculty" }}</p>
-                                </div>
-                                <div class="dropdown ms-auto">
-                                    <a href="{% url 'students:student_id_card' matric_number=student.matric_number %}" class="btn btn-outline-primary btn-sm me-2">
-                                        <i class="fas fa-id-card me-1"></i> View ID Card
-                                    </a>
-                                    <a href="#" class="btn btn-primary light sharp" data-bs-toggle="dropdown"><i class="fas fa-cog"></i></a>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li class="dropdown-item"><a href="{% url 'profile' %}"><i class="fa fa-user-circle text-primary me-2"></i> Update Profile</a></li>
-                                    </ul>
-                                </div>
+        <!-- Header: identity + quick actions, no banner image -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="student-avatar">{{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}</div>
+                        <div>
+                            <h4 class="mb-1 fw-bold text-dark">{{ student.get_full_name|upper }}</h4>
+                            <div class="text-muted">
+                                <span class="badge badge-primary me-1">{{ student.matric_number }}</span>
+                                {{ student.programme|default:"Programme Not Set" }}
+                                {% if student.department %} &middot; {{ student.department.name }}{% endif %}
                             </div>
                         </div>
                     </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'students:student_id_card' matric_number=student.matric_number %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-id-card me-1"></i> ID Card
+                        </a>
+                        {% if current_session and current_semester %}
+                        <a href="{% url 'finance:registration_slip_html' student.id current_session.id current_semester.id %}" class="btn btn-outline-secondary btn-sm" target="_blank">
+                            <i class="fas fa-file-alt me-1"></i> Registration Slip
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="row g-3 text-center">
+                    <div class="col-6 col-md-3 stat-block">
+                        <div class="stat-value">{{ student.level.name|default:"—" }}</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="col-6 col-md-3 stat-block with-divider">
+                        <div class="stat-value">{{ current_semester|default:"—" }}</div>
+                        <div class="stat-label">Semester</div>
+                    </div>
+                    <div class="col-6 col-md-3 stat-block with-divider">
+                        <div class="stat-value">{{ academic_summary.semester_gpa|default:"—" }}</div>
+                        <div class="stat-label">Semester GPA</div>
+                    </div>
+                    <div class="col-6 col-md-3 stat-block with-divider">
+                        <div class="stat-value">{{ academic_summary.cgpa|default:"0.00" }}</div>
+                        <div class="stat-label">CGPA</div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <span class="badge {% if student.student_status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
+                        {{ student.get_student_status_display }}
+                    </span>
+                    <span class="badge badge-light ms-1">{{ student.get_student_type_display }}</span>
                 </div>
             </div>
         </div>
 
+        <!-- Fee clearance banner -->
+        {% if current_session and current_semester %}
+            {% if fee_summary.fully_cleared_for_exams %}
+            <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-3">
+                <i class="fas fa-check-circle me-2"></i>
+                You are fully cleared for exams this semester.
+            </div>
+            {% else %}
+            <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                You have outstanding mandatory fees — see the Fee Clearance panel below. Some courses may not be exam-eligible until cleared.
+            </div>
+            {% endif %}
+        {% endif %}
+
         <div class="row">
             <div class="col-xl-4 col-lg-5">
+                <!-- Fee Clearance -->
+                <div class="card">
+                    <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Fee Clearance</h5>
+                        {% if fee_summary.fully_cleared_for_exams %}
+                        <span class="badge badge-success">Cleared</span>
+                        {% else %}
+                        <span class="badge badge-danger">Outstanding</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if fee_summary.items %}
+                        <ul class="list-group list-group-flush">
+                            {% for item in fee_summary.items %}
+                            <li class="list-group-item d-flex px-0 justify-content-between align-items-center">
+                                <span>{{ item.label }}</span>
+                                <span class="text-end">
+                                    <strong class="{% if item.is_cleared %}clearance-ok{% else %}clearance-bad{% endif %}">
+                                        ₦{{ item.amount_paid|floatformat:2 }} / ₦{{ item.amount_due|floatformat:2 }}
+                                    </strong>
+                                    {% if not item.is_cleared and item.is_mandatory_for_exam %}
+                                    <br><small class="text-danger">Blocks exams</small>
+                                    {% endif %}
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted small mb-0">No fees have been assigned for the current semester yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Contact -->
                 <div class="card">
                     <div class="card-header border-0 pb-0">
-                        <h5 class="card-title">Academic Standing</h5>
+                        <h5 class="card-title">Contact Details</h5>
                     </div>
-                    <div class="card-body text-center">
-                        <div class="row">
-                            <div class="col-6 border-end">
-                                <h3 class="mb-0">{{ student.level.name }}</h3>
-                                <small class="text-muted">Current Level</small>
-                            </div>
-                            <div class="col-6">
-                                <h3 class="mb-0">{{ student.current_semester|default:"1st" }}</h3>
-                                <small class="text-muted">Semester</small>
-                            </div>
-                        </div>
-                        <hr>
-                        <div class="mt-2">
-                            <h6 class="mb-1">Registration Status</h6>
-                            <span class="badge {% if student.is_registered %}badge-success{% else %}badge-warning{% endif %}">
-                                {{ student.get_registration_status_display|default:"Active" }}
-                            </span>
-                        </div>
-                         <hr>
-                        <div class="mt-2">
-                                                        
-                        <h5 class="text-primary mb-3">Contact Details</h5>
+                    <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex px-0 justify-content-between">
-                                <strong>Phone:</strong> <span class="text-muted">{{ student.phone_number|default:"Not Set" }}</span>
-                            </li>
-                            <li class="list-group-item d-flex px-0 justify-content-between">
-                                <strong>Personal Email:</strong> <span class="text-muted small">{{ student.personal_email|default:student.user.email }}</span>
+                                <strong>Email:</strong> <span class="text-muted small">{{ student.user.email|default:"Not Set" }}</span>
                             </li>
                             <li class="list-group-item d-flex px-0 justify-content-between">
                                 <strong>Hostel:</strong> <span class="text-muted">{{ student.hostel_name.name|default:"Off-Campus" }}</span>
                             </li>
+                            {% if student.assigned_room %}
+                            <li class="list-group-item d-flex px-0 justify-content-between">
+                                <strong>Room:</strong> <span class="text-muted">{{ student.assigned_room.room_number }}</span>
+                            </li>
+                            {% endif %}
                         </ul>
-                   
-                        </div>
-
-
                     </div>
                 </div>
-               
             </div>
 
             <div class="col-xl-8 col-lg-7">
@@ -111,12 +195,127 @@
                         <div class="profile-tab">
                             <div class="custom-tab-1">
                                 <ul class="nav nav-tabs">
-                                    <li class="nav-item"><a href="#personal" data-bs-toggle="tab" class="nav-link active show">Bio-Data</a></li>
-                                    <li class="nav-item"><a href="#academic" data-bs-toggle="tab" class="nav-link">Academic History</a></li>
+                                    <li class="nav-item"><a href="#courses" data-bs-toggle="tab" class="nav-link active show">My Courses</a></li>
+                                    <li class="nav-item"><a href="#results" data-bs-toggle="tab" class="nav-link">Results</a></li>
+                                    <li class="nav-item"><a href="#payments" data-bs-toggle="tab" class="nav-link">Payment History</a></li>
+                                    <li class="nav-item"><a href="#personal" data-bs-toggle="tab" class="nav-link">Bio-Data</a></li>
                                     <li class="nav-item"><a href="#nok" data-bs-toggle="tab" class="nav-link">Next of Kin</a></li>
                                 </ul>
                                 <div class="tab-content">
-                                    <div id="personal" class="tab-pane fade active show">
+
+                                    <!-- My Courses -->
+                                    <div id="courses" class="tab-pane fade active show">
+                                        <div class="pt-4">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <p class="text-muted mb-0">
+                                                    {{ current_session|default:"No active session" }}
+                                                    {% if current_semester %} — {{ current_semester }}{% endif %}
+                                                    · {{ registration_summary.total_units }} unit(s) registered
+                                                </p>
+                                                <a href="{% url 'students:course-registration' %}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-edit me-1"></i> Edit Registration
+                                                </a>
+                                            </div>
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Code</th>
+                                                        <th>Title</th>
+                                                        <th class="text-center">Units</th>
+                                                        <th class="text-center">Exam Eligible</th>
+                                                        <th>Reason</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for row in registration_summary.registrations %}
+                                                    <tr>
+                                                        <td>{{ row.course.course_code }}</td>
+                                                        <td>{{ row.course.title }}</td>
+                                                        <td class="text-center">{{ row.course.credit_unit }}</td>
+                                                        <td class="text-center">
+                                                            {% if row.is_exam_eligible %}
+                                                            <span class="badge badge-success">Yes</span>
+                                                            {% else %}
+                                                            <span class="badge badge-danger">No</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="small text-muted">
+                                                            {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
+                                                        </td>
+                                                    </tr>
+                                                    {% empty %}
+                                                    <tr><td colspan="5" class="text-center text-muted">No courses registered this semester.</td></tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- Results -->
+                                    <div id="results" class="tab-pane fade">
+                                        <div class="pt-4">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Session</th>
+                                                        <th>Course</th>
+                                                        <th class="text-center">Score</th>
+                                                        <th class="text-center">Grade</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for result in academic_summary.results %}
+                                                    <tr>
+                                                        <td>{{ result.session }} / {{ result.semester }}</td>
+                                                        <td>{{ result.course.course_code }}</td>
+                                                        <td class="text-center">{{ result.total_score }}</td>
+                                                        <td class="text-center"><span class="badge badge-info">{{ result.grade }}</span></td>
+                                                    </tr>
+                                                    {% empty %}
+                                                    <tr><td colspan="4" class="text-center text-muted">No published results yet.</td></tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                            <div class="alert alert-info mt-3 light">
+                                                <i class="fa fa-info-circle me-2"></i> Only results the Registrar has published are shown here.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Payment History -->
+                                    <div id="payments" class="tab-pane fade">
+                                        <div class="pt-4">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Reference</th>
+                                                        <th>Date</th>
+                                                        <th class="text-end">Amount</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for payment in recent_payments %}
+                                                    <tr>
+                                                        <td>{{ payment.reference }}</td>
+                                                        <td>{{ payment.paid_at|date:"M j, Y" }}</td>
+                                                        <td class="text-end">₦{{ payment.amount|floatformat:2 }}</td>
+                                                        <td class="text-end">
+                                                            <a href="{% url 'finance:payment_receipt_html' payment.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                                Receipt
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    {% empty %}
+                                                    <tr><td colspan="4" class="text-center text-muted">No payments recorded yet.</td></tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- Bio-Data -->
+                                    <div id="personal" class="tab-pane fade">
                                         <div class="pt-4">
                                             <div class="row mb-4">
                                                 <div class="col-md-6">
@@ -125,69 +324,47 @@
                                                 </div>
                                                 <div class="col-md-6">
                                                     <h6 class="text-primary">Gender</h6>
-                                                    <p class="text-capitalize">{{ student.gender }}</p>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h6 class="text-primary">State of Origin / LGA</h6>
-                                                    <p>{{ student.user.profile.state_of_origin|default:"--" }} / {{ student.user.profile.lga|default:"--" }}</p>
+                                                    <p class="text-capitalize">{{ student.get_gender_display }}</p>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <h6 class="text-primary">Blood Group / Genotype</h6>
-                                                    <p>{{ student.blood_group }} / {{ student.genotype }}</p>
+                                                    <p>{{ student.blood_group|default:"—" }} / {{ student.genotype|default:"—" }}</p>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="text-primary">Date Admitted</h6>
+                                                    <p>{{ student.date_admitted|date:"F j, Y" }}</p>
                                                 </div>
                                             </div>
-                                            <h6 class="text-primary">Residential Address</h6>
-                                            <p>{{ student.address|default:"No address provided." }}</p>
                                         </div>
                                     </div>
 
-                                    <div id="academic" class="tab-pane fade">
-                                        <div class="pt-4">
-                                            <table class="table table-sm">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Session</th>
-                                                        <th>Level</th>
-                                                        <th>Semester</th>
-                                                        <th>Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td>2024/2025</td>
-                                                        <td>{{ student.level }}</td>
-                                                        <td>Current</td>
-                                                        <td><span class="text-success">In Progress</span></td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                            <div class="alert alert-info mt-3 light">
-                                                <i class="fa fa-info-circle me-2"></i> Official transcripts can be requested via the Registrar's portal.
-                                            </div>
-                                        </div>
-                                    </div>
-
+                                    <!-- Next of Kin -->
                                     <div id="nok" class="tab-pane fade">
                                         <div class="pt-4">
                                             <div class="row">
                                                 <div class="col-sm-6 mb-3">
                                                     <h6 class="text-primary">Guardian Name</h6>
-                                                    <p>{{ student.guardian_name }}</p>
+                                                    <p>{{ student.guardian_name|default:"—" }}</p>
                                                 </div>
                                                 <div class="col-sm-6 mb-3">
                                                     <h6 class="text-primary">Relationship</h6>
-                                                    <p>{{ student.guardian_relationship|default:"Parent/Guardian" }}</p>
+                                                    <p>{{ student.get_relationship_display|default:"—" }}</p>
                                                 </div>
                                                 <div class="col-sm-6 mb-3">
                                                     <h6 class="text-primary">Guardian Phone</h6>
-                                                    <p>{{ student.guardian_phone }}</p>
+                                                    <p>{{ student.guardian_phone|default:"—" }}</p>
+                                                </div>
+                                                <div class="col-sm-6 mb-3">
+                                                    <h6 class="text-primary">Guardian Email</h6>
+                                                    <p>{{ student.guardian_email|default:"—" }}</p>
                                                 </div>
                                                 <div class="col-sm-12">
                                                     <h6 class="text-primary">Guardian Address</h6>
-                                                    <p>{{ student.guardian_address }}</p>
+                                                    <p>{{ student.guardian_address|default:"—" }}</p>
                                                 </div>
                                             </div>
-                                   
+                                        </div>
+                                    </div>
 
                                 </div>
                             </div>
@@ -198,6 +375,4 @@
         </div>
     </div>
 </div>
-</div>
-</div>
-{% endblock %}
+{% endblock content_body %}

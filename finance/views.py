@@ -7,8 +7,11 @@ the services layer for every calculation, ledger write, or PDF build.
 """
 
 from django.core.exceptions import ValidationError
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib import messages
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
+from django.views.decorators.http import require_POST
 
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -200,13 +203,14 @@ def registration_slip_html(request, student_id, session_id, semester_id):
         student=student, session=session, semester=semester
     ).select_related("course")
 
-    rows = [
-        {
+    rows = []
+    for reg in registrations:
+        result = ExamEligibilityService.check(student, reg.course, session, semester)
+        rows.append({
             "course": reg.course,
-            "is_eligible": ExamEligibilityService.is_course_exam_eligible(student, reg.course, session, semester),
-        }
-        for reg in registrations
-    ]
+            "is_eligible": result.is_eligible,
+            "reasons": result.reasons,
+        })
     total_units = sum(reg.course.credit_unit for reg in registrations)
 
     return render(request, "finance/registration_slip.html", {
@@ -267,3 +271,52 @@ def exam_attendance_list_html(request, course_id, session_id, semester_id):
         "course": course, "session": session, "semester": semester,
         "rows": rows, "eligible_count": eligible_count, "total_count": len(rows),
     })
+
+
+# ---------------------------------------------------------------------------
+# Staff review screen — approve/reject student-submitted payment claims
+# ---------------------------------------------------------------------------
+
+@login_required
+@permission_required("finance.record_payment", raise_exception=True)
+def pending_payments_view(request):
+    """
+    Everything a bursary officer needs on one page: every PENDING payment
+    claim a student has submitted, what it's meant to cover, and one-click
+    Approve/Reject. No API calls required — this is a plain HTML form.
+    """
+    pending_payments = Payment.objects.filter(
+        status=Payment.Status.PENDING
+    ).select_related("student").prefetch_related(
+        "allocations__payment_item__fee_assignment__category",
+        "allocations__payment_item__course_registration__course",
+    ).order_by("-created_at")
+
+    return render(request, "finance/pending_payments.html", {
+        "pending_payments": pending_payments,
+    })
+
+
+@login_required
+@permission_required("finance.record_payment", raise_exception=True)
+@require_POST
+def approve_payment_view(request, payment_id):
+    payment = get_object_or_404(Payment, pk=payment_id, status=Payment.Status.PENDING)
+    FinanceService.confirm_payment(payment)
+    messages.success(
+        request,
+        f"Payment {payment.reference} approved. {payment.student.get_full_name()}'s exam "
+        f"eligibility has been updated automatically wherever this payment applies."
+    )
+    return redirect("finance:pending_payments")
+
+
+@login_required
+@permission_required("finance.record_payment", raise_exception=True)
+@require_POST
+def reject_payment_view(request, payment_id):
+    payment = get_object_or_404(Payment, pk=payment_id, status=Payment.Status.PENDING)
+    reason = request.POST.get("reason", "")
+    FinanceService.reject_payment(payment)
+    messages.warning(request, f"Payment {payment.reference} was rejected.{(' Reason: ' + reason) if reason else ''}")
+    return redirect("finance:pending_payments")

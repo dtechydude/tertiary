@@ -161,7 +161,11 @@
                             </span>
                         </td>
                         <td>{{ s.date_admitted|date:"M Y" }}</td>
-                        <td>{{ s.graduated_session.name|default:'—' }}</td>
+                        <td>
+                            {% with rec=s.graduation_records.all|first %}
+                                {{ rec.session.name|default:"—" }}
+                            {% endwith %}
+                        </td>
                         <td class="pe-4 text-end">
                             <a href="#" class="btn btn-sm btn-light border py-0 px-2" title="View Full Profile">
                                 <i class="fas fa-external-link-alt fa-xs"></i>
