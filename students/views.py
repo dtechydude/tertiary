@@ -12,7 +12,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.template.loader import get_template
 # from xhtml2pdf import pisa
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from students.models import Student, Hostel, Parent, GraduationRecord
+from students.models import Student, Hostel, GraduationRecord
 from staff.models import Lecturer
 from students.forms import StudentUpdateForm, SuperUserStudentUpdateForm
 # from payments.models import Payment, CategoryFee # Import Payment and CategoryFee models

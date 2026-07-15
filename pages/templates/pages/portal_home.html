@@ -66,8 +66,11 @@
 		<div class="nav-header">
 			<a href="/" class="brand-logo">
 				
-				<img src="{{ school_info.logo.url }}" alt="kwikschools" width="80px" height="auto">
-
+			{% if school_info.logo %}
+				<img src="{{ school_info.logo.url }}" alt="School Logo" width="80" height="auto">
+			{% else %}
+				<img src="{% static 'pages/images/kwikschool_logo.png' %}" alt="Default School Logo" width="80" height="auto">
+			{% endif %}
 				
 			</a>
 			<div class="nav-control">

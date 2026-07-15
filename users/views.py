@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from curriculum.models import SchoolIdentity
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
-from students.models import Parent, Student
+from students.models import Student
 
 from django.contrib.auth import views as auth_views
 from django.db.utils import OperationalError, ProgrammingError
@@ -309,12 +309,7 @@ class CustomLoginView(LoginView):
     template_name = 'users/login.html'
 
     def get_success_url(self):
-        # Check if the logged-in user is associated with a Parent object
-        is_parent = Parent.objects.filter(user=self.request.user).exists()
-
-        if is_parent:
-            return reverse_lazy('students:parent-dashboard')
-        
+               
         # If not a parent, use the default redirect URL
         return super().get_success_url()
     

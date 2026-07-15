@@ -28,7 +28,13 @@ class PaymentItemAdmin(admin.ModelAdmin):
     list_display = ("student", "__str__", "amount_due", "amount_paid", "balance", "is_cleared")
     list_filter = ("session", "semester")
     search_fields = ("student__matric_number",)
-    readonly_fields = ("amount_paid", "balance", "is_cleared")
+
+    def get_readonly_fields(self, request, obj=None):
+        # amount_paid/balance/is_cleared are derived from saved allocations —
+        # meaningless (and previously crash-prone) on a not-yet-saved instance.
+        if obj is None:
+            return ()
+        return ("amount_paid", "balance", "is_cleared")
 
     @admin.display(description="Amount Paid")
     def amount_paid(self, obj):

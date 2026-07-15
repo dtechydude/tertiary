@@ -161,6 +161,8 @@ class PaymentItem(models.Model):
 
     @property
     def amount_paid(self) -> Decimal:
+        if self.pk is None:
+            return Decimal("0.00")
         total = self.allocations.filter(payment__status=Payment.Status.SUCCESSFUL).aggregate(
             total=Sum("amount")
         )["total"]
@@ -168,6 +170,8 @@ class PaymentItem(models.Model):
 
     @property
     def balance(self) -> Decimal:
+        if self.amount_due is None:
+            return Decimal("0.00")
         return self.amount_due - self.amount_paid
 
     @property
@@ -178,7 +182,7 @@ class PaymentItem(models.Model):
 
     @property
     def is_cleared(self) -> bool:
-        if self.amount_due <= 0:
+        if not self.amount_due:  # covers both None (unsaved) and 0
             return True
         required = self.amount_due * self.clearance_threshold_percentage / Decimal("100")
         return self.amount_paid >= required
