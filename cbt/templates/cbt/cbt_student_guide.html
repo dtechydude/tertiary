@@ -1,6 +1,10 @@
 {% extends 'pages/portal_home.html' %}
 {% load static %}
 
+{% block title %}
+<title>CBT Student Guide</title>
+{% endblock title %}
+
 {% block head %}
 <style>
     .guide-icon { font-size: 4rem; color: #17a2b8; }
@@ -25,7 +29,7 @@
                         <h3 class="card-title text-white mb-0 uppercase">STUDENT EXAM PORTAL GUIDE</h3>
                     </div>
                     <div class="card-body p-4">
-                        
+
                         <div class="text-center mb-5">
                             <i class="fas fa-user-graduate guide-icon mb-3"></i>
                             <h2 class="fw-black text-dark">HELLO, {{ request.user.username|upper }}!</h2>
@@ -35,9 +39,9 @@
                         <div class="row g-4 mb-5">
                             <div class="col-md-6">
                                 <div class="rule-card h-100 shadow-sm">
-                                    <h4 class="fw-900 text-info mb-2 uppercase"><i class="fas fa-id-card me-2"></i>YOUR CLASS</h4>
-                                    <p class="instruction-text text-dark">You will only see exams set for: <br>
-                                        <span class="badge bg-info fs-5 mt-2">{{ request.user.student.current_class }}</span>
+                                    <h4 class="fw-900 text-info mb-2 uppercase"><i class="fas fa-id-card me-2"></i>YOUR LEVEL &amp; PROGRAMME</h4>
+                                    <p class="instruction-text text-dark">You will only see exams set for courses you're registered for at: <br>
+                                        <span class="badge bg-info fs-5 mt-2">{{ request.user.student.level }}</span>
                                     </p>
                                 </div>
                             </div>
@@ -73,10 +77,10 @@
                             </a>
                         </div>
 
-                    </div>                   
+                    </div>
                     <div class="card-footer bg-light py-3 text-center border-top">
                         <h5 class="text-dark fw-bold mb-0 italic">
-                            <i class="fas fa-shield-alt me-2 text-info"></i> Your results are instantly recorded for your subject teacher.
+                            <i class="fas fa-shield-alt me-2 text-info"></i> Your results are instantly recorded for your course lecturer.
                         </h5>
                     </div>
                 </div>

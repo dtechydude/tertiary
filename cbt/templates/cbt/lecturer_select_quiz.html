@@ -1,5 +1,7 @@
 {% extends 'cbt/base.html' %}
 
+{% block title %}Select a Quiz{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="card shadow">
@@ -14,54 +16,54 @@
             <form method="GET" class="row g-3 mb-4">
 
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Class</label>
-                    <select name="standard" class="form-select">
-                        <option value="">All Classes</option>
-                        {% for s in standards %}
-                        <option value="{{ s.id }}"
-                            {% if request.GET.standard == s.id|stringformat:"i" %}selected{% endif %}>
-                            {{ s.name }}
+                    <label class="form-label fw-bold">Level</label>
+                    <select name="level" class="form-select">
+                        <option value="">All Levels</option>
+                        {% for l in levels %}
+                        <option value="{{ l.id }}"
+                            {% if request.GET.level == l.id|stringformat:"i" %}selected{% endif %}>
+                            {{ l.name }}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Subject</label>
-                    <select name="subject" class="form-select">
-                        <option value="">All Subjects</option>
-                        {% for sub in subjects %}
-                        <option value="{{ sub.id }}"
-                            {% if request.GET.subject == sub.id|stringformat:"i" %}selected{% endif %}>
-                            {{ sub.name }}
+                    <label class="form-label fw-bold">Course</label>
+                    <select name="course" class="form-select">
+                        <option value="">All Courses</option>
+                        {% for c in courses %}
+                        <option value="{{ c.id }}"
+                            {% if request.GET.course == c.id|stringformat:"i" %}selected{% endif %}>
+                            {{ c.course_code }} - {{ c.title }}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Term</label>
-                    <select name="term" class="form-select">
-                        <option value="">All Terms</option>
-                        {% for t in terms %}
-                        <option value="{{ t }}"
-                            {% if request.GET.term == t %}selected{% endif %}>
-                            {{ t }}
+                    <label class="form-label fw-bold">Semester</label>
+                    <select name="semester" class="form-select">
+                        <option value="">All Semesters</option>
+                        {% for value, label in semesters %}
+                        <option value="{{ value }}"
+                            {% if request.GET.semester == value %}selected{% endif %}>
+                            {{ label }}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="col-md-3 d-flex align-items-end gap-2">
-                <button type="submit" class="btn btn-dark px-3">
-                    Filter
-                </button>
+                    <button type="submit" class="btn btn-dark px-3">
+                        Filter
+                    </button>
 
-                <a href="{% url 'cbt:teacher-add-question' %}" 
-                class="btn btn-outline-secondary px-3">
-                    Clear
-                </a>
-            </div>
+                    <a href="{% url 'cbt:lecturer-add-question' %}"
+                       class="btn btn-outline-secondary px-3">
+                        Clear
+                    </a>
+                </div>
 
             </form>
 
@@ -74,27 +76,27 @@
                             <div class="card h-100 border-success shadow-sm quiz-card" style="transition: transform 0.2s;">
                                 <div class="card-body d-flex flex-column justify-content-between">
                                     <div>
-                                        <h6 class="card-title quiz-subject mb-2">
-                                           ({{ quiz.subject }}) - {{ quiz.examination }}
+                                        <h6 class="card-title quiz-course mb-2">
+                                           {{ quiz.course.course_code }} - {{ quiz.examination }}
                                         </h6>
                                         <p class="card-text text-muted mb-2" style="font-size: 0.875rem;">
                                             <span class="badge bg-info text-dark me-1">
                                                 Questions: {{ quiz.number_of_questions }}
                                             </span>
                                             <span class="badge bg-warning text-dark me-1">
-                                                Term: {{ quiz.term }}
+                                                Semester: {{ quiz.semester }}
                                             </span>
                                             <span class="badge bg-secondary text-white">
-                                                Class: {{ quiz.standard.name }}
+                                                Level: {{ quiz.level.name }}
                                             </span>
                                         </p>
                                     </div>
                                     <div class="mt-2 text-center d-grid gap-2">
-                                        <a href="{% url 'cbt:teacher-add-question-quiz' quiz.id %}" 
+                                        <a href="{% url 'cbt:lecturer-add-question-quiz' quiz.id %}"
                                            class="btn btn-success btn-sm w-100">
                                             <i class="bi bi-plus-circle me-1"></i> Add Questions
                                         </a>
-                                        <a href="{% url 'cbt:teacher-view-questions' quiz.id %}" 
+                                        <a href="{% url 'cbt:lecturer-view-questions-quiz' quiz.id %}"
                                            class="btn btn-primary btn-sm w-100">
                                             <i class="bi bi-eye me-1"></i> View Questions
                                         </a>
@@ -121,21 +123,7 @@
     box-shadow: 0 8px 16px rgba(0,0,0,0.2);
 }
 
-.card-body::-webkit-scrollbar {
-    width: 6px;
-}
-.card-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-.card-body::-webkit-scrollbar-thumb {
-    background: #28a745;
-    border-radius: 10px;
-}
-.card-body::-webkit-scrollbar-thumb:hover {
-    background: #218838;
-}
-
-.quiz-subject {
+.quiz-course {
     font-size: 1rem;
     font-weight: 700;
     color: #198754;

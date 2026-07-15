@@ -1,4 +1,4 @@
-{% extends 'cbt/base.html' %} 
+{% extends 'cbt/base.html' %}
 
 {% block title %}Dashboard{% endblock %}
 
@@ -11,8 +11,8 @@
                 Select an exam to begin. Please ensure you have a stable internet connection.
             </p>
         </div>
-        {% if user.is_staff %}
-        <a href="/admin/cbt/quiz/" class="btn btn-success">
+        {% if user.is_staff or user.is_superuser %}
+        <a href="{% url 'cbt:admin-add-quiz' %}" class="btn btn-success">
             <i class="fas fa-plus"></i> Setup New Quiz
         </a>
         {% endif %}
@@ -25,10 +25,10 @@
         <div class="card h-100 shadow-sm">
             <div class="card-body">
                 <h5 class="card-title fw-bold text-primary">
-                    {{ quiz.examination }}
+                    {{ quiz.exam_name }}
                 </h5>
                 <h6 class="card-subtitle mb-2 text-muted">
-                    {{ quiz.subject }}
+                    {{ quiz.course.course_code }} - {{ quiz.course_name }}
                 </h6>
                 <hr>
 
@@ -36,7 +36,8 @@
                     <li>⏱️ <b>Duration:</b> {{ quiz.time }} Minutes</li>
                     <li>📝 <b>Questions:</b> {{ quiz.number_of_questions }}</li>
                     <li>🎯 <b>Pass Mark:</b> {{ quiz.required_score_to_pass }}%</li>
-                    <li>📅 <b>Term:</b> {{ quiz.term }}</li>
+                    <li>📚 <b>Level:</b> {{ quiz.level }}</li>
+                    <li>📅 <b>Semester:</b> {{ quiz.semester }}</li>
                     <li>🗓️ <b>Session:</b> {{ quiz.session }}</li>
                     <li>📆 <b>Available:</b> {{ quiz.start_date }} – {{ quiz.end_date }}</li>
                     <li>⏰ <b>Closes Today:</b> {{ quiz.end_time|time:"h:i A" }}</li>
@@ -44,23 +45,21 @@
             </div>
 
             <div class="card-footer bg-white border-0 pb-3">
-                <a href="{% url 'cbt:quiz-view' quiz.pk %}" 
+                <a href="{% url 'cbt:quiz-view' quiz.pk %}"
                    class="btn btn-primary w-100 mb-2">
                     Start Examination
                 </a>
 
-                {% if user.is_staff or user.teacher %}
-                    {% if quiz.examination.standard in teacher_profile.standards_assigned.all and quiz.subject in teacher_profile.subjects_taught.all %}
-                        <div class="border-top pt-2 mt-2">
-                            <small class="text-muted d-block mb-2">
-                                Teacher Controls:
-                            </small>
-                            <a href="{% url 'cbt:teacher-add-question' %}" 
-                               class="btn btn-sm btn-outline-dark w-100">
-                                ➕ Add/Manage Questions
-                            </a>
-                        </div>
-                    {% endif %}
+                {% if user.is_staff or user.is_superuser or quiz.course_id in lecturer_course_ids %}
+                    <div class="border-top pt-2 mt-2">
+                        <small class="text-muted d-block mb-2">
+                            Lecturer Controls:
+                        </small>
+                        <a href="{% url 'cbt:lecturer-add-question-quiz' quiz.id %}"
+                           class="btn btn-sm btn-outline-dark w-100">
+                            ➕ Add/Manage Questions
+                        </a>
+                    </div>
                 {% endif %}
             </div>
         </div>
@@ -68,14 +67,14 @@
     {% empty %}
     <div class="col-12 text-center py-5">
         <div class="alert alert-info">
-            No exams are currently scheduled for your class.
+            No examinations are currently scheduled for you.
         </div>
     </div>
     {% endfor %}
 </div>
 
-{% if user.is_staff %}
-<a href="{% url 'cbt:teacher-results-view' %}" 
+{% if user.is_staff or user.is_superuser or user.lecturer %}
+<a href="{% url 'cbt:lecturer-results-view' %}"
    class="btn btn-info text-white mt-3">
     📊 View Student Scores
 </a>

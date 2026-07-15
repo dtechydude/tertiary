@@ -23,7 +23,9 @@
 	
 	<!-- FAVICONS ICON -->
 	
-	<link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
+	{% comment %} <link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" /> {% endcomment %}
+	<link rel="shortcut icon" type="image/png" href="{{ school_info.name }}" />
+
 	{% block favicon %}
 	<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
 	<link href="{% static 'pages/vendor/owl-carousel/owl.carousel.css' %}" rel="stylesheet">
@@ -635,21 +637,21 @@
 						<ul aria-expanded="false">	
 
 							{% if user.is_authenticated and user.is_superuser or user.is_staff %}
-							{% comment %} <li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
-							<li><a href="{% url 'cbt:cbt_teacher_order' %}">Teacher CBT Page</a></li>
-							<li><a href="{% url 'cbt:cbt_student_home' %}"> Student CBT Page</a></li>							
-							<li><a href="{% url 'cbt:teacher-results-view' %}"> Students CBT Scores</a></li>
+							<li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
+							{% comment %} <li><a href="{% url 'cbt:cbt_lecturer_order' %}">Teacher CBT Page</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'cbt:cbt_student_home' %}"> Student CBT Page</a></li>							 {% endcomment %}
+							<li><a href="{% url 'cbt:lecturer-results-view' %}"> Students CBT Scores</a></li>
 							<li><a href="{% url 'cbt:cbt-order' %}">customized CBT Platform</a></li>
-							<li><a href="{% url 'cbt:cbt-home' %}"> Current CBT Subscription</a></li>							 {% endcomment %}
+							<li><a href="{% url 'cbt:cbt-home' %}"> Current CBT Subscription</a></li>			
 
 							
 							{% elif user.is_authenticated and user.teacher or user.is_staff %}
-							{% comment %} <li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
-							<li><a href="{% url 'cbt:cbt_teacher_order' %}">Set CBT Exams</a></li>
-							<li><a href="{% url 'cbt:teacher-results-view' %}"> Students CBT Scores</a></li>							
-						 {% endcomment %}
+							<li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
+							{% comment %} <li><a href="{% url 'cbt:cbt_lecturer_order' %}">Set CBT Exams</a></li> {% endcomment %}
+							<li><a href="{% url 'cbt:lecturer-results-view' %}"> Students CBT Scores</a></li>							
+						
 							{% elif user.is_authenticated and user.student %}
-							{% comment %} <li><a href="{% url 'cbt:cbt_student_home' %}"> My CBT Exams</a></li>																			 {% endcomment %}
+							<li><a href="{% url 'cbt:cbt_student_home' %}"> My CBT Exams</a></li>
 																
 							{% endif %}
 						</ul>					

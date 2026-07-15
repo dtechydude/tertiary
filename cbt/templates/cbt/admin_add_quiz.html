@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-md-7">
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
                 <h4 class="mb-0">Setup New Examination Quiz</h4>
@@ -12,17 +12,27 @@
             <div class="card-body">
                 <form method="POST">
                     {% csrf_token %}
-                    
+
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Select Examination (Standard)</label>
+                        <label class="form-label fw-bold">Examination</label>
                         {{ form.examination }}
-                        <div class="form-text">Only standards assigned to you are listed.</div>
+                        <div class="form-text">The parent examination this CBT sitting belongs to.</div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Select Subject</label>
-                        {{ form.subject }}
-                        <div class="form-text">Only subjects you teach are listed.</div>
+                        <label class="form-label fw-bold">Course</label>
+                        {{ form.course }}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Level</label>
+                            {{ form.level }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Semester</label>
+                            {{ form.semester }}
+                        </div>
                     </div>
 
                     <div class="row">
@@ -37,12 +47,43 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Term</label>
-                        {{ form.term }}
+                        <label class="form-label fw-bold">Required Score to Pass (%)</label>
+                        {{ form.required_score_to_pass }}
                     </div>
 
                     <hr>
-                    <button type="submit" class="btn btn-success w-100">Create Quiz & Proceed to Questions</button>
+                    <h6 class="fw-bold text-muted">Availability Window</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Start Date</label>
+                            {{ form.start_date }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">End Date</label>
+                            {{ form.end_date }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Daily Opening Time</label>
+                            {{ form.start_time }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Daily Closing Time</label>
+                            {{ form.end_time }}
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        {{ form.active }}
+                        <label class="form-check-label fw-bold">Active</label>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <hr>
+                    <button type="submit" class="btn btn-success w-100">Create Quiz &amp; Proceed to Questions</button>
                     <a href="{% url 'cbt:main-view' %}" class="btn btn-link w-100 text-muted">Cancel</a>
                 </form>
             </div>

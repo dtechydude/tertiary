@@ -9,10 +9,9 @@
 {{ block.super }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-    /* Bolder Typography & Layout */
     .cbt-main-title { font-size: 2.5rem; font-weight: 900; color: #1e293b; text-transform: uppercase; }
     .cbt-subtitle { font-size: 1.25rem; font-weight: 700; color: #64748b; }
-    
+
     .path-card {
         transition: all 0.3s cubic-bezier(.25,.8,.25,1);
         border-radius: 20px;
@@ -23,7 +22,7 @@
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
                     0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
-    .teacher-path:hover { border-color: #3b82f6; }
+    .lecturer-path:hover { border-color: #3b82f6; }
     .student-path:hover { border-color: #10b981; }
 
     .icon-box {
@@ -42,7 +41,6 @@
 <div class="content-body">
     <div class="container-fluid">
 
-        {# ===== Admin / Staff Back Link ===== #}
         {% if request.user.is_superuser or request.user.is_staff %}
         <div class="d-flex justify-content-end mb-3 mt-2">
             <a href="/dashboard"
@@ -67,27 +65,27 @@
         <div class="row justify-content-center g-4">
 
             <div class="col-xl-5 col-lg-6">
-                <div class="card path-card teacher-path shadow-lg h-100 overflow-hidden">
+                <div class="card path-card lecturer-path shadow-lg h-100 overflow-hidden">
                     <div class="card-body p-5 text-center">
                         <div class="icon-box bg-primary text-white shadow">
                             <i class="fas fa-chalkboard-teacher"></i>
                         </div>
-                        <h2 class="text-massive text-dark mb-3">TEACHER MANAGEMENT</h2>
+                        <h2 class="text-massive text-dark mb-3">LECTURER MANAGEMENT</h2>
                         <p class="fs-5 text-muted fw-bold mb-4">
-                            Create quizzes, manage question banks, and analyze student results with our optimized class-filtering system.
+                            Create quizzes, manage question banks, and analyze student results across your assigned courses.
                         </p>
 
                         <div class="text-start bg-light p-4 rounded-3 mb-4 border-start border-primary border-5">
                             <h6 class="fw-900 text-primary mb-2">Core Controls:</h6>
                             <ul class="list-unstyled fw-bold text-dark fs-6 mb-0">
-                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Set Exams for Assigned Classes</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Set Exams for Assigned Courses</li>
                                 <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Real-time Result Filtering</li>
                                 <li><i class="fas fa-check text-success me-2"></i> Anti-Duplicate Protection</li>
                             </ul>
                         </div>
 
-                        <a href="{% url 'cbt:cbt_teacher_order' %}" class="btn btn-primary btn-action w-100 shadow">
-                            Teacher Dashboard <i class="fas fa-arrow-right ms-2"></i>
+                        <a href="{% url 'cbt:lecturer-guide' %}" class="btn btn-primary btn-action w-100 shadow">
+                            Lecturer Dashboard <i class="fas fa-arrow-right ms-2"></i>
                         </a>
                     </div>
                 </div>
@@ -107,13 +105,13 @@
                         <div class="text-start bg-light p-4 rounded-3 mb-4 border-start border-success border-5">
                             <h6 class="fw-900 text-success mb-2">Student Access:</h6>
                             <ul class="list-unstyled fw-bold text-dark fs-6 mb-0">
-                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i> View Exams for your Class</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i> View Exams for your Registered Courses</li>
                                 <li class="mb-2"><i class="fas fa-check text-success me-2"></i> Auto-Saving Progress</li>
                                 <li><i class="fas fa-check text-success me-2"></i> Instant Score Release</li>
                             </ul>
                         </div>
 
-                        <a href="{% url 'cbt:cbt_teacher_order' %}" class="btn btn-success btn-action w-100 text-white shadow">
+                        <a href="{% url 'cbt:student-guide' %}" class="btn btn-success btn-action w-100 text-white shadow">
                             Start Examination <i class="fas fa-pen-nib ms-2"></i>
                         </a>
                     </div>

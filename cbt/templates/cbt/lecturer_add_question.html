@@ -1,5 +1,7 @@
 {% extends 'cbt/base.html' %}
 
+{% block title %}Add Question{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="card shadow">
@@ -8,7 +10,7 @@
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
             <div>
                 <h5 class="mb-1">
-                    Adding Questions for: 
+                    Adding Questions for:
                     {{ quiz.course.course_code }} - {{ quiz.course.title }}
                 </h5>
                 <small>
@@ -76,14 +78,14 @@
                 <!-- ACTION BUTTONS -->
                 <div class="d-flex gap-2">
                     <button type="submit" name="add_another" class="btn btn-primary">
-                        Save & Add Another
+                        Save &amp; Add Another
                     </button>
 
                     <button type="submit" class="btn btn-success">
-                        Save & Finish
+                        Save &amp; Finish
                     </button>
 
-                    <a href="{% url 'cbt:teacher-add-question' %}" class="btn btn-light border">
+                    <a href="{% url 'cbt:lecturer-add-question' %}" class="btn btn-light border">
                         Cancel
                     </a>
                 </div>
