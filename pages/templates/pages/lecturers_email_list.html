@@ -7,7 +7,7 @@
     
 	<!-- PAGE TITLE HERE -->
     {% block title %}
-	<title>Teachers Phone List</title>
+	<title>Lecturers Email List</title>
 	{% endblock title %}
 	
 	<!-- FAVICONS ICON -->
@@ -89,10 +89,10 @@
 					<div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h4 class="card-title" style="color:green;">Teachers Phone List </h4>
-                                <a href="{% url 'pages:teachers_phone_list' %}?export=csv" class="btn btn-success">
-                                 <i class="fas fa-file-download me-2"></i>Export CSV
-                                    </a>
+                                <h4 class="card-title" style="color:green;">Lecturers Email List </h4>
+                                 <a href="{% url 'pages:lecturer_email_list' %}?export=csv" class="btn btn-success">
+                                <i class="fas fa-file-download me-2"></i>Export CSV
+                                </a>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -100,43 +100,38 @@
                                         <thead>
                                             <tr>
                                                 <th>S/N</th>
-                                                <th>Teacher Name</th>
-                                                <th>Profile Phone</th>
+                                               <th>Lecturer Name</th>
+                                               <th>Email</th>
                                                 <th>Guarantor Name</th>
-                                                <th>Guarantor Phone</th>
+                                                <th>Guarantor Email</th>
+                                                
                                                                                             
                                             </tr>
                                         </thead>
                                         <tbody>
-                                          {% for teacher in teachers %}
-                                            <tr>
-                                               <td>{{ forloop.counter }}</td> 
-                                                <td>{{ teacher.get_full_name }}</td>
-                                                <td>
-                                                    <a href="tel:{{ teacher.phone_home }}" class="text-decoration-none">
-                                                        {{ teacher.phone_home }}
-                                                    </a>
-                                                </td>
-                                                <td>{{ teacher.guarantor_name }}</td>
-                                                <td>
-                                                    <a href="tel:{{ teacher.guarantor_phone }}" class="text-decoration-none">
-                                                        {{ teacher.guarantor_phone }}
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                            {% empty %}
-                                            <tr>
-                                                <td colspan="3" class="text-center text-muted">No guarantor information found.</td>
-                                            </tr>
-                                            {% endfor %}
-                                         
+                                           {% for lecturer in lecturers %}
+                                            <tr>  
+                                            <td>{{ forloop.counter }}  </td>                                      
+                                            <td>{{ lecturer.get_full_name }}</td>
+                                            <td>{{ lecturer.user.email }}</td>
+                                            <td>{{ lecturer.guarantor_name }}</td>
+                                            <td>
+                                                <a href="mailto:{{ lecturer.guarantor_email }}" class="text-decoration-none">
+                                                    {{ lecturer.guarantor_email }}
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">No guarantor information found.</td>
+                                        </tr>
+                                        {% endfor %}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
                     </div>
-
 
 
 				</div>

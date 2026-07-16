@@ -580,13 +580,11 @@
 							<li><a href="{% url 'staff:admin_course_assignments' %}">Lecturer Courses</a></li>
 
 
-							{% comment %} <li><a href="{% url 'staff:teacher-list' %}">All Teachers</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:lecturer-list' %}">All Lecturers</a></li> {% endcomment %}
 							{% comment %} <li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li>  {% endcomment %}
-							{% comment %} <li><a href="{% url 'staff:assign_form_teacher_to_classgroup' %}">Assign FormTeacher To CLASSGROUP</a></li> {% endcomment %}
 							{% comment %} <li><a href="{% url 'staff:teacher_assignments' %}">Teacher's Subj./Classes</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'staff:cbv_all_teachers_student_counts' %}">Teacher's Students Count</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'curriculum:form_teachers_head' %}">FormTeachers List</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'curriculum:classgroup_form_teachers' %}">ClassGroup FormTeachers</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:cbv_all_teachers_student_counts' %}">Lecturer's Students Count</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'curriculum:form_teachers_head' %}">Course Advisors List</a></li> {% endcomment %}
 
 						</ul>
 					</li> 
@@ -751,8 +749,8 @@
 							<li><a href="{% url 'events:calendar' %}">School Events Calendar</a></li>
 							<li><a href="{% url 'pages:students_email_list' %}">Students Email List</a></li>
 							<li><a href="{% url 'pages:students_phone_list' %}">Students Phone List</a></li>
-							<li><a href="{% url 'pages:teachers_phone_list' %}">Teachers Phone List</a></li>
-							<li><a href="{% url 'pages:teachers_email_list' %}">Teachers Email List</a></li>
+							<li><a href="{% url 'pages:lecturer_phone_list' %}">Lecturers Phone List</a></li>
+							<li><a href="{% url 'pages:lecturer_email_list' %}">Lecturers Email List</a></li>
 
 							</ul>
 					</li>
@@ -1004,8 +1002,8 @@
 																<span class="badge bg-primary">SUPERUSER</span>
 																{% elif user.student %}
 																<span class="badge bg-success">STUDENT</span>
-																{% elif user.teacher %}
-																<span class="badge bg-info">TEACHER</span>
+																{% elif user.lecturer %}
+																<span class="badge bg-info">LECTURER</span>
 																{% elif user.parent %}
 																<span class="badge bg-secondary">GUARDIAN/PARENT</span>
 																{% else %}
@@ -1117,7 +1115,7 @@
 													<div class="card-body">
 														<div class="d-flex align-items-end pb-4 justify-content-between">
 															<span class="fs-14 font-w500 text-white">Total Lecturers</span>
-															<span class="fs-20 font-w600 text-white"><span class="pe-2"></span>{{ teacher_num }}</span>
+															<span class="fs-20 font-w600 text-white"><span class="pe-2"></span>{{ lecturer_num }}</span>
 														</div>
 														<div class="progress default-progress h-auto">
 															<div class="progress-bar bg-white progress-animated" style="width: 30%; height:13px;" role="progressbar">
@@ -1210,18 +1208,18 @@
 																You can use the internal “Ticket” communication tool to submit complaints, report issues, or request assistance.															</p>
 															</p>
 
-																<!-- For Teacher -->
+																<!-- For lECTURER -->
 																<p style="text-align: justify;">	
 																<span><strong>Result Upload</strong> <br>
-																Teachers can upload academic results for their assigned subjects and classes, including Continuous Assessment (CA) and examination scores. 
-																Subject teachers can only enter results for the subjects they teach, while form teachers have broader access and may upload results for all students in their class.
+																Lecturers can upload academic results for their assigned subjects and classes, including Continuous Assessment (CA) and examination scores. 
+																Course lecturers can only enter results for the subjects they teach, while form teachers have broader access and may upload results for all students in their class.
 																</span><br>															
 																<span><strong>Attendance Management</strong> <br>
-																Teachers can take and update daily attendance for their classes using the attendance tools available in the portal.	</span><br>
+																Lecturers can take and update daily attendance for their classes using the attendance tools available in the portal.	</span><br>
 																<span> <strong>Student Information Access</strong> <br>
-																The portal allows teachers to view relevant student details for their assigned classes, enabling better communication and academic support.	</span><br>
+																The portal allows lecturers to view relevant student details for their assigned classes, enabling better communication and academic support.	</span><br>
 																<span><strong>Upload E-Learning Materials</strong> <br>
-																Teachers can upload notes, assignments, and other academic resources through the E-Learning menu to support digital learning.
+																Lecturers can upload notes, assignments, and other academic resources through the E-Learning menu to support digital learning.
 																</span>
 															</p>						
 														</div>
@@ -1282,7 +1280,7 @@
 											<div class="items">
 												<div class="customers border">
 													<p class="fs-16"><b>Results Tracking, Fees Payment, Attendance...</b><br />
-														Both parents and teachers enjoy the flexibilities of the interface to performance tasks with easily accessible buttons. download features and perform query</p>
+														lecturers enjoy the flexibilities of the interface to performance tasks with easily accessible buttons. download features and perform query</p>
 													<div class="d-flex justify-content-between align-items-center mt-4">
 														<div class="customer-profile d-flex ">
 														<div class="ms-3">

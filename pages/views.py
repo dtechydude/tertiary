@@ -57,7 +57,7 @@ def dashboard(request):
     active = Student.objects.filter(student_status='active').count()
     # payments = PaymentDetail1.objects.count()
     # staff_num = Staff.objects.count()
-    teacher_num = Lecturer.objects.count()    
+    lecturer_num = Lecturer.objects.count()    
     my_idcard = Student.objects.filter(user=User.objects.get(username=request.user))
     students = Student.objects.filter().order_by('programme').values('programme__name').annotate(count=Count('programme__name'))
     # my_students = Student.objects.filter(form_teacher__user=request.user).order_by('first_name')
@@ -90,7 +90,7 @@ def dashboard(request):
         'users_num': users_num,
         'num_inclass': num_inclass,
         # 'staff_num': staff_num,
-        'teacher_num':teacher_num,
+        'lecturer_num':lecturer_num,
         'graduated': graduated,
         'dropped': dropped,
         'expelled': expelled,
@@ -146,11 +146,11 @@ def email_list(request):
 @login_required
 def birthday_list(request):
     user_birthday = Profile.objects.all()
-    teacher_birthday = Lecturer.objects.all()
+    lecturer_birthday = Lecturer.objects.all()
     student_birthday = Student.objects.all()
     context = {        
         'user_birthday': user_birthday,
-        'teacher_birthday':teacher_birthday,
+        'lecturer_birthday':lecturer_birthday,
         'student_birthday': student_birthday,
     }
     return render(request, 'pages/birthday_list.html', context)
@@ -182,7 +182,7 @@ def student_phone_list_view(request):
     """
     A view to display a phone list of all students and allows for CSV export.
     """
-    students = Student.objects.select_related('user__profile').all().order_by('last_name', 'first_name')
+    students = Student.objects.select_related('user__profile').all().order_by('user__last_name', 'user__first_name')
 
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
@@ -212,7 +212,7 @@ def student_email_list_view(request):
     """
     A view to display a list of student and guardian emails and allows for CSV export.
     """
-    students = Student.objects.all().order_by('last_name', 'first_name')
+    students = Student.objects.all().order_by('user__last_name', 'user__first_name')
 
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
@@ -236,65 +236,65 @@ def student_email_list_view(request):
 
     return render(request, 'pages/students_email_list.html', context)
 
-# Teachers/guarantors Phone List
+# Lecturers/guarantors Phone List
 @login_required
-def teacher_guarantor_phone_list_view(request):
+def lecturer_phone_list_view(request):
     """
-    A view to display a list of teacher guarantor phone numbers and allows for CSV export.
+    A view to display a list of lecturers phone numbers and allows for CSV export.
     """
-    teachers = Lecturer.objects.all().order_by('last_name', 'first_name')
+    lecturers = Lecturer.objects.all().order_by('user__last_name', 'user__first_name')
 
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="teacher_guarantor_phone_list.csv"'
+        response['Content-Disposition'] = 'attachment; filename="lecturer_guarantor_phone_list.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['Teacher Name', 'Profile Phone', 'Guarantor Name', 'Guarantor Phone'])
+        writer.writerow(['Lecturer Name', 'Profile Phone', 'Guarantor Name', 'Guarantor Phone'])
 
-        for teacher in teachers:
+        for lecturer in lecturers:
             writer.writerow([
-                teacher.get_full_name(),
-                teacher.phone_home,
-                teacher.guarantor_name,
-                teacher.guarantor_phone,
+                lecturer.get_full_name(),
+                lecturer.phone_home,
+                lecturer.guarantor_name,
+                lecturer.guarantor_phone,
             ])
         return response
 
     context = {
-        'teachers': teachers,
+        'lecturers': lecturers,
     }
 
-    return render(request, 'pages/teachers_phone_list.html', context)
+    return render(request, 'pages/lecturers_phone_list.html', context)
 
-# Teachers Email List
+# Lecturers Email List
 @login_required
-def teacher_guarantor_email_list_view(request):
+def lecturer_email_list_view(request):
     """
-    A view to display a list of teacher guarantor emails and allows for CSV export.
+    A view to display a list of lecturer  emails and allows for CSV export.
     """
-    teachers = Teacher.objects.all().order_by('last_name', 'first_name')
+    lecturers = Lecturer.objects.all().order_by('user__last_name', 'user__first_name')
 
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="teacher_guarantor_email_list.csv"'
+        response['Content-Disposition'] = 'attachment; filename="lecuturer_guarantor_email_list.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['Teacher Name', 'Profile Email', 'Guarantor Name', 'Guarantor Email'])
+        writer.writerow(['Lecturer Name', 'Profile Email', 'Guarantor Name', 'Guarantor Email'])
 
-        for teacher in teachers:
+        for lecturer in lecturers:
             writer.writerow([
-                teacher.get_full_name(),
-                teacher.user.email,
-                teacher.guarantor_name,
-                teacher.guarantor_email,
+                lecturer.get_full_name(),
+                lecturer.user.email,
+                lecturer.guarantor_name,
+                lecturer.guarantor_email,
             ])
         return response
 
     context = {
-        'teachers': teachers,
+        'lecturers': lecturers,
     }
 
-    return render(request, 'pages/teachers_email_list.html', context)
+    return render(request, 'pages/lecturers_email_list.html', context)
 
 
 
@@ -328,15 +328,15 @@ def video_guides_view(request):
             'is_staff_only': True  # This video is for staff only
         },
          {
-            'title': 'Admin - Student Enrolment & Teachers Signup',
+            'title': 'Admin - Student Enrolment & Lecturers Signup',
             'youtube_url': 'https://www.youtube.com/watch/EHOePJXKWp0',
             'description': 'Set Up - Initial portal set up',
             'is_staff_only': True  # This video is for staff only
         },
          {
-            'title': 'Admin - Assign Form Teachers To Classes',
+            'title': 'Admin - Assign Form Lecturers To Classes',
             'youtube_url': 'https://www.youtube.com/watch/jnm5nk58L-Q',
-            'description': 'How to assign form teachers to classes',
+            'description': 'How to assign form lecturers to classes',
             'is_staff_only': True  # This video is for staff only
         },
         {
@@ -346,9 +346,9 @@ def video_guides_view(request):
             'is_staff_only': False  # This video is for staff only
         },
         {
-            'title': 'TEACHERS - The Teachers Dashboard 1',
+            'title': 'LECTURERS - The Lecturers Dashboard 1',
             'youtube_url': 'https://www.youtube.com/watch/HiRL_cLb8Z8',
-            'description': 'Exploring the teachers dashboard',
+            'description': 'Exploring the lecturers dashboard',
             'is_staff_only': False  # This video is for staff only
         },
        
@@ -383,7 +383,7 @@ def send_newsletter_task(newsletter_id):
     elif newsletter.target_audience == 'STUDENTS':
         users = users.filter(student__isnull=False)
     elif newsletter.target_audience == 'STAFF':
-        users = users.filter(teacher__isnull=False)
+        users = users.filter(lecturer__isnull=False)
     elif newsletter.target_audience == 'ADMINS':
         users = users.filter(is_staff=True)
     

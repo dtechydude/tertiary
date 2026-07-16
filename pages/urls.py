@@ -23,8 +23,8 @@ urlpatterns = [
      path('students-phone-list/', page_views.student_phone_list_view, name='students_phone_list'),
      path('students-email-list/', page_views.student_email_list_view, name='students_email_list'),
 
-     path('teachers-phone-list/', page_views.teacher_guarantor_phone_list_view, name='teachers_phone_list'),
-     path('teachers-email-list/', page_views.teacher_guarantor_email_list_view, name='teachers_email_list'),
+     path('lecturers-phone-list/', page_views.lecturer_phone_list_view, name='lecturer_phone_list'),
+     path('lecturers-email-list/', page_views.lecturer_email_list_view, name='lecturer_email_list'),
 
 #      path('payment-instruction/', page_views.payment_instruction, name='payment_instruction'),
 #      path('payment-chart/', page_views.payment_chart, name='payment_chart'),

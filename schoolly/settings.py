@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'tickets.apps.TicketsConfig',
     'payments.apps.PaymentsConfig',
     'finance.apps.FinanceConfig',
+    'ai_center.apps.AiCenterConfig',
 
 
 
