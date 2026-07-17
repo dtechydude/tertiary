@@ -1,0 +1,108 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Academic Calendar</title>
+{% endblock title %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles mb-4">
+            <div class="col-sm-8">
+                <h3 class="fw-bold mb-1"><i class="fas fa-calendar-days text-primary me-2"></i>Academic Calendar</h3>
+                <p class="mb-0 text-muted">Session and semester dates, and when course registration opens and closes</p>
+            </div>
+        </div>
+
+        {% if current_session or current_semester %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-primary d-flex align-items-center shadow-sm rounded-3" role="alert">
+                    <i class="fas fa-circle-check fa-lg me-3"></i>
+                    <div>
+                        Currently in <strong>{{ current_session.name|default:"—" }}</strong>,
+                        <strong>{{ current_semester.name|default:"—" }} Semester</strong>.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% for entry in calendar_rows %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0 fw-bold">
+                    {{ entry.session.name }}
+                    {% if entry.session.is_current %}
+                        <span class="badge bg-success ms-2">Current Session</span>
+                    {% endif %}
+                </h5>
+                <span class="text-muted small">
+                    {{ entry.session.start_date|date:"M d, Y"|default:"TBA" }} &ndash; {{ entry.session.end_date|date:"M d, Y"|default:"TBA" }}
+                </span>
+            </div>
+            <div class="card-body">
+                {% if entry.semesters %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Semester</th>
+                                <th>Starts</th>
+                                <th>Ends</th>
+                                <th>Status</th>
+                                <th>Registration Window</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in entry.semesters %}
+                            <tr>
+                                <td class="fw-bold">
+                                    {{ item.obj.name }} Semester
+                                    {% if item.obj.is_current %}<span class="badge bg-success ms-1">Current</span>{% endif %}
+                                </td>
+                                <td>{{ item.obj.start_date|date:"M d, Y" }}</td>
+                                <td>{{ item.obj.end_date|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if item.phase == 'ongoing' %}
+                                        <span class="badge bg-primary">Ongoing</span>
+                                    {% elif item.phase == 'upcoming' %}
+                                        <span class="badge bg-info text-dark">Upcoming</span>
+                                    {% elif item.phase == 'completed' %}
+                                        <span class="badge bg-secondary">Completed</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark border">Unscheduled</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.window.state == 'open' %}
+                                        <span class="badge bg-success"><i class="fas fa-lock-open me-1"></i>{{ item.window.label }}</span>
+                                    {% elif item.window.state == 'late' %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>{{ item.window.label }}</span>
+                                    {% elif item.window.state == 'not_started' %}
+                                        <span class="badge bg-light text-dark border">{{ item.window.label }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-lock me-1"></i>{{ item.window.label }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No semesters have been configured for this session yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-calendar-xmark fa-2x mb-3 d-block"></i>
+            No academic sessions have been configured yet.
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+{% endblock content_body %}

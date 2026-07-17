@@ -1,0 +1,73 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Course Roster</title>
+{% endblock title %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles mb-4">
+            <div class="col-sm-8">
+                <h3 class="fw-bold mb-1"><i class="fas fa-users text-primary me-2"></i>{{ course.course_code }} Roster</h3>
+                <p class="mb-0 text-muted">{{ course.title }} &mdash; {{ session }} &bull; {{ semester }}</p>
+            </div>
+            <div class="col-sm-4 d-flex align-items-center justify-content-sm-end gap-3 mt-3 mt-sm-0">
+                <span class="badge bg-primary fs-6">{{ total_count }} Registered</span>
+                <span class="badge bg-success fs-6">{{ validated_count }} Validated</span>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                {% if registrations %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Matric Number</th>
+                                <th>Student</th>
+                                <th>Level</th>
+                                <th>Status</th>
+                                <th>Registered On</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reg in registrations %}
+                            <tr>
+                                <td class="fw-bold">{{ reg.student.matric_number }}</td>
+                                <td>{{ reg.student.get_full_name|default:reg.student }}</td>
+                                <td><span class="badge bg-info text-dark">{{ reg.student.level }}</span></td>
+                                <td>
+                                    {% if reg.is_validated %}
+                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Validated</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted small">{{ reg.registered_at|date:"M d, Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-inbox fa-2x mb-3 d-block"></i>
+                    No students have registered for this course yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-12">
+                <a href="{% url 'curriculum:lecturer-courses' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to My Courses
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content_body %}

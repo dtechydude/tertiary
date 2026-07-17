@@ -1,0 +1,118 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>My Programme</title>
+{% endblock title %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles mb-4">
+            <div class="col-sm-8">
+                <h3 class="fw-bold mb-1"><i class="fas fa-graduation-cap text-primary me-2"></i>My Programme</h3>
+                <p class="mb-0 text-muted">Your academic profile at a glance</p>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Faculty</div>
+                        <div class="fw-bold">{{ faculty.name|default:"—" }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Department</div>
+                        <div class="fw-bold">{{ department.name|default:"—" }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Programme</div>
+                        <div class="fw-bold">{{ programme|default:"—" }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Current Level</div>
+                        <div class="fw-bold">{{ student.level|default:"—" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="fw-bold mb-0"><i class="fas fa-stairs me-2 text-primary"></i>Programme Progression</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if levels %}
+                        <ul class="list-group list-group-flush">
+                            {% for level in levels %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center {% if level == student.level %}bg-primary bg-opacity-10{% endif %}">
+                                <span class="{% if level == student.level %}fw-bold text-primary{% endif %}">
+                                    {{ level.name }}
+                                    {% if level == student.level %}<span class="badge bg-primary ms-2">You are here</span>{% endif %}
+                                </span>
+                                <i class="fas fa-chevron-right text-muted small"></i>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted p-3 mb-0">No levels configured for this programme yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="fw-bold mb-0"><i class="fas fa-sliders me-2 text-primary"></i>Registration Policy — {{ student.level|default:"Your Level" }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm mb-0">
+                            <tr><td class="text-muted">Minimum Units / Semester</td><td class="fw-bold">{{ policy.min_units_per_semester }}</td></tr>
+                            <tr><td class="text-muted">Maximum Units / Semester</td><td class="fw-bold">{{ policy.max_units_per_semester }}</td></tr>
+                            <tr><td class="text-muted">Carry-over Allowance</td><td class="fw-bold">{{ policy.max_carryover_units }}</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="fas fa-user-group fa-lg text-info me-3"></i>
+                        <div>
+                            You have <strong>{{ peer_count }}</strong> classmate{{ peer_count|pluralize }} in
+                            {{ student.level|default:"your level" }}, {{ department.name|default:"your department" }}.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12 d-flex gap-2 flex-wrap">
+                <a href="{% url 'curriculum:course-registration' %}" class="btn btn-primary">
+                    <i class="fas fa-pen-to-square me-1"></i> Register Courses
+                </a>
+                <a href="{% url 'curriculum:academic-calendar' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-calendar-days me-1"></i> Academic Calendar
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock content_body %}

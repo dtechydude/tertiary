@@ -478,32 +478,6 @@
 					</li>
 					{% endif %}
 
-							<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
-							<i class="flaticon-025-dashboard"></i>
-									
-							<span class="nav-text">HOSTEL MGT</span>
-						</a>
-						<ul aria-expanded="false">
-
-							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
-							
-							{% if user.is_superuser or user.is_staff %}
-							<li><a href="{% url 'students:boarder-list' %}">Hostel Students</a></li>
-							<li><a href="{% url 'students:hostel-dashboard' %}">HOSTEL MGT</a></li>
-
-							{% endif %}		
-	
-							{% if user.is_authenticated and user.student %}
-							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	 {% endcomment %}
-							{% endif %}
-							{% if user.lecturer %}
-							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
-							{% endif %}
-							
-						</ul>
-					</li>
-
-
 					{% if user.is_authenticated%}
 					{% if user.is_superuser or user.is_staff or user.lecturer %}
 					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
@@ -521,7 +495,7 @@
 							
 							 {% if user.lecturer %}
 							<li><a href="{% url 'attendance:attendance-student-list' %}">Mark Attendance</a></li>
-							<li><a href="{% url 'attendance:attendance_scanner' %}">SCANNING Attendance</a></li>
+							<li><a href="{% url 'attendance:attendance_scanner' %}"><i class="fas fa-qrcode"></i>SCANNING Attendance</a></li>
 							{% endif %}						
 							<li><a href="{% url 'attendance:attendance_report' %}">Attendance Report</a></li>
 							<li><a href="{% url 'attendance:attendance-student-list' %}">Attendance List</a></li>
@@ -736,6 +710,34 @@
 								</ul>
 							</li>
 							{% endif %}
+
+							
+							<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-025-dashboard"></i>
+									
+							<span class="nav-text">HOSTEL MGT</span>
+						</a>
+						<ul aria-expanded="false">
+
+							<li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	
+							
+							{% if user.is_superuser or user.is_staff %}
+							<li><a href="{% url 'students:boarder-list' %}">Hostel Students</a></li>
+							<li><a href="{% url 'students:hostel-dashboard' %}">HOSTEL MGT</a></li>
+
+							{% endif %}		
+	
+							{% if user.is_authenticated and user.student %}
+							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	 {% endcomment %}
+							{% endif %}
+							{% if user.lecturer %}
+							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	 {% endcomment %}
+							{% endif %}
+							
+						</ul>
+					</li>
+
+
 					
 						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 							<i class="flaticon-013-checkmark"></i>

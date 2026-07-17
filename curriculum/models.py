@@ -38,6 +38,32 @@ class SchoolIdentity(models.Model):
     email = models.EmailField(blank=True, null=True)
     website = models.CharField(max_length=100, blank=True, null=True)
 
+    # --- New: tertiary-specific contact channels ---
+    registrar_phone = models.CharField(
+        max_length=15, blank=True, null=True,
+        help_text="Registry / Student Affairs phone — shown to students",
+    )
+    registrar_email = models.EmailField(
+        blank=True, null=True,
+        help_text="Registry / Student Affairs email — shown to students",
+    )
+    hr_phone = models.CharField(
+        max_length=15, blank=True, null=True,
+        help_text="HR / Staff Affairs phone — shown to lecturers & staff",
+    )
+    hr_email = models.EmailField(
+        blank=True, null=True,
+        help_text="HR / Staff Affairs email — shown to lecturers & staff",
+    )
+    support_phone = models.CharField(
+        max_length=15, blank=True, null=True,
+        help_text="Portal/ICT support phone — for technical issues, shown to students & staff",
+    )
+    support_email = models.EmailField(
+        blank=True, null=True,
+        help_text="Portal/ICT support email — for technical issues, shown to students & staff",
+    )
+
     logo = models.ImageField(upload_to='official_pics', default='school_logo.jpg')
     signature = models.ImageField(upload_to='official_pics', blank=True, null=True)
 
@@ -46,15 +72,14 @@ class SchoolIdentity(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk and SchoolIdentity.objects.count() >= 5:
             raise ValidationError("Maximum of 5 identities allowed.")
-
         if self.is_default:
             SchoolIdentity.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
-
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} ({self.identity_label})"
- 
+
+
     
 class AcademicIdentityMapping(models.Model):
     """

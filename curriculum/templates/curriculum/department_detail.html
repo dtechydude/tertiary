@@ -1,0 +1,69 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>{{ department.name }}</title>
+{% endblock title %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles mb-4">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-2">
+                        <li class="breadcrumb-item"><a href="{% url 'curriculum:faculty-list' %}">Faculties</a></li>
+                        {% if department.faculty %}
+                        <li class="breadcrumb-item"><a href="{% url 'curriculum:faculty-detail' department.faculty.id %}">{{ department.faculty.name }}</a></li>
+                        {% endif %}
+                        <li class="breadcrumb-item active">{{ department.name }}</li>
+                    </ol>
+                </nav>
+                <h3 class="fw-bold mb-1"><i class="fas fa-sitemap text-primary me-2"></i>{{ department.name }}</h3>
+                <p class="mb-0 text-muted">Head of Department: {{ department.hod.get_full_name|default:"Not assigned" }}</p>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Students</div>
+                        <div class="h3 fw-bold mb-0">{{ student_count }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Courses</div>
+                        <div class="h3 fw-bold mb-0">{{ course_count }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="fw-bold mb-0">Programmes</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if programmes %}
+                <ul class="list-group list-group-flush">
+                    {% for programme in programmes %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ programme }}</span>
+                        {% if programme.qualification_type %}
+                        <span class="badge bg-secondary">{{ programme.qualification_type }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted p-3 mb-0">No programmes linked to this department yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content_body %}

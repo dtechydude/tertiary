@@ -113,9 +113,16 @@ def dashboard(request):
         
     return render(request, 'pages/portal_home.html', context )    
 
-@login_required        
+@login_required
 def help_center(request):
-    return render(request, 'pages/help_center.html')
+    user = request.user
+    context = {
+        "is_student": hasattr(user, "student"),
+        "is_lecturer": hasattr(user, "lecturer"),
+        "is_staff_or_admin": user.is_staff or user.is_superuser,
+    }
+    return render(request, "pages/help_center.html", context)
+
 
 @login_required
 def support_info(request):

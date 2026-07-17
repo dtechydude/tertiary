@@ -1,0 +1,186 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Course Registration</title>
+{% endblock title %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles mb-4">
+            <div class="col-sm-8">
+                <h3 class="fw-bold mb-1"><i class="fas fa-pen-to-square text-primary me-2"></i>Course Registration</h3>
+                <p class="mb-0 text-muted">
+                    {% if session and semester %}
+                        {{ session.name }} &mdash; {{ semester.name }} Semester
+                    {% else %}
+                        No active session/semester
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- REGISTRATION WINDOW STATUS -->
+        <div class="row mb-4">
+            <div class="col-12">
+                {% if window.state == 'open' %}
+                <div class="alert alert-success d-flex align-items-center shadow-sm">
+                    <i class="fas fa-lock-open fa-lg me-3"></i>
+                    <div><strong>Registration is open.</strong> {{ window.label }}</div>
+                </div>
+                {% elif window.state == 'late' %}
+                <div class="alert alert-warning d-flex align-items-center shadow-sm">
+                    <i class="fas fa-clock fa-lg me-3"></i>
+                    <div><strong>Late registration window.</strong> {{ window.label }}</div>
+                </div>
+                {% elif window.state == 'not_started' %}
+                <div class="alert alert-info d-flex align-items-center shadow-sm">
+                    <i class="fas fa-hourglass-half fa-lg me-3"></i>
+                    <div><strong>Registration has not opened yet.</strong> {{ window.label }}</div>
+                </div>
+                {% else %}
+                <div class="alert alert-danger d-flex align-items-center shadow-sm">
+                    <i class="fas fa-lock fa-lg me-3"></i>
+                    <div><strong>Registration is closed.</strong> {{ window.label }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row g-3">
+
+            <!-- MY REGISTERED COURSES -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0"><i class="fas fa-clipboard-check me-2 text-success"></i>My Registered Courses</h6>
+                        <span class="badge bg-primary">{{ total_units }} unit{{ total_units|pluralize }}</span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if my_registrations %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Units</th>
+                                        <th>Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for reg in my_registrations %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold">{{ reg.course.course_code }}</div>
+                                            <div class="text-muted small">{{ reg.course.title }}</div>
+                                        </td>
+                                        <td>{{ reg.course.credit_unit }}</td>
+                                        <td>
+                                            {% if reg.is_validated %}
+                                                <span class="badge bg-success">Validated</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if not reg.is_validated %}
+                                            <form method="POST" action="{% url 'curriculum:drop-registration' reg.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Drop {{ reg.course.course_code }}?');">
+                                                    <i class="fas fa-xmark"></i>
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted p-3 mb-0">You haven't registered any courses this semester yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- AVAILABLE COURSES -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="fw-bold mb-0"><i class="fas fa-book me-2 text-primary"></i>Available Courses</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if available_courses %}
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="register">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width:36px;"></th>
+                                            <th>Course</th>
+                                            <th>Type</th>
+                                            <th>Units</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for course in available_courses %}
+                                        <tr>
+                                            <td><input type="checkbox" class="form-check-input" name="course_ids" value="{{ course.id }}"></td>
+                                            <td>
+                                                <div class="fw-bold">{{ course.course_code }}</div>
+                                                <div class="text-muted small">{{ course.title }}</div>
+                                            </td>
+                                            <td>
+                                                {% if course.course_type == 'compulsory' %}
+                                                    <span class="badge bg-primary">Compulsory</span>
+                                                {% else %}
+                                                    <span class="badge bg-info text-dark">Elective</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ course.credit_unit }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="p-3 border-top">
+                                <button type="submit" class="btn btn-primary w-100"
+                                        {% if window.state != 'open' and window.state != 'late' %}disabled{% endif %}>
+                                    <i class="fas fa-plus me-1"></i> Register Selected Courses
+                                </button>
+                            </div>
+                        </form>
+                        {% else %}
+                        <p class="text-muted p-3 mb-0">No further courses are available for your Department/Level/Programme this semester.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <a href="{% url 'curriculum:my-programme' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to My Programme
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock content_body %}

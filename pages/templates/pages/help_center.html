@@ -15,12 +15,12 @@
 	<meta property="og:title" content="KwikSchools : KwikSchools" />
 	<meta property="og:description" content="KwikSchools : KwikSchools" />
 	<meta name="format-detection" content="telephone=no">
-	
+
 	<!-- PAGE TITLE HERE -->
      {% block title %}
 	<title>Help Center</title>
     {% endblock title %}
-	
+
 	<!-- FAVICONS ICON -->
      {% block favicon %}
 	<link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
@@ -54,20 +54,20 @@
         <!--**********************************
             Nav header start
         ***********************************-->
-        
+
         <!--**********************************
             Nav header end
         ***********************************-->
-		
+
 		<!--**********************************
             Chat box start
         ***********************************-->
-		
+
 		<!--**********************************
             Chat box End
         ***********************************-->
 
-		
+
         <!--**********************************
             Header start
         ***********************************-->
@@ -77,7 +77,7 @@
           <li class="breadcrumb-item"><a href="javascript:void(0)" class="fs-14">Help Center</a></li>
         </ol>
         {% endblock sub-title%}
-                    
+
         <!--**********************************
             Header end ti-comment-alt
         ***********************************-->
@@ -85,7 +85,7 @@
         <!--**********************************
             Sidebar start
         ***********************************-->
-       
+
         <!--**********************************
             Sidebar end
         ***********************************-->
@@ -105,163 +105,239 @@
                 </div>
                 <!-- row -->
                 <!-- Row starts -->
-                <div class="row">
+                <div class="row justify-content-center">
+                    {% if is_student %}
                     <!-- Column starts -->
-                    <div class="col-xl-6">
+                    <div class="col-xl-8 col-lg-10">
                         <div class="card">
                             <div class="card-header d-block">
-                                <h4 class="card-title">Student/Parent: FAQs</h4>
-                                <p class="m-0 subtitle">What you need to know about The School Portal </p>
+                                <h4 class="card-title">Student FAQs</h4>
+                                <p class="m-0 subtitle">What you need to know about the School Portal</p>
                             </div>
                             <div class="card-body">
                                 <!-- Default accordion -->
-                
+
 								<div class="accordion accordion-primary" id="accordion-one">
+
 								  <div class="accordion-item">
-									<div class="accordion-header  rounded-lg" id="headingOne" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-controls="collapseOne"   aria-expanded="true" role="button">
+									<div class="accordion-header rounded-lg" id="headingOne" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-controls="collapseOne" aria-expanded="true" role="button">
 										<span class="accordion-header-icon"></span>
-									  <span class="accordion-header-text">How To Make Payments On The Portal?</span>
+									  <span class="accordion-header-text">How Do I Register My Courses?</span>
 									  <span class="accordion-header-indicator"></span>
 									</div>
 									<div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-bs-parent="#accordion-one">
 									  <div class="accordion-body-text">
-										 You have to make transfer to the school's designated account first, after this login to this portal and 
-                     check the "Payments/Bills" Menu and select "Make Payments". Enter the neccessary information in the form and submit.
+										 Once the registration portal is open for the session/semester, go to the "Course Registration" menu, select your programme's
+										 available courses for your current level, and submit. You can print your course registration form/slip from the same
+										 page once submitted. Registration closes on the deadline set by your department — check with your course adviser if
+										 the portal shows registration as closed.
 									  </div>
 									</div>
 								  </div>
+
 								  <div class="accordion-item">
-									<div class="accordion-header collapsed rounded-lg" id="headingTwo" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-controls="collapseTwo"   role="button" aria-expanded="true">
-									  <span class="accordion-header-text">How Do I Check My Results?</span>
+									<div class="accordion-header collapsed rounded-lg" id="headingTwo" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-controls="collapseTwo" role="button" aria-expanded="false">
+									  <span class="accordion-header-text">How To Make Payments On The Portal?</span>
 									 <span class="accordion-header-indicator"></span>
 									</div>
 									<div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-bs-parent="#accordion-one">
 									  <div class="accordion-body-text">
-										 All your results are listed under the "Exams & Results" Menu. Select the appropriate menu to view your results (Termly & Session)
-                      You can view/print and save to pdf format on your device.
+										 Make a transfer to the institution's designated account first. After payment, log in to this portal and check the
+										 "Payments/Bills" menu, then select "Make Payment". Enter the required information (amount, reference/teller number)
+										 and submit for verification.
 									  </div>
 									</div>
 								  </div>
+
 								  <div class="accordion-item">
-									<div class="accordion-header collapsed rounded-lg" id="headingThree" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-controls="collapseThree"  role="button"  aria-expanded="true">
-									  <span class="accordion-header-text">How Does The E-Learning Works?</span>
+									<div class="accordion-header collapsed rounded-lg" id="headingThree" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-controls="collapseThree" role="button" aria-expanded="false">
+									  <span class="accordion-header-text">How Do I Check My Results?</span>
 									  <span class="accordion-header-indicator"></span>
 									</div>
 									<div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-bs-parent="#accordion-one">
 									  <div class="accordion-body-text">
-										 The e-learning tools allows you to explore lessons related to your class. Select e-learning center under "E-Learning"
-                     and check your classes materials. You can make comments, ask questions and interact with your teacher on the e-learning platform.
+										 All your results are listed under the "Exams & Results" menu, broken down by session and semester. You can also
+										 view your cumulative GPA/CGPA summary from the same menu. Results can be viewed, printed, or saved as a PDF
+										 directly from your device.
 									  </div>
 									</div>
 								  </div>
-                  <div class="accordion-item">
-                    <div class="accordion-header collapsed rounded-lg" id="headingThree" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-controls="collapseThree"  role="button"  aria-expanded="true">
-                      <span class="accordion-header-text">How About CBT ?</span>
-                      <span class="accordion-header-indicator"></span>
-                    </div>
-                    <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-bs-parent="#accordion-one">
-                      <div class="accordion-body-text">
-                       The portal users a third party CBT tools and your school will send you links whenever your need to take assessment test, exams or quizes.
-                      </div>
-                    </div>
-                    </div>
-                    <div class="accordion-item">
-                      <div class="accordion-header collapsed rounded-lg" id="headingTwo" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-controls="collapseTwo"   role="button" aria-expanded="true">
-                        <span class="accordion-header-text">How Do I Update My Profile ?</span>
-                       <span class="accordion-header-indicator"></span>
-                      </div>
-                      <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-bs-parent="#accordion-one">
-                        <div class="accordion-body-text">
-                         You can update basic information on your student portal. Use the "My Profile" Menu on the left side menu bar. Edit appropriately 
-                        </div>
-                      </div>
-                      </div>
+
+								  <div class="accordion-item">
+									<div class="accordion-header collapsed rounded-lg" id="headingFour" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-controls="collapseFour" role="button" aria-expanded="false">
+									  <span class="accordion-header-text">How Does The E-Learning Center Work?</span>
+									  <span class="accordion-header-indicator"></span>
+									</div>
+									<div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-bs-parent="#accordion-one">
+									  <div class="accordion-body-text">
+										 The E-Learning Center under the "E-Learning" menu lists every course you're currently registered for. Open a course
+										 to access lecture notes, slides, and recorded videos uploaded by your lecturer, join live classes via the Google
+										 Classroom or Microsoft Teams links provided (where available), and ask questions or leave comments directly under
+										 each material.
+									  </div>
+									</div>
+								  </div>
+
+								  <div class="accordion-item">
+									<div class="accordion-header collapsed rounded-lg" id="headingFive" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-controls="collapseFive" role="button" aria-expanded="false">
+									  <span class="accordion-header-text">How About CBT (Computer-Based Tests)?</span>
+									  <span class="accordion-header-indicator"></span>
+									</div>
+									<div id="collapseFive" class="collapse" aria-labelledby="headingFive" data-bs-parent="#accordion-one">
+									  <div class="accordion-body-text">
+										 The portal uses a third-party CBT tool for course quizzes, tests, and exams. Your lecturer or the exams office will
+										 share a link and access details whenever a CBT is scheduled for one of your courses — usually announced under the
+										 course's e-learning page or by email/SMS.
+									  </div>
+									</div>
+								  </div>
+
+								  <div class="accordion-item">
+									<div class="accordion-header collapsed rounded-lg" id="headingSix" data-bs-toggle="collapse" data-bs-target="#collapseSix" aria-controls="collapseSix" role="button" aria-expanded="false">
+									  <span class="accordion-header-text">How Do I Get / Print My Student ID Card?</span>
+									  <span class="accordion-header-indicator"></span>
+									</div>
+									<div id="collapseSix" class="collapse" aria-labelledby="headingSix" data-bs-parent="#accordion-one">
+									  <div class="accordion-body-text">
+										 Go to "My Profile" &rarr; "ID Card" to preview and download your official student ID card as a PDF, or print it
+										 directly from the portal. Make sure your profile photo is up to date, since it's what appears on the card — update
+										 it under "My Profile" if needed.
+									  </div>
+									</div>
+								  </div>
+
+								  <div class="accordion-item">
+									<div class="accordion-header collapsed rounded-lg" id="headingSeven" data-bs-toggle="collapse" data-bs-target="#collapseSeven" aria-controls="collapseSeven" role="button" aria-expanded="false">
+									  <span class="accordion-header-text">How Do I Update My Profile?</span>
+									  <span class="accordion-header-indicator"></span>
+									</div>
+									<div id="collapseSeven" class="collapse" aria-labelledby="headingSeven" data-bs-parent="#accordion-one">
+									  <div class="accordion-body-text">
+										 You can update basic information (contact details, address, profile photo) from your student portal. Use the
+										 "My Profile" menu on the left sidebar and edit the relevant fields.
+									  </div>
+									</div>
+								  </div>
+
+								  <div class="accordion-item">
+									<div class="accordion-header collapsed rounded-lg" id="headingEight" data-bs-toggle="collapse" data-bs-target="#collapseEight" aria-controls="collapseEight" role="button" aria-expanded="false">
+									  <span class="accordion-header-text">How Do I Lodge A Complaint Or Get Help?</span>
+									  <span class="accordion-header-indicator"></span>
+									</div>
+									<div id="collapseEight" class="collapse" aria-labelledby="headingEight" data-bs-parent="#accordion-one">
+									  <div class="accordion-body-text">
+										 For registration, payment, or result-related issues, use the "Complaints/Support" menu to raise a ticket — describe
+										 the issue clearly and, where relevant, include your matric number and course code. The registry/exams office will
+										 respond through the portal or your registered email. For urgent issues, contact your department or the admin
+										 office directly.
+									  </div>
+									</div>
+								  </div>
+
 								</div>
-                
+
                             </div>
                         </div>
                     </div>
                     <!-- Column ends -->
+                    {% endif %}
+
+                    {% if is_lecturer or is_staff_or_admin %}
                     <!-- Column starts -->
-                    <div class="col-xl-6">
+                    <div class="col-xl-8 col-lg-10">
                         <div class="card">
                             <div class="card-header d-block">
-                                <h4 class="card-title">Teacher/Staff/Admin: FAQs</h4>
-                                <p class="m-0 subtitle">All You Need To Know </p>
+                                <h4 class="card-title">Lecturer/Staff/Admin FAQs</h4>
+                                <p class="m-0 subtitle">All You Need To Know</p>
                             </div>
                             <div class="card-body">
-                                
+
 								<div class="accordion accordion-danger-solid" id="accordion-two">
+
 								  <div class="accordion-item">
-									<div class="accordion-header  rounded-lg" id="accord-2One" data-bs-toggle="collapse" data-bs-target="#collapse2One" aria-controls="collapse2One"   aria-expanded="true"  role="button">
-									  <span class="accordion-header-text">Teacher's Role</span>
+									<div class="accordion-header rounded-lg" id="accord-2One" data-bs-toggle="collapse" data-bs-target="#collapse2One" aria-controls="collapse2One" aria-expanded="true" role="button">
+									  <span class="accordion-header-text">Lecturer's Role</span>
 									  <span class="accordion-header-indicator"></span>
 									</div>
 									<div id="collapse2One" class="collapse accordion__body show" aria-labelledby="accord-2One" data-bs-parent="#accordion-two">
 									  <div class="accordion-body-text">
-                      Teachers are categorized as academic staff. Teacher has priviledge to access their student results and update same.
-                      Teacher takes daily attendance and ensure all information about their students are correct.
+										 Lecturers can only access and manage the courses assigned to them for the current session/semester (see "My Courses").
+										 From there, you can upload lecture materials and add Google Classroom/Microsoft Teams links under "E-Learning",
+										 take attendance by scanning student ID QR codes under "Attendance", and enter/submit scores under "Results".
 									  </div>
 									</div>
 								  </div>
+
 								  <div class="accordion-item">
-									<div class="accordion-header collapsed rounded-lg" id="accord-2Two" data-bs-toggle="collapse" data-bs-target="#collapse2Two" aria-controls="collapse2Two"   aria-expanded="true"  role="button">
-									  <span class="accordion-header-text">Staff Role</span>
+									<div class="accordion-header collapsed rounded-lg" id="accord-2Two" data-bs-toggle="collapse" data-bs-target="#collapse2Two" aria-controls="collapse2Two" aria-expanded="false" role="button">
+									  <span class="accordion-header-text">Course Adviser's Role</span>
 									 <span class="accordion-header-indicator"></span>
 									</div>
 									<div id="collapse2Two" class="collapse accordion__body" aria-labelledby="accord-2Two" data-bs-parent="#accordion-two">
 									  <div class="accordion-body-text">
-                     Non-academic staff can login to the portal if given the priviledge to perform task. This category of staff has limited priviledge on the portal.
+										 A Course Adviser is a lecturer assigned oversight of a specific level/set within a department. In addition to a
+										 lecturer's usual access, a course adviser can review their advisees' course registrations, flag irregular
+										 registrations before the deadline, and respond to registration-related complaints from their students.
 									  </div>
 									</div>
 								  </div>
+
 								  <div class="accordion-item">
-									<div class="accordion-header collapsed rounded-lg" id="accord-2Three" data-bs-toggle="collapse" data-bs-target="#collapse2Three" aria-controls="collapse2Three"   aria-expanded="true"  role="button">
-									  <span class="accordion-header-text">Admin Role</span>
+									<div class="accordion-header collapsed rounded-lg" id="accord-2Three" data-bs-toggle="collapse" data-bs-target="#collapse2Three" aria-controls="collapse2Three" aria-expanded="false" role="button">
+									  <span class="accordion-header-text">Non-Academic Staff Role</span>
 									 <span class="accordion-header-indicator"></span>
 									</div>
 									<div id="collapse2Three" class="collapse accordion__body" aria-labelledby="accord-2Three" data-bs-parent="#accordion-two">
 									  <div class="accordion-body-text">
-                      There are different Admin Roles as may be stipulated by the school. The admin officers assist in portal issues and 
-                      can be contacted for help in regards to the portal issues.
+										 Non-academic staff can log in to the portal if granted access by the administrator, with permissions limited to
+										 their assigned unit (e.g. bursary, registry, admissions). This category of staff has restricted privileges on
+										 the portal, scoped strictly to their department's tasks.
 									  </div>
 									</div>
 								  </div>
+
+								  <div class="accordion-item">
+									<div class="accordion-header collapsed rounded-lg" id="accord-2Four" data-bs-toggle="collapse" data-bs-target="#collapse2Four" aria-controls="collapse2Four" aria-expanded="false" role="button">
+									  <span class="accordion-header-text">Admin Role</span>
+									 <span class="accordion-header-indicator"></span>
+									</div>
+									<div id="collapse2Four" class="collapse accordion__body" aria-labelledby="accord-2Four" data-bs-parent="#accordion-two">
+									  <div class="accordion-body-text">
+										 There are different admin roles as stipulated by the institution (e.g. Registry, Exams & Records, Bursary, ICT).
+										 Admin officers manage core academic data — faculties, departments, programmes, course assignments, and session/
+										 semester settings — and can be contacted for help with portal-wide issues.
+									  </div>
+									</div>
+								  </div>
+
+								  <div class="accordion-item">
+									<div class="accordion-header collapsed rounded-lg" id="accord-2Five" data-bs-toggle="collapse" data-bs-target="#collapse2Five" aria-controls="collapse2Five" aria-expanded="false" role="button">
+									  <span class="accordion-header-text">How Do I Handle Student Complaints?</span>
+									 <span class="accordion-header-indicator"></span>
+									</div>
+									<div id="collapse2Five" class="collapse accordion__body" aria-labelledby="accord-2Five" data-bs-parent="#accordion-two">
+									  <div class="accordion-body-text">
+										 Complaints submitted through the student "Complaints/Support" menu route to the relevant department/unit based on
+										 the category selected. Check "Complaints/Support" &rarr; "Assigned To Me" to view, respond to, and mark complaints
+										 resolved. Escalate anything outside your unit's scope to the admin office.
+									  </div>
+									</div>
+								  </div>
+
 								</div>
                             </div>
                         </div>
                     </div>
                     <!-- Column ends -->
-                    <!-- Column starts -->
-                   
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                    
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                   
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                   
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                   
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                   
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                   
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                  
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                   
-                    <!-- Column ends -->
-                    <!-- Column starts -->
-                   
-                    <!-- Column ends -->
+                    {% endif %}
+
+                    {% if not is_student and not is_lecturer and not is_staff_or_admin %}
+                    <div class="col-xl-8 col-lg-10">
+                        <div class="alert alert-warning border-0 shadow-sm text-center">
+                            No help topics found for your account type. Please contact the admin office for assistance.
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 <!-- Row ends -->
             </div>
@@ -276,7 +352,7 @@
         <!--**********************************
             Footer start
         ***********************************-->
-  
+
         <!--**********************************
             Footer end
         ***********************************-->
@@ -289,7 +365,7 @@
            Support ticket button end
         ***********************************-->
 
-        
+
     </div>
     <!--**********************************
         Main wrapper end

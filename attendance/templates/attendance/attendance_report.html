@@ -41,14 +41,19 @@ body { background:#f8f9fa; }
 <body>
 
 <div class="container mt-4">
-
-<h3 class="text-center mb-4">
+<p class="text-center mb-1">My Attendance Report </p>
+<h4 class="text-center mb-4">
 {% if request.user.student %}
-My Attendance Report
+{{ school_info.name }} <span style="color:blue;"></span> |
+
+       <a href="/dashboard"> <button class="btn btn-success" >
+            Back To Dashboard
+        </button></a>
 {% else %}
 Course Attendance Report
 {% endif %}
-</h3>
+</h4>
+
 
 <!-- FILTER FORM -->
 <form method="GET" class="row g-3 mb-4">
