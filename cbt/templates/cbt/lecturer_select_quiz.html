@@ -96,6 +96,10 @@
                                            class="btn btn-success btn-sm w-100">
                                             <i class="bi bi-plus-circle me-1"></i> Add Questions
                                         </a>
+                                        <a href="{% url 'cbt:lecturer-bulk-upload-questions' quiz_id=quiz.id %}"
+                                           class="btn btn-outline-primary btn-sm w-100">
+                                            <i class="fas fa-file-csv me-1"></i> Bulk Upload CSV
+                                        </a>
                                         <a href="{% url 'cbt:lecturer-view-questions-quiz' quiz.id %}"
                                            class="btn btn-primary btn-sm w-100">
                                             <i class="bi bi-eye me-1"></i> View Questions

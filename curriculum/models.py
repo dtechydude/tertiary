@@ -290,8 +290,20 @@ class Level(models.Model):
         return self.name
 
 
+"""
+Drop-in replacement for the Course model in curriculum/models.py.
+Only one new field added: `course_type`. Nothing renamed or removed —
+default is COMPULSORY, so every existing row keeps working exactly as
+before (they just all count as compulsory until you go back and mark
+the real electives — a data cleanup task, not a code change).
+"""
+
 # courses
 class Course(models.Model):
+    class CourseType(models.TextChoices):
+        COMPULSORY = "compulsory", "Compulsory"
+        ELECTIVE = "elective", "Elective"
+
     department = models.ForeignKey(Department, on_delete=models.CASCADE)
     programme = models.ForeignKey("Programme", on_delete=models.CASCADE)
     level = models.ForeignKey("Level", on_delete=models.CASCADE)
@@ -302,12 +314,19 @@ class Course(models.Model):
     course_code = models.CharField(max_length=20)
     credit_unit = models.PositiveIntegerField(default=2)
 
-    lecturer = models.ForeignKey("staff.Lecturer", on_delete=models.SET_NULL,  null=True, blank=True, related_name="courses")
+    course_type = models.CharField(
+        max_length=12, choices=CourseType.choices, default=CourseType.COMPULSORY,
+        help_text="Compulsory courses count toward the required-to-graduate total; "
+                   "electives are shown separately and don't block graduation progress.",
+    )
+
+    lecturer = models.ForeignKey("staff.Lecturer", on_delete=models.SET_NULL, null=True, blank=True, related_name="courses")
 
     cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
         return f"{self.course_code} - {self.title}"
+
 
 
 class CourseAssignment(models.Model):
@@ -324,30 +343,6 @@ class CourseAssignment(models.Model):
     def __str__(self):
         return f"{self.course.course_code} - {self.lecturer.get_full_name()} ({self.session})"
  
-
-
-# # Students Course Registrations
-# class CourseRegistration(models.Model):
-#     student = models.ForeignKey(
-#         "students.Student",
-#         on_delete=models.CASCADE,
-#         related_name="course_registrations"
-#     )
-#     course = models.ForeignKey(
-#         Course,
-#         on_delete=models.CASCADE,
-#         related_name="registrations"
-#     )
-#     session = models.ForeignKey(Session, on_delete=models.CASCADE)
-#     semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
-
-#     registered_at = models.DateTimeField(auto_now_add=True)
-
-#     class Meta:
-#         unique_together = ("student", "course", "session", "semester")
-
-#     def __str__(self):
-#         return f"{self.student} - {self.course} ({self.session} / {self.semester})"
 
 """
 Drop-in replacement for the CourseRegistration model in curriculum/models.py.
@@ -401,107 +396,3 @@ class CourseRegistration(models.Model):
         return f"{self.student} - {self.course} ({self.session} / {self.semester})"
 
 
-
-#===================================================================
-# Subject For E-Learning
-class ELearningSubject(models.Model):
-    subject_id = models.CharField(max_length=100, unique=True)
-    name = models.CharField(max_length=100)
-    standard = models.ForeignKey(Level, on_delete=models.CASCADE, related_name='subjects')
-    # image = models.ImageField(upload_to=save_subject_image, blank=True, verbose_name='Subject Image')
-    description = models.CharField(max_length=200, blank=True)
-    slug = models.SlugField(null=True, blank=True)
-
-    def __str__(self):
-        return f'{self.name} - {self.standard.name}'
-
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.subject_id)
-        super().save(*args, **kwargs)
-
-    class Meta:
-      verbose_name = 'E-Learning Subjects'
-      verbose_name_plural = 'E-Learning Subjects'
-      ordering = ['name']
-      unique_together = ('name', 'standard')
-
-
-def save_lesson_files(instance, filename):
-    upload_to = 'Images/'
-    ext = filename.split('.')[-1]
-    # get file name
-    if instance.lesson_id:
-        filename = 'lesson_files/{}.{}'.format(instance.lesson_id,instance.lesson_id, ext)
-        if os.path.exists(filename):
-            new_name = str(instance.lesson_id) + str('1')
-            filename = 'lesson_images/{}/{}.{}'.format(instance.lesson_id,new_name, ext)
-    
-    return os.path.join(upload_to, filename)
-    
-
-class Lesson(models.Model):
-    lesson_id = models.CharField(max_length=100, unique=True)
-    standard = models.ForeignKey(Level, on_delete=models.CASCADE)
-    subject = models.ForeignKey(ELearningSubject, on_delete=models.CASCADE, related_name='lessons')
-    name = models.CharField(max_length=250)
-    position = models.PositiveSmallIntegerField(verbose_name="Chapter no.")
-    video = EmbedVideoField(blank=True, null=True)
-    notes = models.FileField(upload_to='save_lesson_files', verbose_name="Notes", blank=True)
-    # comment = RichTextField(blank=True, null=True)
-    comment = HTMLField(blank=True, null=True)
-    # comment = CKEditor5Field('Text', config_name='extends')
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    slug = models.SlugField(null=True, blank=True)
-
-    class Meta:
-        ordering = ['position']
-        verbose_name = 'E-Learning Lessons'
-        verbose_name_plural = 'E-Learning Lessons'
-
-    def __str__(self):
-        return self.name
-
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.name)
-        super().save(*args, **kwargs)
-
-    def get_absolute_url(self):
-        return reverse('curriculum:lesson_list', kwargs={'slug':self.subject.slug, 'standard':self.standard.slug})
-
-    @property
-    def html_stripped(self):
-       
-       return strip_tags(self.comment)
-            
-            
-
-# comment module
-class Comment(models.Model):
-    lesson_name = models.ForeignKey(Lesson, null=True, on_delete=models.CASCADE, related_name='comments')
-    comm_name = models. CharField(max_length=100, blank=True)
-    # reply = models.ForeignKey("comment", null=True, blank=True, on_delete=CASCADE, related_name='replies')
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    body = models.TextField(max_length=500)
-    date_added = models.DateTimeField(auto_now_add=True)
-
-    def save(self, *args, **kwargs):
-        self.comm_name = slugify("comment by" + "-" + str(self.author) + str(self.date_added))
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.comm_name
-
-    class Meta:
-        ordering = ['-date_added']
-
-
-class Reply(models.Model):
-    comment_name = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='replies')
-    reply_body = models.TextField(max_length=500)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    date_added = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return "reply to" + str(self.comment_name.comm_name)
-    

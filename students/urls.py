@@ -15,6 +15,7 @@ urlpatterns = [
     path('student_list/', students_views.student_list, name='student-list'),
     path('boarder_list/', students_views.student_boarder_list, name='boarder-list'),
     path('student_in_class/', students_views.student_distribution_view, name='student-in-class'),
+    path('distribution/export/', students_views.student_distribution_csv_export, name='student-distribution-csv'),
     path('graduate-students/', students_views.graduate_students_view, name='graduate_students'),
 
     path('hostel_list/', students_views.hostel_list, name='hostel_list'),

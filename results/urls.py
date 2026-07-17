@@ -5,39 +5,16 @@ from . import views
 app_name = "results"
 
 urlpatterns = [
-    # --- Template views ---
-    path("dashboard/", views.student_dashboard, name="student_dashboard"),
-    path("course/<int:course_id>/submit/", views.lecturer_submit_scores, name="lecturer_submit_scores"),
+    # --- Template views: students ---
+    path("progress/", views.academic_progress_view, name="academic_progress"),
+    path("progress/<str:matric_number>/", views.staff_student_progress_view, name="staff_student_progress"),
 
-    # --- API v1 ---
+    # --- Template views: lecturer ---
+    path("lecturer/my-courses/", views.lecturer_my_courses_view, name="lecturer_my_courses"),
+    path("course/<int:course_id>/submit/", views.lecturer_submit_scores, name="lecturer_submit_scores"),
     path(
-        "api/v1/lecturer/course/<int:course_id>/results/",
-        views.LecturerCourseResultListView.as_view(),
-        name="api_lecturer_course_results",
-    ),
-    path(
-        "api/v1/lecturer/scores/bulk/",
-        views.BulkScoreEntryView.as_view(),
-        name="api_bulk_score_entry",
-    ),
-    path(
-        "api/v1/results/<int:result_id>/workflow/",
-        views.ResultWorkflowActionView.as_view(),
-        name="api_result_workflow",
-    ),
-    path(
-        "api/v1/student/results/",
-        views.StudentResultListView.as_view(),
-        name="api_student_results",
-    ),
-    path(
-        "api/v1/student/gpa-summary/",
-        views.StudentGPASummaryView.as_view(),
-        name="api_student_gpa",
-    ),
-    path(
-        "api/v1/students/<int:student_id>/graduation-evaluation/",
-        views.StudentGraduationEvaluationView.as_view(),
-        name="api_student_graduation_evaluation",
+        "course/<int:course_id>/submit-for-review/",
+        views.submit_results_for_review_view,
+        name="submit_results_for_review",
     ),
 ]

@@ -1,25 +1,238 @@
-{% extends 'pages/portal_home.html' %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enrollment Statistics | {% if school_info %}{{ school_info.name }}{% else %}School{% endif %}</title>
+    <link rel="icon" type="image/png" href="{% static 'pages/images/favicon.png' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        html, body { height: 100%; }
+        body { display: flex; flex-direction: column; background-color: #f4f6f9; font-family: "Segoe UI", sans-serif; }
+        .content-wrapper { flex: 1 0 auto; }
 
-{% block content_body %}
-<div class="content-body">
-    <div class="container-fluid">
+        .navbar { background: linear-gradient(135deg, #0d6efd, #0a4fb5); }
+
+        .stat-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+            padding: 22px;
+            height: 100%;
+        }
+        .stat-card .stat-icon {
+            width: 52px; height: 52px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; margin-bottom: 12px;
+        }
+        .stat-value { font-size: 1.9rem; font-weight: 800; color: #1e293b; }
+        .stat-label { font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+
+        .card-box { border: none; border-radius: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.06); }
+
+        .faculty-accordion .accordion-item {
+            border: none;
+            border-radius: 12px !important;
+            overflow: hidden;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .faculty-accordion .accordion-button {
+            font-weight: 700;
+            background: #fff;
+        }
+        .faculty-accordion .accordion-button:not(.collapsed) {
+            background: #eaf2ff;
+            color: #0d6efd;
+        }
+        .faculty-accordion .accordion-button:focus { box-shadow: none; }
+        .faculty-badge {
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .dept-block {
+            border-left: 4px solid #0d6efd;
+            background: #f8f9fb;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+
+        footer { background-color: #ffffff; border-top: 1px solid #dee2e6; flex-shrink: 0; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div class="content-wrapper">
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="/dashboard">
+                🎓 {% if school_info %}{{ school_info.name }}{% else %}School{% endif %} Portal
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a href="/dashboard" class="btn btn-light btn-sm fw-bold rounded-pill px-3">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+
         <div class="row page-titles mb-4">
-            <div class="col-sm-6">
-                <h4>📊 Enrollment Statistics</h4>
-                <p class="mb-0">Headcount distribution across the institution</p>
+            <div class="col-sm-8">
+                <h3 class="fw-bold mb-1"><i class="fas fa-chart-pie text-primary me-2"></i>Enrollment Statistics</h3>
+                <p class="mb-0 text-muted">Headcount distribution across faculties, departments, levels, and programmes</p>
+            </div>
+            {% if request.user.is_staff or request.user.is_superuser %}
+            <div class="col-sm-4 d-flex align-items-center justify-content-sm-end mt-3 mt-sm-0">
+                <a href="{% url 'students:student-distribution-csv' %}" class="btn btn-outline-primary fw-bold">
+                    <i class="fas fa-file-csv me-2"></i>Download CSV
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- SUMMARY STAT CARDS -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-users"></i></div>
+                    <div class="stat-value">{{ total_students }}</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="fas fa-building-columns"></i></div>
+                    <div class="stat-value">{{ faculty_count }}</div>
+                    <div class="stat-label">Faculties</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="fas fa-sitemap"></i></div>
+                    <div class="stat-value">{{ department_count }}</div>
+                    <div class="stat-label">Departments</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card">
+                    <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="stat-value">{{ programme_counts|length }}</div>
+                    <div class="stat-label">Programmes</div>
+                </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-xl-4 col-xxl-6 col-lg-6">
-                <div class="card shadow-sm">
+        <!-- CHARTS -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="card card-box">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">Students by Faculty</h6>
+                        <canvas id="facultyChart" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card card-box">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">Students by Level</h6>
+                        <canvas id="levelChart" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FACULTY -> DEPARTMENT ACCORDION -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card card-box">
+                    <div class="card-header border-0 pb-0 pt-3 px-4">
+                        <h5 class="fw-bold mb-0"><i class="fas fa-building-columns me-2 text-primary"></i>Breakdown by Faculty</h5>
+                        <p class="text-muted small mb-3">Click a faculty to see its departments, and each department's Level &amp; Programme split.</p>
+                    </div>
+                    <div class="card-body pt-0">
+
+                        {% if faculties %}
+                        <div class="accordion faculty-accordion" id="facultyAccordion">
+                            {% for faculty in faculties %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#faculty-{{ forloop.counter }}">
+                                        <span class="flex-grow-1">{{ faculty.name }}</span>
+                                        <span class="badge bg-primary faculty-badge me-3">{{ faculty.total }} student{{ faculty.total|pluralize }}</span>
+                                    </button>
+                                </h2>
+                                <div id="faculty-{{ forloop.counter }}" class="accordion-collapse collapse"
+                                     data-bs-parent="#facultyAccordion">
+                                    <div class="accordion-body">
+
+                                        {% for dept in faculty.departments %}
+                                        <div class="dept-block">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h6 class="fw-bold mb-0">{{ dept.name }}</h6>
+                                                <span class="badge bg-success">{{ dept.total }} student{{ dept.total|pluralize }}</span>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Level</th>
+                                                            <th>Programme</th>
+                                                            <th class="text-end">Students</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for row in dept.rows %}
+                                                        <tr>
+                                                            <td><span class="badge bg-info text-dark">{{ row.level }}</span></td>
+                                                            <td>{{ row.programme }}</td>
+                                                            <td class="text-end fw-bold">{{ row.total }}</td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-inbox fa-2x mb-3 d-block"></i>
+                            No student records found.
+                        </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QUICK REFERENCE TABLES -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="card card-box">
                     <div class="card-header border-0 pb-0">
-                        <h4 class="card-title">By Programme</h4>
+                        <h6 class="card-title fw-bold">By Programme</h6>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table shadow-sm mb-0">
+                            <table class="table table-sm mb-0">
                                 <thead>
                                     <tr>
                                         <th>Programme</th>
@@ -32,6 +245,8 @@
                                         <td>{{ item.programme__name|default:"Unassigned" }}</td>
                                         <td class="text-end fw-bold text-primary">{{ item.total }}</td>
                                     </tr>
+                                    {% empty %}
+                                    <tr><td colspan="2" class="text-muted text-center py-3">No data available.</td></tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -40,56 +255,28 @@
                 </div>
             </div>
 
-            <div class="col-xl-4 col-xxl-6 col-lg-6">
-                <div class="card shadow-sm">
+            <div class="col-lg-6">
+                <div class="card card-box">
                     <div class="card-header border-0 pb-0">
-                        <h4 class="card-title">By Department</h4>
+                        <h6 class="card-title fw-bold">By Level</h6>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table shadow-sm mb-0">
+                            <table class="table table-sm mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Department</th>
+                                        <th>Level</th>
                                         <th class="text-end">Count</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for item in department_counts %}
+                                    {% for item in level_counts %}
                                     <tr>
-                                        <td>{{ item.department__name|default:"Unassigned" }}</td>
+                                        <td>{{ item.level__name|default:"Unassigned" }}</td>
                                         <td class="text-end fw-bold text-success">{{ item.total }}</td>
                                     </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-12">
-                <div class="card shadow-sm mt-4">
-                    <div class="card-header border-bottom py-3">
-                        <h4 class="card-title text-dark">Detailed Level Breakdown</h4>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th>Department</th>
-                                        <th>Academic Level</th>
-                                        <th class="text-center">Active Students</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                  {% for item in detailed_counts %}
-                                    <tr>
-                                        <td>{{ item.department__name }}</td>
-                                        <td><span class="badge light badge-info">{{ item.level__name }}</span></td>
-                                        <td class="text-center fw-bold">{{ item.total }}</td>
-                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="2" class="text-muted text-center py-3">No data available.</td></tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -98,6 +285,71 @@
                 </div>
             </div>
         </div>
+
+        {% if request.user.student %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-primary d-flex align-items-center shadow-sm rounded-3" role="alert">
+                    <i class="fas fa-user-group fa-lg me-3"></i>
+                    <div>
+                        You have <strong>{{ peers_count }}</strong> classmate{{ peers_count|pluralize }}
+                        in your Level and Department.
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 </div>
-{% endblock %}
+
+<footer class="py-4 mt-3">
+    <div class="container text-center text-muted">
+        <small class="mb-1">&copy; {% now "Y" %} - <b>{% if school_info %}{{ school_info.name }}{% else %}School{% endif %}</b> — Enrollment Statistics</small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const facultyLabels = [{% for item in faculty_counts %}"{{ item.department__faculty__name|default:'Unassigned'|escapejs }}",{% endfor %}];
+    const facultyData = [{% for item in faculty_counts %}{{ item.total }},{% endfor %}];
+
+    new Chart(document.getElementById('facultyChart'), {
+        type: 'bar',
+        data: {
+            labels: facultyLabels,
+            datasets: [{
+                label: 'Students',
+                data: facultyData,
+                backgroundColor: '#0d6efd',
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+    });
+
+    const levelLabels = [{% for item in level_counts %}"{{ item.level__name|default:'Unassigned'|escapejs }}",{% endfor %}];
+    const levelData = [{% for item in level_counts %}{{ item.total }},{% endfor %}];
+    const levelColors = ['#0d6efd', '#198754', '#ffc107', '#0dcaf0', '#dc3545', '#6f42c1', '#fd7e14', '#20c997'];
+
+    new Chart(document.getElementById('levelChart'), {
+        type: 'doughnut',
+        data: {
+            labels: levelLabels,
+            datasets: [{
+                data: levelData,
+                backgroundColor: levelColors,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+</script>
+</body>
+</html>

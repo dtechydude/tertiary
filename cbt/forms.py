@@ -145,6 +145,14 @@ class QuestionForm(forms.ModelForm):
         return cleaned_data
 
 
+class BulkQuestionUploadForm(forms.Form):
+    csv_file = forms.FileField(
+        label="Upload CSV File",
+        help_text="Upload a .csv file with your questions. Download the template below to get started.",
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': '.csv'}),
+    )
+
+
 class ExaminationForm(forms.ModelForm):
     """
     Optional convenience form for lecturers/staff creating an Examination

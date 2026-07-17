@@ -1,57 +1,122 @@
-{% extends 'results/base.html' %}
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+{% load l10n %}
 
-{% block title %}Submit Scores{% endblock %}
+{% block title %}
+<title>Score Entry | {{ course.course_code }}</title>
+{% endblock title %}
 
-{% block content %}
-
-<h2 class="mb-4">Enter Student Scores</h2>
-
-<div class="card card-shadow p-4">
-
-<form method="POST">
-    {% csrf_token %}
-
-    <table class="table table-bordered">
-
-        <thead>
-            <tr>
-                <th>Matric Number</th>
-                <th>Student Name</th>
-                <th>TMA Score</th>
-                <th>Exam Score</th>
-            </tr>
-        </thead>
-
-        <tbody>
-
-            {% for reg in registrations %}
-            <tr>
-                <td>{{ reg.student.matric_number }}</td>
-                <td>{{ reg.student.full_name }}</td>
-
-                <td>
-                    <input
-                        type="number"
-                        name="tma_{{ reg.student.id }}"
-                        class="form-control"
-                        min="0"
-                        max="100"
-                    >
-                </td>
-
-                <td>
-                    <input
-                        type="number"
-                        name="exam_{{ reg.student.id }}"
-                        class="form-control"
-                        min="0"
-                        max="100"
-                    >
-                </td>
-            </tr>
-            {% endfor %}
-
-        </tbody>
-
-    </table>
+{% block favicon %}
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    .score-input { width: 70px; }
+    .ineligible-row { background: #fff5f5; }
+</style>
 {% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active"><a href="{% url 'results:lecturer_my_courses' %}">My Courses</a></li>
+                <li class="breadcrumb-item"><a href="javascript:void(0)">Score Entry</a></li>
+            </ol>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h3 class="fw-bold mb-1">{{ course.course_code }} — {{ course.title }}</h3>
+                <p class="text-muted mb-0">{{ assignment.session }} — {{ assignment.semester }} &middot; {{ student_rows|length }} student(s) registered</p>
+            </div>
+            <a href="{% url 'results:submit_results_for_review' course.id %}" class="btn btn-outline-primary">
+                <i class="fas fa-paper-plane me-1"></i> Submit for HOD Review
+            </a>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="alert alert-secondary border-0 small">
+            <i class="fas fa-info-circle me-1"></i>
+            Rows shaded red have outstanding mandatory fees and/or a registration pending registrar validation —
+            their <strong>examination</strong> component score cannot be saved until that's resolved. Other
+            components (CA, quiz, etc.) can still be entered normally.
+        </div>
+
+        <form method="post" id="scoreForm">
+            {% csrf_token %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Matric No.</th>
+                                    <th>Student</th>
+                                    {% for link in components %}
+                                    <th class="text-center">
+                                        {{ link.component.name }}
+                                        <br><small class="text-muted">/{{ link.max_raw_score|floatformat:0 }}</small>
+                                        {% if link.component.is_exam_component %}
+                                        <br><span class="badge bg-danger-subtle text-danger">Exam</span>
+                                        {% endif %}
+                                    </th>
+                                    {% endfor %}
+                                    <th class="text-center">Total</th>
+                                    <th class="text-center">Grade</th>
+                                    <th class="pe-3 text-center">Eligible</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in student_rows %}
+                                <tr class="{% if not row.is_exam_eligible %}ineligible-row{% endif %}">
+                                    <td class="ps-3">{{ row.student.matric_number }}</td>
+                                    <td>{{ row.student.get_full_name }}</td>
+                                    {% for cell in row.score_cells %}
+                                    <td class="text-center">
+                                        <input
+                                            type="number" step="0.01" min="0" max="{{ cell.link.max_raw_score|unlocalize }}"
+                                            name="score_{{ cell.link.component_id }}_{{ row.student.id }}"
+                                            class="form-control form-control-sm score-input d-inline-block"
+                                            value="{{ cell.value|unlocalize }}"
+                                            {% if cell.link.component.is_exam_component and not row.is_exam_eligible %}
+                                            title="Blocked: outstanding fees or pending validation"
+                                            {% endif %}
+                                        >
+                                    </td>
+                                    {% endfor %}
+                                    <td class="text-center fw-bold">{{ row.result.total_score|default:"—" }}</td>
+                                    <td class="text-center">
+                                        {% if row.result.grade %}<span class="badge bg-info">{{ row.result.grade }}</span>{% else %}—{% endif %}
+                                    </td>
+                                    <td class="pe-3 text-center">
+                                        {% if row.is_exam_eligible %}
+                                        <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="{{ components|length|add:5 }}" class="text-center text-muted py-4">No students registered for this course/session/semester.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Save All Scores
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content_body %}

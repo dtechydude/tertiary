@@ -1,0 +1,227 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Academic Progress | {{ student.matric_number }}</title>
+{% endblock title %}
+
+{% block favicon %}
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    .progress-ring-wrap { display: flex; align-items: center; gap: 1.5rem; }
+    .progress-bar-thick { height: 14px; border-radius: 7px; }
+    .status-badge-passed { background: #d1fae5; color: #065f46; }
+    .status-badge-failed { background: #fee2e2; color: #991b1b; }
+    .status-badge-outstanding { background: #f3f4f6; color: #4b5563; }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active"><a href="javascript:void(0)">{% if is_staff_view %}Student Records{% else %}My Portal{% endif %}</a></li>
+                <li class="breadcrumb-item"><a href="javascript:void(0)">Academic Progress</a></li>
+            </ol>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h3 class="fw-bold mb-1">{{ student.get_full_name }}</h3>
+                <p class="text-muted mb-0">
+                    {{ student.matric_number }} &middot; {{ student.programme }} &middot; {{ student.department.name }}
+                    {% if student.level %} &middot; Current Level: {{ student.level.name }}{% endif %}
+                </p>
+            </div>
+            <form method="get" class="d-flex align-items-center gap-2">
+                <select name="session" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Sessions</option>
+                    {% for s in sessions %}
+                    <option value="{{ s.id }}" {% if selected_session == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if selected_session %}
+                <select name="semester" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Semesters</option>
+                    {% for sem in semesters %}
+                    <option value="{{ sem.id }}" {% if selected_semester == sem.id|stringformat:"s" %}selected{% endif %}>{{ sem }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted text-uppercase small">Cumulative GPA</h6>
+                        <h1 class="display-5 fw-bold text-primary">{{ cgpa }}</h1>
+                        {% if evaluation %}
+                        <hr>
+                        {% if evaluation.is_eligible_to_graduate %}
+                        <span class="badge bg-success mb-2">Eligible to Graduate</span>
+                        {% if evaluation.classification %}
+                        <p class="mb-0 fw-bold">{{ evaluation.classification }}</p>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-secondary mb-2">Not Yet Eligible</span>
+                        <p class="text-muted small mb-0">
+                            Min. CGPA required: {{ evaluation.minimum_cgpa_required }}
+                            {% if evaluation.minimum_credit_units_required %}
+                            <br>Min. units required: {{ evaluation.minimum_credit_units_required }} (earned: {{ evaluation.total_credit_units }})
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h6 class="text-muted text-uppercase small mb-3">Compulsory Course Coverage</h6>
+                        <div class="progress-ring-wrap mb-3">
+                            <div class="flex-grow-1">
+                                <div class="progress progress-bar-thick">
+                                    <div class="progress-bar bg-success" style="width: {{ progress.percent_complete }}%;"></div>
+                                </div>
+                            </div>
+                            <h4 class="fw-bold mb-0">{{ progress.percent_complete }}%</h4>
+                        </div>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <h4 class="mb-0">{{ progress.total_required_courses }}</h4>
+                                <small class="text-muted">Required</small>
+                            </div>
+                            <div class="col-4 border-start border-end">
+                                <h4 class="mb-0 text-success">{{ progress.passed_required_courses }}</h4>
+                                <small class="text-muted">Passed</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="mb-0 text-danger">{{ progress.outstanding_required_courses }}</h4>
+                                <small class="text-muted">Outstanding</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Compulsory Courses (Required to Graduate)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Code</th>
+                                <th>Title</th>
+                                <th class="text-center">Level</th>
+                                <th class="text-center">Units</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in progress.compulsory_rows %}
+                            <tr>
+                                <td class="ps-3">{{ row.course.course_code }}</td>
+                                <td>{{ row.course.title }}</td>
+                                <td class="text-center">{{ row.course.level.name }}</td>
+                                <td class="text-center">{{ row.course.credit_unit }}</td>
+                                <td class="text-center">
+                                    <span class="badge status-badge-{{ row.status }}">{{ row.status|capfirst }}</span>
+                                </td>
+                                <td class="text-center">{{ row.result.grade|default:"—" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-3">No compulsory courses configured for this programme yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% if progress.elective_rows %}
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Elective Courses</h5>
+                <p class="text-muted small mb-0">Not counted toward the required-to-graduate total, shown here for reference.</p>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Code</th>
+                                <th>Title</th>
+                                <th class="text-center">Level</th>
+                                <th class="text-center">Units</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in progress.elective_rows %}
+                            <tr>
+                                <td class="ps-3">{{ row.course.course_code }}</td>
+                                <td>{{ row.course.title }}</td>
+                                <td class="text-center">{{ row.course.level.name }}</td>
+                                <td class="text-center">{{ row.course.credit_unit }}</td>
+                                <td class="text-center">
+                                    <span class="badge status-badge-{{ row.status }}">{{ row.status|capfirst }}</span>
+                                </td>
+                                <td class="text-center">{{ row.result.grade|default:"—" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if progress.period_results is not None %}
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Results for Selected Period</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Session</th>
+                                <th>Semester</th>
+                                <th>Course</th>
+                                <th class="text-center">Score</th>
+                                <th class="text-center">Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in progress.period_results %}
+                            <tr>
+                                <td class="ps-3">{{ result.session }}</td>
+                                <td>{{ result.semester }}</td>
+                                <td>{{ result.course.course_code }}</td>
+                                <td class="text-center">{{ result.total_score }}</td>
+                                <td class="text-center">{{ result.grade }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No published results for this period.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content_body %}

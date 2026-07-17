@@ -31,22 +31,29 @@
                 {% csrf_token %}
                 {{ form.media }}
 
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
                 <!-- QUESTION -->
                 <div class="mb-4">
                     <label class="fw-bold">Question Text</label>
                     {{ form.content }}
+                    {% for error in form.content.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                 </div>
 
                 <!-- TYPE -->
                 <div class="mb-3">
                     <label class="fw-bold">Question Type</label>
                     {{ form.question_type }}
+                    {% for error in form.question_type.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                 </div>
 
                 <!-- IMAGE -->
                 <div class="mb-3">
                     <label class="fw-bold">Image URL (Optional)</label>
                     {{ form.image_url }}
+                    {% for error in form.image_url.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                 </div>
 
                 <!-- OPTIONS -->
@@ -54,18 +61,22 @@
                     <div class="col-md-6 mb-3">
                         <label>Option A</label>
                         {{ form.option_a }}
+                        {% for error in form.option_a.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="col-md-6 mb-3">
                         <label>Option B</label>
                         {{ form.option_b }}
+                        {% for error in form.option_b.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="col-md-6 mb-3">
                         <label>Option C</label>
                         {{ form.option_c }}
+                        {% for error in form.option_c.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="col-md-6 mb-3">
                         <label>Option D</label>
                         {{ form.option_d }}
+                        {% for error in form.option_d.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                 </div>
 
@@ -73,10 +84,11 @@
                 <div class="mb-4 col-md-4">
                     <label class="text-success fw-bold">Correct Answer</label>
                     {{ form.correct_answer }}
+                    {% for error in form.correct_answer.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                 </div>
 
                 <!-- ACTION BUTTONS -->
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                     <button type="submit" name="add_another" class="btn btn-primary">
                         Save &amp; Add Another
                     </button>
@@ -84,6 +96,10 @@
                     <button type="submit" class="btn btn-success">
                         Save &amp; Finish
                     </button>
+
+                    <a href="{% url 'cbt:lecturer-bulk-upload-questions' quiz_id=quiz.id %}" class="btn btn-outline-primary">
+                        <i class="fas fa-file-csv me-1"></i> Bulk Upload via CSV
+                    </a>
 
                     <a href="{% url 'cbt:lecturer-add-question' %}" class="btn btn-light border">
                         Cancel

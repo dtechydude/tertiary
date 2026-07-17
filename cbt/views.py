@@ -1,4 +1,5 @@
 import csv
+import io
 
 from django.conf import settings
 from django.contrib import messages
@@ -28,7 +29,7 @@ from curriculum.models import (
 )
 from staff.models import Lecturer
 
-from .forms import AdminQuizForm, QuestionForm
+from .forms import AdminQuizForm, BulkQuestionUploadForm, QuestionForm
 from .models import Examination, Question, Quiz, QuizAttempt, QuizResult
 
 
@@ -77,13 +78,14 @@ def cbt_order(request):
 
 
 @login_required
-def cbt_lecturer_guide(request):
-    return render(request, 'cbt/cbt_lecturer_guide.html')
-
-
-@login_required
-def cbt_student_guide(request):
-    return render(request, 'cbt/cbt_student_guide.html')
+def user_guide(request):
+    """
+    A single CBT user guide covering both audiences on one page — how
+    students take an exam, and how lecturers set up quizzes, add
+    questions (single or bulk), and read results. Available to every
+    logged-in user regardless of role.
+    """
+    return render(request, 'cbt/user_guide.html')
 
 
 @login_required
@@ -641,3 +643,198 @@ def export_results_csv(request):
         ])
 
     return response
+
+
+# =====================================================================
+# Bulk question upload
+# =====================================================================
+
+@login_required
+def lecturer_bulk_upload_questions(request, quiz_id):
+    """
+    Lets a lecturer (for their assigned course) or staff/superuser upload
+    an entire question bank for a quiz in one go via CSV, instead of
+    adding questions one at a time.
+    """
+    user = request.user
+    lecturer = _get_lecturer_or_none(user)
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    if not _lecturer_is_authorized_for_quiz(user, quiz, lecturer=lecturer):
+        messages.error(request, "Access Denied: You are not assigned to this course.")
+        return redirect('cbt:main-view')
+
+    # ---- CSV template download ----
+    if request.GET.get('download_template'):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="questions_template.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'content', 'question_type', 'option_a', 'option_b',
+            'option_c', 'option_d', 'correct_answer', 'image_url',
+        ])
+        writer.writerow([
+            'What is the SI unit of force?', 'MCQ',
+            'Watt', 'Newton', 'Joule', 'Pascal', 'B', '',
+        ])
+        writer.writerow([
+            'The process of cell division is called ___',
+            'SHORT', '', '', '', '', 'Mitosis', '',
+        ])
+        return response
+
+    form = BulkQuestionUploadForm()
+    errors = []
+    preview_rows = []
+    success_count = 0
+
+    if request.method == 'POST':
+        form = BulkQuestionUploadForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            csv_file = request.FILES['csv_file']
+
+            if not csv_file.name.endswith('.csv'):
+                messages.error(request, "Invalid file type. Please upload a .csv file.")
+                return render(request, 'cbt/bulk_upload_questions.html', {
+                    'form': form, 'quiz': quiz,
+                    'errors': errors, 'success_count': success_count,
+                })
+
+            try:
+                decoded = csv_file.read().decode('utf-8-sig')
+            except UnicodeDecodeError:
+                messages.error(request, "Could not read the file. Please ensure it is saved as UTF-8 CSV.")
+                return render(request, 'cbt/bulk_upload_questions.html', {
+                    'form': form, 'quiz': quiz,
+                    'errors': errors, 'success_count': success_count,
+                })
+
+            reader = csv.DictReader(io.StringIO(decoded))
+
+            required_headers = {'content', 'question_type', 'correct_answer'}
+            if not required_headers.issubset(set(reader.fieldnames or [])):
+                messages.error(
+                    request,
+                    f"Missing required columns. Your CSV must have at least: "
+                    f"{', '.join(required_headers)}. Download the template for reference."
+                )
+                return render(request, 'cbt/bulk_upload_questions.html', {
+                    'form': form, 'quiz': quiz,
+                    'errors': errors, 'success_count': success_count,
+                })
+
+            questions_to_create = []
+
+            for row_num, row in enumerate(reader, start=2):
+                row_errors = []
+
+                content = (row.get('content') or '').strip()
+                if not content:
+                    errors.append(f"Row {row_num}: 'content' is empty — skipped.")
+                    continue
+
+                question_type = (row.get('question_type') or 'MCQ').strip().upper()
+                if question_type not in ('MCQ', 'SHORT'):
+                    row_errors.append(
+                        f"Row {row_num}: Invalid question_type '{question_type}'. "
+                        f"Use MCQ or SHORT — defaulting to MCQ."
+                    )
+                    question_type = 'MCQ'
+
+                correct_answer = (row.get('correct_answer') or '').strip()
+                if not correct_answer:
+                    errors.append(f"Row {row_num}: 'correct_answer' is empty — skipped.")
+                    continue
+
+                if question_type == 'MCQ' and correct_answer.upper() not in ('A', 'B', 'C', 'D'):
+                    row_errors.append(
+                        f"Row {row_num}: For MCQ, correct_answer must be A, B, C, or D. "
+                        f"Got '{correct_answer}' — skipped."
+                    )
+                    errors.extend(row_errors)
+                    continue
+
+                option_a = (row.get('option_a') or '').strip() or None
+                option_b = (row.get('option_b') or '').strip() or None
+                option_c = (row.get('option_c') or '').strip() or None
+                option_d = (row.get('option_d') or '').strip() or None
+                image_url = (row.get('image_url') or '').strip() or None
+
+                if question_type == 'MCQ' and not any([option_a, option_b, option_c, option_d]):
+                    row_errors.append(
+                        f"Row {row_num}: MCQ question has no options (A-D). "
+                        f"Question will be saved but options are blank."
+                    )
+
+                errors.extend(row_errors)
+
+                questions_to_create.append(
+                    Question(
+                        quiz=quiz,
+                        content=content,
+                        question_type=question_type,
+                        option_a=option_a,
+                        option_b=option_b,
+                        option_c=option_c,
+                        option_d=option_d,
+                        correct_answer=correct_answer,
+                        image_url=image_url,
+                    )
+                )
+
+                preview_rows.append({
+                    'row': row_num,
+                    'content': content[:60],
+                    'type': question_type,
+                    'answer': correct_answer,
+                    'status': 'Ready' if not row_errors else 'Warning',
+                })
+
+            if questions_to_create:
+                Question.objects.bulk_create(questions_to_create)
+                success_count = len(questions_to_create)
+
+                Quiz.objects.filter(id=quiz.id).update(
+                    number_of_questions=F('number_of_questions') + success_count
+                )
+
+                messages.success(
+                    request,
+                    f"{success_count} question(s) uploaded successfully to '{quiz.course}'."
+                )
+            else:
+                messages.warning(request, "No valid questions found in the file. Check the errors below.")
+
+    return render(request, 'cbt/bulk_upload_questions.html', {
+        'form': form,
+        'quiz': quiz,
+        'errors': errors,
+        'preview_rows': preview_rows,
+        'success_count': success_count,
+    })
+
+
+# =====================================================================
+# Student self-service: exam history
+# =====================================================================
+
+@login_required
+def student_results_view(request):
+    """
+    A student's own CBT history — every exam they've sat, their score,
+    and pass/fail status. Read-only and scoped strictly to request.user;
+    students cannot view anyone else's results here.
+    """
+    if not hasattr(request.user, 'student'):
+        messages.error(request, "This page is only available to students.")
+        return redirect('cbt:main-view')
+
+    results = QuizResult.objects.filter(
+        user=request.user, cancelled=False
+    ).select_related(
+        'quiz', 'quiz__examination', 'quiz__course', 'quiz__level'
+    ).order_by('-timestamp')
+
+    return render(request, 'cbt/student_results.html', {'results': results})

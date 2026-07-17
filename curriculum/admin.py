@@ -79,6 +79,7 @@ class CourseAdmin(admin.ModelAdmin):
         'level',
         'session',
         'semester',
+        'course_type',
         'credit_unit',
         'lecturer'
     )

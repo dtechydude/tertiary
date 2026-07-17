@@ -1,0 +1,56 @@
+{% extends 'cbt/base.html' %}
+
+{% block title %}My Results{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h3 class="fw-bold"><i class="fas fa-chart-line me-2"></i>My Exam History</h3>
+        <p class="text-muted">Every CBT exam you've sat, and how you did.</p>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle bg-white shadow-sm rounded">
+        <thead class="table-dark">
+            <tr>
+                <th class="ps-3">Course</th>
+                <th>Examination</th>
+                <th>Semester / Session</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Date Taken</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for res in results %}
+            <tr>
+                <td class="ps-3 fw-bold">{{ res.quiz.course.course_code }}</td>
+                <td>{{ res.quiz.examination }}</td>
+                <td class="text-muted small">{{ res.quiz.semester }} &bull; {{ res.quiz.session }}</td>
+                <td class="fw-bold">{{ res.score|floatformat:1 }}%</td>
+                <td>
+                    {% if res.passed %}
+                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Passed</span>
+                    {% else %}
+                        <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Failed</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted small">{{ res.timestamp|date:"M d, Y | H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="fas fa-info-circle fa-2x mb-3 d-block"></i>
+                    You haven't sat any CBT exams yet.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<a href="{% url 'cbt:main-view' %}" class="btn btn-secondary mt-2">
+    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+</a>
+{% endblock %}

@@ -10,14 +10,14 @@ urlpatterns = [
     # ---------------------------------------------------------------
     path('info/', views.cbt_home, name='cbt-home'),
     path('info/order/', views.cbt_order, name='cbt-order'),
-    path('info/lecturer-guide/', views.cbt_lecturer_guide, name='lecturer-guide'),
-    path('info/student-guide/', views.cbt_student_guide, name='student-guide'),
+    path('info/guide/', views.user_guide, name='user-guide'),
     path('info/request-exam/', views.request_cbt_exam, name='request-exam'),
 
     # ---------------------------------------------------------------
     # Student / candidate exam-taking flow
     # ---------------------------------------------------------------
     path('', views.quiz_list_view, name='main-view'),
+    path('my-results/', views.student_results_view, name='student-results'),
     path('<int:pk>/', views.quiz_detail_view, name='quiz-view'),
     path('<int:pk>/data/', views.quiz_data_view, name='quiz-data-view'),
     path('<int:pk>/save/', views.save_quiz_view, name='save-view'),
@@ -47,6 +47,11 @@ urlpatterns = [
         views.export_questions,
         name='export-questions',
     ),
+    path(
+        'lecturer/questions/<int:quiz_id>/bulk-upload/',
+        views.lecturer_bulk_upload_questions,
+        name='lecturer-bulk-upload-questions',
+    ),
 
     # ---------------------------------------------------------------
     # Results
@@ -54,3 +59,4 @@ urlpatterns = [
     path('lecturer/results/', views.lecturer_results_view, name='lecturer-results-view'),
     path('results/export/csv/', views.export_results_csv, name='results-csv'),
 ]
+

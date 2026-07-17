@@ -1,0 +1,200 @@
+{% extends 'cbt/base.html' %}
+
+{% block title %}Bulk Upload Questions{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fas fa-file-csv me-2"></i>Bulk Upload Questions</h4>
+            <p class="text-muted mb-0">
+                {{ quiz.course.course_code }} - {{ quiz.examination }} &mdash; {{ quiz.level }}
+            </p>
+        </div>
+        <a href="{% url 'cbt:lecturer-add-question-quiz' quiz_id=quiz.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Add Single Question Instead
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- LEFT: INSTRUCTIONS + UPLOAD -->
+    <div class="col-lg-7">
+
+        <!-- STEP 1: Download Template -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="badge bg-primary rounded-circle p-2" style="width:32px;height:32px;">1</span>
+                    <h6 class="fw-bold mb-0">Download the CSV Template</h6>
+                </div>
+                <p class="text-muted small">
+                    Download the ready-made template, fill in your questions in Excel or Google Sheets,
+                    then save as <strong>.csv</strong> and upload it below.
+                </p>
+                <a href="?download_template=1" class="btn btn-outline-primary">
+                    <i class="fas fa-download me-2"></i>Download CSV Template
+                </a>
+            </div>
+        </div>
+
+        <!-- CSV FORMAT GUIDE -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fas fa-table me-2 text-primary"></i>CSV Column Guide</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Column</th>
+                                <th>Required</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>content</code></td>
+                                <td><span class="badge bg-danger">Yes</span></td>
+                                <td>The full question text</td>
+                            </tr>
+                            <tr>
+                                <td><code>question_type</code></td>
+                                <td><span class="badge bg-danger">Yes</span></td>
+                                <td><code>MCQ</code> or <code>SHORT</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>option_a</code> &ndash; <code>option_d</code></td>
+                                <td><span class="badge bg-secondary">MCQ only</span></td>
+                                <td>Leave blank for SHORT answer questions</td>
+                            </tr>
+                            <tr>
+                                <td><code>correct_answer</code></td>
+                                <td><span class="badge bg-danger">Yes</span></td>
+                                <td>MCQ: enter <code>A</code>, <code>B</code>, <code>C</code>, or <code>D</code>. SHORT: enter the exact answer</td>
+                            </tr>
+                            <tr>
+                                <td><code>image_url</code></td>
+                                <td><span class="badge bg-success">Optional</span></td>
+                                <td>Paste a Google Drive share link. Leave blank if not needed</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Upload -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="badge bg-primary rounded-circle p-2" style="width:32px;height:32px;">2</span>
+                    <h6 class="fw-bold mb-0">Upload Your Filled CSV</h6>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{{ form.csv_file.label }}</label>
+                        {{ form.csv_file }}
+                        <div class="form-text">{{ form.csv_file.help_text }} Max recommended: 500 rows per upload.</div>
+                        {% for error in form.csv_file.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-upload me-2"></i>Upload &amp; Save Questions
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT: RESULTS PANEL -->
+    <div class="col-lg-5">
+
+        <!-- SUCCESS SUMMARY -->
+        {% if success_count %}
+        <div class="card shadow-sm mb-4 border-success">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-circle-check fa-3x text-success mb-3"></i>
+                <h4 class="fw-bold text-success">{{ success_count }} Question{{ success_count|pluralize }} Uploaded</h4>
+                <p class="text-muted mb-3">Successfully added to <strong>{{ quiz.course.course_code }} - {{ quiz.examination }}</strong></p>
+                <a href="{% url 'cbt:lecturer-add-question-quiz' quiz_id=quiz.id %}" class="btn btn-outline-success me-2">
+                    <i class="fas fa-plus me-1"></i>Add More (Single)
+                </a>
+                <a href="{% url 'cbt:main-view' %}" class="btn btn-success">
+                    <i class="fas fa-home me-1"></i>Done
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- PREVIEW TABLE -->
+        {% if preview_rows %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fas fa-eye me-2 text-success"></i>Upload Preview</h6>
+                <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-success">
+                            <tr>
+                                <th>Row</th>
+                                <th>Question</th>
+                                <th>Type</th>
+                                <th>Answer</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in preview_rows %}
+                            <tr>
+                                <td>{{ row.row }}</td>
+                                <td>{{ row.content }}{% if row.content|length == 60 %}&hellip;{% endif %}</td>
+                                <td><span class="badge {% if row.type == 'MCQ' %}bg-primary{% else %}bg-info text-dark{% endif %}">{{ row.type }}</span></td>
+                                <td><code>{{ row.answer }}</code></td>
+                                <td>
+                                    {% if row.status == 'Ready' %}
+                                        <span class="badge bg-success">Saved</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Warning</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ERRORS / WARNINGS -->
+        {% if errors %}
+        <div class="card shadow-sm border-warning">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3 text-warning"><i class="fas fa-triangle-exclamation me-2"></i>Warnings &amp; Skipped Rows</h6>
+                <ul class="list-unstyled mb-0" style="max-height:200px; overflow-y:auto;">
+                    {% for error in errors %}
+                    <li class="mb-1 small"><i class="fas fa-circle-xmark text-danger me-1"></i>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- QUIZ INFO -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fas fa-chart-bar me-2 text-primary"></i>Quiz Info</h6>
+                <table class="table table-sm mb-0 small">
+                    <tr><td class="text-muted">Examination</td><td class="fw-bold">{{ quiz.examination }}</td></tr>
+                    <tr><td class="text-muted">Course</td><td>{{ quiz.course.course_code }} - {{ quiz.course.title }}</td></tr>
+                    <tr><td class="text-muted">Level</td><td>{{ quiz.level }}</td></tr>
+                    <tr><td class="text-muted">Total Questions</td><td><span class="badge bg-primary">{{ quiz.number_of_questions }}</span></td></tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

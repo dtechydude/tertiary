@@ -17,21 +17,25 @@
                         <label class="form-label fw-bold">Examination</label>
                         {{ form.examination }}
                         <div class="form-text">The parent examination this CBT sitting belongs to.</div>
+                        {% for error in form.examination.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Course</label>
                         {{ form.course }}
+                        {% for error in form.course.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Level</label>
                             {{ form.level }}
+                            {% for error in form.level.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Semester</label>
                             {{ form.semester }}
+                            {% for error in form.semester.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                     </div>
 
@@ -39,16 +43,19 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Number of Questions</label>
                             {{ form.number_of_questions }}
+                            {% for error in form.number_of_questions.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Time (Minutes)</label>
                             {{ form.time }}
+                            {% for error in form.time.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Required Score to Pass (%)</label>
                         {{ form.required_score_to_pass }}
+                        {% for error in form.required_score_to_pass.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
 
                     <hr>
@@ -58,18 +65,22 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Start Date</label>
                             {{ form.start_date }}
+                            {% for error in form.start_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">End Date</label>
                             {{ form.end_date }}
+                            {% for error in form.end_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Daily Opening Time</label>
                             {{ form.start_time }}
+                            {% for error in form.start_time.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Daily Closing Time</label>
                             {{ form.end_time }}
+                            {% for error in form.end_time.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
                     </div>
 

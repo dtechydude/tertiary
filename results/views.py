@@ -7,6 +7,8 @@ delegate every calculation or state change to the services layer.
 Nothing here computes a grade, a GPA, or decides the next workflow status.
 """
 
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
@@ -17,7 +19,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from curriculum.models import Course, CourseAssignment, CourseRegistration
+from curriculum.models import Course, CourseAssignment, CourseRegistration, Session, Semester
 
 from .models import Result
 from .permissions import IsCourseLecturer
@@ -25,6 +27,7 @@ from .serializers import BulkScoreEntrySerializer, ResultSerializer, ResultWorkf
 from .services.gpa import GPAService
 from .services.grading import GradingService
 from .services.graduation import GraduationService
+from .services.progress import AcademicProgressService
 from .services.workflow import ResultWorkflowService
 
 
@@ -206,69 +209,241 @@ class StudentGraduationEvaluationView(APIView):
 # Template views — thin; all logic delegates to services
 # ---------------------------------------------------------------------------
 
-def student_dashboard(request):
+def _build_progress_context(request, student):
+    """Shared by academic_progress_view (student's own) and
+    staff_student_progress_view (any student, staff-only) — one
+    implementation, two entry points."""
+    filter_session_id = request.GET.get("session") or None
+    filter_semester_id = request.GET.get("semester") or None
+
+    filter_session = Session.objects.filter(pk=filter_session_id).first() if filter_session_id else None
+    filter_semester = Semester.objects.filter(pk=filter_semester_id).first() if filter_semester_id else None
+
+    progress = AcademicProgressService.build_progress(
+        student, filter_session=filter_session, filter_semester=filter_semester
+    )
+
+    try:
+        evaluation = GraduationService.evaluate(student)
+    except ValidationError:
+        evaluation = None
+
+    return {
+        "student": student,
+        "progress": progress,
+        "cgpa": GPAService.calculate_cgpa(student),
+        "evaluation": evaluation,
+        "sessions": Session.objects.all().order_by("-start_date"),
+        "semesters": Semester.objects.filter(session=filter_session) if filter_session else Semester.objects.none(),
+        "selected_session": filter_session_id or "",
+        "selected_semester": filter_semester_id or "",
+    }
+
+
+@login_required
+def academic_progress_view(request):
+    """A student viewing their own progress toward graduation."""
     student = getattr(request.user, "student", None)
     if not student:
         return render(request, "errors/403.html", {"message": "Student profile required."})
 
-    results = Result.objects.filter(student=student, is_published=True).select_related("course")
-    context = {
-        "results": results,
-        "cgpa": GPAService.calculate_cgpa(student),
-        "total_courses": results.count(),
-        "outstanding_courses": results.filter(grade="F").count(),
-    }
-    return render(request, "results/student/dashboard.html", context)
+    context = _build_progress_context(request, student)
+    return render(request, "results/student/academic_progress.html", context)
 
 
+@login_required
+def staff_student_progress_view(request, matric_number):
+    """Staff looking up any student's progress toward graduation."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        return render(request, "errors/403.html", {"message": "Staff access required."})
+
+    from students.models import Student
+    student = get_object_or_404(Student, matric_number=matric_number)
+
+    context = _build_progress_context(request, student)
+    context["is_staff_view"] = True
+    return render(request, "results/student/academic_progress.html", context)
+
+
+@login_required
+def lecturer_my_courses_view(request):
+    """A lecturer's own course list for the current session/semester,
+    with at-a-glance status counts — the entry point into score entry."""
+    lecturer = getattr(request.user, "lecturer", None)
+    if not lecturer:
+        return render(request, "errors/403.html", {"message": "Lecturer profile required."})
+
+    current_session = Session.objects.filter(is_current=True).first()
+    current_semester = Semester.objects.filter(is_current=True).first()
+
+    assignments = CourseAssignment.objects.filter(
+        lecturer=lecturer, session=current_session, semester=current_semester
+    ).select_related("course") if current_session and current_semester else CourseAssignment.objects.none()
+
+    rows = []
+    for assignment in assignments:
+        results_qs = Result.objects.filter(
+            course=assignment.course, session=current_session, semester=current_semester
+        )
+        registered_count = CourseRegistration.objects.filter(
+            course=assignment.course, session=current_session, semester=current_semester
+        ).count()
+        rows.append({
+            "course": assignment.course,
+            "registered_count": registered_count,
+            "scored_count": results_qs.exclude(total_score=0).count(),
+            "submitted_count": results_qs.exclude(status=Result.Status.DRAFT).count(),
+            "published_count": results_qs.filter(is_published=True).count(),
+        })
+
+    return render(request, "results/lecturer/my_courses.html", {
+        "rows": rows,
+        "current_session": current_session,
+        "current_semester": current_semester,
+    })
+
+
+@login_required
 def lecturer_submit_scores(request, course_id):
     lecturer = getattr(request.user, "lecturer", None)
     if not lecturer:
         return render(request, "errors/403.html", {"message": "Lecturer profile required."})
 
     course = get_object_or_404(Course, pk=course_id)
-    assignment = CourseAssignment.objects.filter(lecturer=lecturer, course=course).first()
+
+    current_session = Session.objects.filter(is_current=True).first()
+    current_semester = Semester.objects.filter(is_current=True).first()
+
+    # IMPORTANT: scope to the current session/semester specifically — a
+    # lecturer may have assignments to this same course from past
+    # sessions, and grabbing "any" assignment risked entering scores
+    # against the wrong academic period entirely.
+    assignment = CourseAssignment.objects.filter(
+        lecturer=lecturer, course=course, session=current_session, semester=current_semester
+    ).first()
     if not assignment:
-        return render(request, "errors/403.html", {"message": "You are not assigned to this course."})
+        return render(request, "errors/403.html", {
+            "message": "You are not assigned to this course for the current session/semester."
+        })
 
     registrations = CourseRegistration.objects.filter(
         course=course, session=assignment.session, semester=assignment.semester
-    ).select_related("student")
+    ).select_related("student__user")
 
     scheme = GradingService.resolve_scheme(course)
     components = list(scheme.schemecomponents.select_related("component"))
+    exam_component_ids = {link.component_id for link in components if link.component.is_exam_component}
+
+    # Pre-fill existing scores and eligibility, so re-opening this page
+    # shows what's already been entered instead of a blank grid.
+    from finance.services.exam_eligibility import ExamEligibilityService
+
+    existing_results = {
+        r.student_id: r for r in Result.objects.filter(
+            course=course, session=assignment.session, semester=assignment.semester
+        ).prefetch_related("scores")
+    }
+
+    student_rows = []
+    for reg in registrations:
+        result = existing_results.get(reg.student_id)
+        existing_scores = {s.component_id: s.raw_score for s in result.scores.all()} if result else {}
+        is_exam_eligible = ExamEligibilityService.is_course_exam_eligible(
+            reg.student, course, assignment.session, assignment.semester
+        )
+        # Pre-align each component with this student's existing score (if
+        # any) — Django templates can't do a dynamic dict[key] lookup, so
+        # this pairing has to happen here, not in the template.
+        score_cells = [
+            {"link": link, "value": existing_scores.get(link.component_id, "")}
+            for link in components
+        ]
+        student_rows.append({
+            "student": reg.student,
+            "result": result,
+            "score_cells": score_cells,
+            "is_exam_eligible": is_exam_eligible,
+        })
 
     if request.method == "POST":
         blocked = []
         with transaction.atomic():
-            for reg in registrations:
+            for row in student_rows:
+                student = row["student"]
                 component_scores = {
-                    link.component_id: request.POST.get(f"score_{link.component_id}_{reg.student.id}", 0) or 0
+                    link.component_id: request.POST.get(f"score_{link.component_id}_{student.id}", 0) or 0
                     for link in components
                 }
                 result, _ = Result.objects.get_or_create(
-                    student=reg.student, course=course,
+                    student=student, course=course,
                     session=assignment.session, semester=assignment.semester,
                     defaults={"scheme": scheme, "credit_unit": course.credit_unit},
                 )
                 try:
                     GradingService.record_scores(result, component_scores, actor=request.user)
                 except ValidationError as e:
-                    # Don't let one student's outstanding fees stop the
-                    # rest of the class from being scored.
-                    blocked.append({"student": reg.student, "reason": str(e)})
+                    # Don't let one student's outstanding fees/eligibility
+                    # stop the rest of the class from being scored.
+                    blocked.append({"student": student, "reason": str(e)})
 
         if blocked:
-            return render(request, "results/lecturer/submit_scores.html", {
-                "registrations": registrations, "course": course,
-                "assignment": assignment, "components": components,
-                "blocked": blocked,
-            })
+            messages.warning(
+                request,
+                f"{len(blocked)} student(s) could not be scored for the exam component — see details below."
+            )
+        else:
+            messages.success(request, "Scores saved.")
+
         return redirect("results:lecturer_submit_scores", course_id=course_id)
 
     return render(request, "results/lecturer/submit_scores.html", {
-        "registrations": registrations,
+        "student_rows": student_rows,
         "course": course,
         "assignment": assignment,
         "components": components,
+        "exam_component_ids": exam_component_ids,
+    })
+
+
+@login_required
+def submit_results_for_review_view(request, course_id):
+    """Bulk-submits every DRAFT result for this course/session/semester
+    to the HOD for review — the lecturer's half of the approval chain
+    (submit -> HOD -> Dean -> Registrar -> Published)."""
+    lecturer = getattr(request.user, "lecturer", None)
+    if not lecturer:
+        return render(request, "errors/403.html", {"message": "Lecturer profile required."})
+
+    course = get_object_or_404(Course, pk=course_id)
+    current_session = Session.objects.filter(is_current=True).first()
+    current_semester = Semester.objects.filter(is_current=True).first()
+
+    assignment = CourseAssignment.objects.filter(
+        lecturer=lecturer, course=course, session=current_session, semester=current_semester
+    ).first()
+    if not assignment:
+        return render(request, "errors/403.html", {"message": "You are not assigned to this course."})
+
+    draft_results = Result.objects.filter(
+        course=course, session=current_session, semester=current_semester, status=Result.Status.DRAFT
+    )
+
+    if request.method == "POST":
+        submitted, failed = 0, 0
+        for result in draft_results:
+            try:
+                ResultWorkflowService.transition(result, "submit", actor=request.user)
+                submitted += 1
+            except (ValidationError, PermissionDenied):
+                failed += 1
+
+        if submitted:
+            messages.success(request, f"{submitted} result(s) submitted for HOD review.")
+        if failed:
+            messages.error(request, f"{failed} result(s) could not be submitted — check your permissions.")
+
+        return redirect("results:lecturer_my_courses")
+
+    return render(request, "results/lecturer/confirm_submit.html", {
+        "course": course, "draft_count": draft_results.count(),
     })

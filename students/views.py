@@ -451,48 +451,217 @@ def hostel_list(request):
 # TERTIARY LOGIC for students count ===================================================
 #count students in each class
 
+# @login_required
+# def student_distribution_view(request):
+#     """
+#     Displays the headcount of students broken down by 
+#     Programme, Department, and Level.
+#     """
+#     # 1. Total Count per Programme
+#     programme_counts = Student.objects.values('programme__name').annotate(
+#         total=Count('id')
+#     ).order_by('programme__name')
+
+#     # 2. Total Count per Department
+#     department_counts = Student.objects.values('department__name').annotate(
+#         total=Count('id')
+#     ).order_by('department__name')
+
+#     # 3. Detailed breakdown (Level + Department)
+#     # Changed 'current_level__name' to 'level__name' to match your model
+#     detailed_counts = Student.objects.values(
+#         'department__name', 
+#         'level__name' 
+#     ).annotate(
+#         total=Count('id')
+#     ).order_by('department__name', 'level__id') # Using level__id for ordering
+
+#     # 4. Context for the logged-in student
+#     peers_count = 0
+#     if hasattr(request.user, 'student'):
+#         # Changed current_level to level to match your model
+#         peers_count = Student.objects.filter(
+#             level=request.user.student.level,
+#             department=request.user.student.department
+#         ).count()
+
+#     context = {
+#         'programme_counts': programme_counts,
+#         'department_counts': department_counts,
+#         'detailed_counts': detailed_counts,
+#         'peers_count': peers_count,
+#     }
+
+#     return render(request, 'students/student_distribution.html', context)
+
+import csv
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count
+from django.http import HttpResponse
+from django.shortcuts import render
+
+from students.models import Student
+
+
+def _get_detailed_distribution():
+    """
+    Shared query: Faculty -> Department -> Level -> Programme headcount.
+    Used by both the on-screen report and the CSV export so the two
+    can never drift out of sync.
+    """
+    return Student.objects.values(
+        'department__faculty__name',
+        'department__name',
+        'level__name',
+        'programme__name',
+    ).annotate(
+        total=Count('id')
+    ).order_by(
+        'department__faculty__name',
+        'department__name',
+        'level__id',
+        'programme__name',
+    )
+
+
 @login_required
 def student_distribution_view(request):
     """
-    Displays the headcount of students broken down by 
-    Programme, Department, and Level.
+    Displays the headcount of students broken down by Faculty, Department,
+    Level, and Programme, plus a hierarchical Faculty -> Department view
+    for the standalone report page.
+
+    Assumes Department has a ForeignKey to Faculty (department.faculty).
+    If your curriculum.models.Department uses a different field name for
+    that relationship, update the `department__faculty__...` lookups below.
     """
-    # 1. Total Count per Programme
+
+    total_students = Student.objects.count()
+
+    # 1. Total Count per Faculty
+    faculty_counts = Student.objects.values(
+        'department__faculty__name'
+    ).annotate(
+        total=Count('id')
+    ).order_by('department__faculty__name')
+
+    # 2. Total Count per Department (flat, kept for backward compatibility /
+    #    quick reference table)
+    department_counts = Student.objects.values(
+        'department__faculty__name', 'department__name'
+    ).annotate(
+        total=Count('id')
+    ).order_by('department__faculty__name', 'department__name')
+
+    # 3. Total Count per Programme
     programme_counts = Student.objects.values('programme__name').annotate(
         total=Count('id')
     ).order_by('programme__name')
 
-    # 2. Total Count per Department
-    department_counts = Student.objects.values('department__name').annotate(
+    # 4. Total Count per Level
+    level_counts = Student.objects.values('level__name').annotate(
         total=Count('id')
-    ).order_by('department__name')
+    ).order_by('level__id')
 
-    # 3. Detailed breakdown (Level + Department)
-    # Changed 'current_level__name' to 'level__name' to match your model
-    detailed_counts = Student.objects.values(
-        'department__name', 
-        'level__name' 
-    ).annotate(
-        total=Count('id')
-    ).order_by('department__name', 'level__id') # Using level__id for ordering
+    # 5. Full detailed breakdown: Faculty -> Department -> Level -> Programme
+    detailed_counts = _get_detailed_distribution()
 
-    # 4. Context for the logged-in student
+    # 6. Build a nested Faculty -> Department -> rows structure so the
+    #    template can render an accordion instead of one long flat table.
+    faculty_map = {}
+
+    for row in detailed_counts:
+        faculty_name = row['department__faculty__name'] or 'Unassigned Faculty'
+        department_name = row['department__name'] or 'Unassigned Department'
+
+        faculty_entry = faculty_map.setdefault(faculty_name, {
+            'name': faculty_name,
+            'total': 0,
+            'departments': {},
+        })
+
+        department_entry = faculty_entry['departments'].setdefault(department_name, {
+            'name': department_name,
+            'total': 0,
+            'rows': [],
+        })
+
+        department_entry['rows'].append({
+            'level': row['level__name'] or 'Unspecified',
+            'programme': row['programme__name'] or 'Unspecified',
+            'total': row['total'],
+        })
+        department_entry['total'] += row['total']
+        faculty_entry['total'] += row['total']
+
+    # Convert dicts -> sorted lists for stable, predictable template iteration
+    faculties = []
+    for faculty_name in sorted(faculty_map.keys()):
+        faculty_entry = faculty_map[faculty_name]
+        faculty_entry['departments'] = sorted(
+            faculty_entry['departments'].values(),
+            key=lambda d: d['name']
+        )
+        faculties.append(faculty_entry)
+
+    # 7. Context for the logged-in student — how many peers share their
+    #    exact Level + Department
     peers_count = 0
     if hasattr(request.user, 'student'):
-        # Changed current_level to level to match your model
         peers_count = Student.objects.filter(
             level=request.user.student.level,
             department=request.user.student.department
         ).count()
 
     context = {
-        'programme_counts': programme_counts,
+        'total_students': total_students,
+        'faculty_counts': faculty_counts,
         'department_counts': department_counts,
+        'programme_counts': programme_counts,
+        'level_counts': level_counts,
         'detailed_counts': detailed_counts,
+        'faculties': faculties,
+        'faculty_count': len(faculties),
+        'department_count': len({row['department__name'] for row in department_counts}),
         'peers_count': peers_count,
     }
 
     return render(request, 'students/student_distribution.html', context)
+
+
+@login_required
+def student_distribution_csv_export(request):
+    """
+    Offline copy of the full Faculty -> Department -> Level -> Programme
+    breakdown, for registrars/admin who need it outside the portal
+    (board reports, accreditation submissions, backups, etc.).
+    """
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Not permitted.", status=403)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="student_enrollment_distribution.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Faculty', 'Department', 'Level', 'Programme', 'Student Count'])
+
+    total = 0
+    for row in _get_detailed_distribution():
+        writer.writerow([
+            row['department__faculty__name'] or 'Unassigned',
+            row['department__name'] or 'Unassigned',
+            row['level__name'] or 'Unspecified',
+            row['programme__name'] or 'Unspecified',
+            row['total'],
+        ])
+        total += row['total']
+
+    writer.writerow([])
+    writer.writerow(['', '', '', 'Total Students', total])
+
+    return response
+
 
 
 # TERTIARY LOGIC ===============================================================    

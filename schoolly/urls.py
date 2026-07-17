@@ -23,12 +23,10 @@ urlpatterns = [
     path('finance/', include('finance.urls', namespace='finance')),
     path('ai_center/', include('ai_center.urls', namespace='ai_center')),
     path('elearning/', include('elearning.urls', namespace='elearning')),
+    path('results/', include('results.urls')),
 
-
-    # path for result API
-    # path('results/', include('results.urls', namespace='results')),
-    # path('api/results/', include('results.urls')),    
-    path('api/results/', include(('results.urls', 'results'), namespace='results')),     
+    
+    path('api/results/', include(('results.urls', 'results'), namespace='results-api')),     
 
      # Add this line below to fix the NoReverseMatch error
     path("ckeditor5/", include('django_ckeditor_5.urls'), name="ck_editor_5_upload_file"),

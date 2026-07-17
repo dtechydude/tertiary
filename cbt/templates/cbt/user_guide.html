@@ -1,0 +1,234 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>CBT User Guide</title>
+{% endblock title %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .guide-tabs .nav-link {
+        font-weight: 700;
+        color: #64748b;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 12px 20px;
+    }
+    .guide-tabs .nav-link.active {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd;
+        background: transparent;
+    }
+    .step-number {
+        width: 36px; height: 36px; background: #0d6efd; color: white;
+        border-radius: 50%; display: inline-flex; align-items: center;
+        justify-content: center; margin-right: 15px; font-weight: 900;
+        flex-shrink: 0;
+    }
+    .step-number.green { background: #198754; }
+    .rule-card {
+        border-left: 6px solid #0d6efd;
+        background: #f1f5f9;
+        padding: 20px;
+        border-radius: 8px;
+    }
+    .rule-card.green { border-left-color: #198754; background: #f1f8f9; }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row justify-content-center mt-4">
+            <div class="col-lg-10 col-md-11 mb-5">
+
+                <div class="text-center mb-4">
+                    <i class="fas fa-laptop-code fa-3x text-primary mb-3"></i>
+                    <h2 class="fw-bold text-dark">CBT User Guide</h2>
+                    <p class="fs-5 text-muted fw-bold">
+                        Everything you need to know to take an exam or set one up — in one place.
+                    </p>
+                </div>
+
+                <!-- TABS -->
+                <ul class="nav guide-tabs justify-content-center mb-4" id="guideTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="student-tab" data-bs-toggle="tab"
+                                data-bs-target="#student-pane" type="button" role="tab">
+                            <i class="fas fa-user-graduate me-2"></i>For Students
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="lecturer-tab" data-bs-toggle="tab"
+                                data-bs-target="#lecturer-pane" type="button" role="tab">
+                            <i class="fas fa-chalkboard-teacher me-2"></i>For Lecturers
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- ============ STUDENT PANE ============ -->
+                    <div class="tab-pane fade show active" id="student-pane" role="tabpanel">
+                        <div class="card shadow-lg border-0">
+                            <div class="card-header bg-primary text-white py-3">
+                                <h4 class="mb-0"><i class="fas fa-pencil-alt me-2"></i>How to Take a CBT Exam</h4>
+                            </div>
+                            <div class="card-body p-4">
+
+                                <div class="d-flex mb-4 align-items-start">
+                                    <div class="step-number shadow">1</div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Open Your Dashboard</h5>
+                                        <p class="mb-0">
+                                            Go to your <strong>Exam Dashboard</strong> — you'll only see exams for
+                                            courses you're registered for in the current session and semester.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex mb-4 align-items-start">
+                                    <div class="step-number shadow">2</div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Check the Details Before You Start</h5>
+                                        <p class="mb-0">
+                                            Each exam card shows the duration, number of questions, pass mark,
+                                            and how long the exam stays open. Make sure you have a stable
+                                            internet connection before clicking <strong>Start Examination</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex mb-4 align-items-start">
+                                    <div class="step-number shadow">3</div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Answer the Questions</h5>
+                                        <p class="mb-0">
+                                            Questions may be multiple-choice (select one option) or short-answer
+                                            (type your answer). A countdown timer is always visible at the top —
+                                            once it hits zero, your exam is submitted automatically.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex mb-4 align-items-start">
+                                    <div class="step-number shadow">4</div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Submit and See Your Score</h5>
+                                        <p class="mb-0">
+                                            Click <strong>Finish Exam</strong> when you're done, or let the timer
+                                            submit it for you. Your score and pass/fail status appear immediately.
+                                            You can review your full exam history anytime from "My Results."
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="rule-card mt-4">
+                                    <h6 class="fw-bold text-primary mb-2"><i class="fas fa-exclamation-circle me-2"></i>Important Rules</h6>
+                                    <ul class="mb-0">
+                                        <li>You can only sit each exam <strong>once</strong> — there is no retake unless a lecturer/admin clears your previous attempt.</li>
+                                        <li>The timer cannot be paused. If you lose connection, reopening the exam resumes your original countdown — it does not reset.</li>
+                                        <li>Exams are only accessible within their configured availability window and daily opening/closing time.</li>
+                                    </ul>
+                                </div>
+
+                                <div class="d-grid gap-2 mt-4">
+                                    <a href="{% url 'cbt:main-view' %}" class="btn btn-primary btn-lg fw-bold">
+                                        <i class="fas fa-arrow-right me-2"></i> Go to My Exam Dashboard
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============ LECTURER PANE ============ -->
+                    <div class="tab-pane fade" id="lecturer-pane" role="tabpanel">
+                        <div class="card shadow-lg border-0">
+                            <div class="card-header bg-success text-white py-3">
+                                <h4 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>How to Set Up a CBT Exam</h4>
+                            </div>
+                            <div class="card-body p-4">
+
+                                <div class="d-flex mb-4 align-items-start">
+                                    <div class="step-number green shadow">1</div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Quiz Setup (Admin/Staff)</h5>
+                                        <p class="mb-0">
+                                            Before questions can be added, an admin or staff member creates the
+                                            Quiz — linking an Examination, Course, Level, Semester, and the
+                                            availability window (open/close date and time).
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex mb-4 align-items-start">
+                                    <div class="step-number green shadow">2</div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Add Questions — One at a Time</h5>
+                                        <p class="mb-0">
+                                            From your dashboard, open <strong>Add/Manage Questions</strong> for any
+                                            course you're assigned to teach. Fill in the question text, choose
+                                            Multiple Choice or Short Answer, and mark the correct answer.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex mb-4 align-items-start">
+                                    <div class="step-number green shadow">3</div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Or Add Questions in Bulk (CSV)</h5>
+                                        <p class="mb-0">
+                                            Setting a full question bank at once is faster with
+                                            <strong>Bulk Upload</strong>: download the CSV template, fill in your
+                                            questions in Excel or Google Sheets, and upload the file — the system
+                                            validates every row and shows you exactly what was saved and what
+                                            needs fixing before it commits anything.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex mb-4 align-items-start">
+                                    <div class="step-number green shadow">4</div>
+                                    <div>
+                                        <h5 class="fw-bold text-dark mb-1">Review Student Results</h5>
+                                        <p class="mb-0">
+                                            Use <strong>View Student Scores</strong> to filter results by
+                                            Examination or Level for your assigned courses, and export them to
+                                            CSV for your records or the registrar.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="rule-card green mt-4">
+                                    <h6 class="fw-bold text-success mb-2"><i class="fas fa-exclamation-circle me-2"></i>Important Rules</h6>
+                                    <ul class="mb-0">
+                                        <li>You can only manage quizzes and question banks for courses you are formally assigned to (per your Course Assignment record).</li>
+                                        <li>Only one quiz is allowed per Course, per Examination, per Semester and Session — this prevents accidental duplicates.</li>
+                                        <li>In your CSV upload, <code>question_type</code> must be <code>MCQ</code> or <code>SHORT</code>, and for MCQ, <code>correct_answer</code> must be A, B, C, or D.</li>
+                                    </ul>
+                                </div>
+
+                                <div class="d-grid gap-2 mt-4">
+                                    <a href="{% url 'cbt:lecturer-add-question' %}" class="btn btn-success btn-lg fw-bold text-white">
+                                        <i class="fas fa-arrow-right me-2"></i> Go to My Quizzes
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        Missing a course assignment, or something not working as expected?
+                        Contact the Registry/HOD or your school administrator.
+                    </small>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content_body %}

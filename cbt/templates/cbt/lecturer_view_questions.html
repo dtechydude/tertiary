@@ -19,7 +19,17 @@
         <div class="card-body">
 
             {% if selected_quiz %}
-                <div class="mb-3 d-flex gap-2">
+                <div class="mb-3 d-flex gap-2 flex-wrap">
+                    <a href="{% url 'cbt:lecturer-add-question-quiz' selected_quiz.id %}"
+                       class="btn btn-success btn-sm">
+                        <i class="fas fa-plus me-1"></i> Add Question
+                    </a>
+
+                    <a href="{% url 'cbt:lecturer-bulk-upload-questions' quiz_id=selected_quiz.id %}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-file-csv me-1"></i> Bulk Upload
+                    </a>
+
                     <a href="{% url 'cbt:export-questions' selected_quiz.id 'csv' %}"
                        class="btn btn-outline-primary btn-sm">
                         Download CSV

@@ -1,0 +1,44 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Submit for Review | {{ course.course_code }}</title>
+{% endblock title %}
+
+{% block favicon %}
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active"><a href="{% url 'results:lecturer_my_courses' %}">My Courses</a></li>
+                <li class="breadcrumb-item"><a href="javascript:void(0)">Submit for Review</a></li>
+            </ol>
+        </div>
+
+        <div class="card shadow-sm border-0" style="max-width: 600px; margin: 2rem auto;">
+            <div class="card-body text-center p-5">
+                <i class="fas fa-paper-plane fa-3x text-primary mb-3"></i>
+                <h4 class="fw-bold mb-2">Submit {{ course.course_code }} Results for Review?</h4>
+                <p class="text-muted mb-4">
+                    {{ draft_count }} result(s) currently in draft will be sent to the Head of Department for
+                    review. Once submitted, you won't be able to edit scores until they're returned to you.
+                </p>
+                <form method="post" class="d-flex justify-content-center gap-2">
+                    {% csrf_token %}
+                    <a href="{% url 'results:lecturer_submit_scores' course.id %}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary" {% if draft_count == 0 %}disabled{% endif %}>
+                        Confirm Submission
+                    </button>
+                </form>
+                {% if draft_count == 0 %}
+                <p class="text-muted small mt-3 mb-0">No draft results to submit — either nothing's been scored yet, or everything's already been submitted.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content_body %}
