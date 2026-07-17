@@ -31,7 +31,7 @@
         <nav class="navbar navbar-expand-lg navbar-dark mb-4">
             <div class="container">
                 <a class="navbar-brand fw-bold" href="{% url 'cbt:main-view' %}">
-                    🎓 {% if school_identity %}{{ school_identity.name }}{% else %}CBT{% endif %} Portal
+                    🎓 {% if school_info.name %}{{ school_info.name }}{% else %}CBT{% endif %} Portal
                 </a>
                 <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
                     {% if user.is_authenticated %}

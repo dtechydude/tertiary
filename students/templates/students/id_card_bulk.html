@@ -9,12 +9,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        :root {
+            --primary-navy: #002366;
+            --accent-gold: #c5a059;
+            --security-red: #d32f2f;
+            --bg-canvas: #f1f5f9;
+        }
+
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
 
         body {
             margin: 0;
-            background: #f1f5f9;
-            font-family: 'Inter', sans-serif;
+            background: var(--bg-canvas);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         @page {
@@ -38,141 +48,191 @@
             margin: 0 auto 30px;
         }
 
-        /* ================= CARD GRID ================= */
+        /* ================= CARD GRID (PORTRAIT) ================= */
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(2, 86mm);
-            grid-auto-rows: 54mm;
-            gap: 4mm 8mm;
+            grid-template-columns: repeat(3, 54mm);
+            grid-auto-rows: 86mm;
+            gap: 6mm 6mm;
             justify-content: center;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
 
-        /* ================= ID CARD ================= */
-        .id-card {
-            width: 86mm;
-            height: 54mm;
-            background: #fff;
-            border: 1px solid #0f172a;
-            border-radius: 6px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            break-inside: avoid;
-        }
-
-        /* Page Break Logic */
-        {% if request.GET.per_page == "6" %}
-            .id-card:nth-child(6n) { page-break-after: always; }
-        {% elif request.GET.per_page == "8" %}
-            .id-card:nth-child(8n) { page-break-after: always; }
+        /* Page Break Logic — aligned to the 3-column portrait grid */
+        {% if request.GET.per_page == "9" %}
+            .id-card:nth-child(9n) { page-break-after: always; }
+        {% elif request.GET.per_page == "15" %}
+            .id-card:nth-child(15n) { page-break-after: always; }
         {% else %}
-            .id-card:nth-child(10n) { page-break-after: always; }
+            .id-card:nth-child(12n) { page-break-after: always; }
         {% endif %}
 
-        /* ================= CARD HEADER ================= */
-        .card-header {
-            background: #1a237e; /* Tertiary Navy */
-            color: #fff;
-            padding: 5px 10px;
+        /* ================= ID CARD (portrait, mirrors id_card_single) ================= */
+        .id-card {
+            width: 54mm;
+            height: 86mm;
+            background: #ffffff;
+            border-radius: 3mm;
+            border: 1px solid #d1d1d1;
+            overflow: hidden;
+            position: relative;
             display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 2px solid #ffd600;
+            flex-direction: column;
+            break-inside: avoid;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        /* CARD HEADER */
+        .card-header {
+            background-color: var(--primary-navy);
+            color: #fff;
+            padding: 2.5mm 2mm;
+            text-align: center;
+            border-bottom: 1mm solid var(--accent-gold);
             z-index: 10;
         }
 
         .card-logo {
-            width: 28px;
-            height: 28px;
+            width: 9mm;
+            height: 9mm;
             background: #fff;
-            border-radius: 3px;
+            padding: 0.5mm;
+            border-radius: 50%;
+            margin-bottom: 1mm;
             object-fit: contain;
         }
 
         .s-name {
-            font-size: 0.6rem;
+            font-size: 2.1mm;
             font-weight: 800;
             text-transform: uppercase;
-            line-height: 1.1;
+            margin: 0;
+            letter-spacing: 0.2px;
+            line-height: 1.15;
         }
 
-        /* ================= CARD BODY ================= */
+        /* CARD BODY */
         .card-body {
             flex: 1;
-            padding: 8px 10px;
             display: flex;
-            gap: 10px;
-            z-index: 10;
+            flex-direction: column;
+            align-items: center;
+            padding: 2.5mm 3mm;
+            background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23f0f0f0' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
         }
 
         .photo-side {
-            width: 65px;
-            flex-shrink: 0;
+            width: 17mm;
+            height: 20mm;
+            border: 0.6mm solid var(--primary-navy);
+            border-radius: 1.2mm;
+            overflow: hidden;
+            background: #fafafa;
+            margin-bottom: 1.5mm;
         }
 
         .student-photo {
-            width: 65px;
-            height: 78px;
+            width: 100%;
+            height: 100%;
             object-fit: cover;
-            border-radius: 3px;
-            border: 1px solid #1a237e;
-        }
-
-        .content-main {
-            flex: 1;
-            overflow: hidden;
         }
 
         .student-name {
-            font-size: 0.75rem;
-            font-weight: 800;
-            color: #1a237e;
+            font-size: 2.6mm;
+            font-weight: 700;
+            color: var(--primary-navy);
+            text-align: center;
             text-transform: uppercase;
+            margin: 0;
+            width: 100%;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            border-bottom: 1px solid #e2e8f0;
-            margin-bottom: 3px;
         }
 
-        .info-row {
-            font-size: 0.55rem;
-            margin-bottom: 1px;
-            line-height: 1.2;
+        .id-badge {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: var(--security-red);
+            font-size: 2.2mm;
+            margin-bottom: 1.5mm;
         }
 
-        .info-label {
-            font-weight: 700;
-            color: #64748b;
-            margin-right: 3px;
+        /* INFO GRID — mirrors id_card_single's 2x2 layout */
+        .info-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5mm 2mm;
+            border-top: 0.2mm solid #eee;
+            padding-top: 1.5mm;
+        }
+
+        .info-item label {
+            display: block;
+            font-size: 1.3mm;
+            color: #777;
             text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 0.3mm;
         }
 
-        .qr-side {
-            width: 42px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        /* ================= FOOTER ================= */
-        .card-footer {
-            background: #1a237e;
-            color: #fff;
-            font-size: 0.4rem;
-            padding: 3px;
-            text-align: center;
+        .info-item span {
+            font-size: 1.8mm;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            color: #333;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* CARD FOOTER */
+        .card-footer {
+            background: #f8f9fa;
+            padding: 1.5mm 3mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-top: 0.2mm solid #eee;
+        }
+
+        .qr-target {
+            background: #fff;
+            padding: 0.5mm;
+            border: 0.2mm solid #ddd;
+            width: 11mm;
+            height: 11mm;
+        }
+
+        .qr-target img, .qr-target canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .signature-container {
+            text-align: center;
+        }
+
+        .signature-line {
+            width: 15mm;
+            border-top: 0.2mm solid #444;
+            margin-bottom: 0.5mm;
+        }
+
+        .signature-label {
+            font-size: 1.2mm;
+            font-weight: bold;
+            color: #666;
+            text-transform: uppercase;
         }
 
         @media print {
             body { background: #fff; }
             .no-print, .page-header { display: none !important; }
-            .cards-grid { grid-template-columns: repeat(2, 86mm) !important; gap: 4mm 8mm !important; }
+            .cards-grid { grid-template-columns: repeat(3, 54mm) !important; gap: 6mm 6mm !important; }
+            .id-card { box-shadow: none; border: 1px solid #000; }
         }
     </style>
 </head>
@@ -180,7 +240,7 @@
 <body>
 
 <div class="page-header">
-    <h4 class="mb-0">ID Production Dashboard</h4>
+    <h4 class="mb-0">{{ school_info.name }} - <small> ID Production Dashboard </small></h4>
     <a href="/dashboard" class="btn btn-sm btn-outline-secondary">← Back</a>
 </div>
 
@@ -220,9 +280,9 @@
             <div class="col-md-2">
                 <label class="small font-weight-bold">Per Page</label>
                 <select name="per_page" class="form-control form-control-sm">
-                    <option value="10" {% if request.GET.per_page == "10" %}selected{% endif %}>10 Cards</option>
-                    <option value="8" {% if request.GET.per_page == "8" %}selected{% endif %}>8 Cards</option>
-                    <option value="12" {% if request.GET.per_page == "12" %}selected{% endif %}>12 Cards</option>
+                    <option value="12" {% if request.GET.per_page == "12" or not request.GET.per_page %}selected{% endif %}>12 Cards</option>
+                    <option value="9" {% if request.GET.per_page == "9" %}selected{% endif %}>9 Cards</option>
+                    <option value="15" {% if request.GET.per_page == "15" %}selected{% endif %}>15 Cards</option>
                 </select>
             </div>
 
@@ -237,58 +297,75 @@
 <div class="cards-grid">
 {% for student in students %}
 <div class="id-card">
+    <!-- Header — matches id_card_single -->
     <div class="card-header">
         {% if school_info.logo %}
-            <img src="{{ school_info.logo.url }}" class="card-logo">
+            <img src="{{ school_info.logo.url }}" class="card-logo" alt="Logo">
+        {% else %}
+            <img src="{% static 'pages/images/logo.png' %}" class="card-logo" alt="Logo">
         {% endif %}
-        <div>
-            <div class="s-name">{{ school_info.name|default:"INSTITUTION NAME" }}</div>
-        </div>
+        <h1 class="s-name">{{ school_info.name|default:"INSTITUTION NAME" }}</h1>
     </div>
 
+    <!-- Body — photo, name, matric badge, 2x2 info grid -->
     <div class="card-body">
         <div class="photo-side">
             {% if student.user.profile.image %}
-                <img src="{{ student.user.profile.image.url }}" class="student-photo">
+                <img src="{{ student.user.profile.image.url }}" class="student-photo" alt="Student">
             {% else %}
-                <img src="{% static 'pages/images/default-avatar.png' %}" class="student-photo">
+                <img src="{% static 'pages/images/default-avatar.png' %}" class="student-photo" alt="Student">
             {% endif %}
         </div>
 
-        <div class="content-main">
-            <div class="student-name">{{ student.get_full_name }}</div>
-            <div class="info-row"><span class="info-label">MATRIC:</span>{{ student.matric_number }}</div>
-            <div class="info-row"><span class="info-label">DEPT:</span>{{ student.department.name|truncatechars:25 }}</div>
-            <div class="info-row"><span class="info-label">PROG:</span>{{ student.programme.name }}</div>
-            <div class="info-row"><span class="info-label">LEVEL:</span>{{ student.level.name }}</div>
-            <div class="info-row"><span class="info-label">GENDER:</span>{{ student.gender|upper }}</div>
-        </div>
+        <h2 class="student-name">{{ student.get_full_name }}</h2>
+        <div class="id-badge">{{ student.matric_number }}</div>
 
-        <div class="qr-side">
-            <div class="qr-target" data-qr="ID:{{ student.matric_number }}\nDept:{{ student.department.name }}"></div>
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Department</label>
+                <span>{{ student.department.name|truncatechars:16 }}</span>
+            </div>
+            <div class="info-item">
+                <label>Programme</label>
+                <span>{{ student.programme.name|truncatechars:16 }}</span>
+            </div>
+            <div class="info-item">
+                <label>Level</label>
+                <span>{{ student.level.name }}</span>
+            </div>
+            <div class="info-item">
+                <label>Gender</label>
+                <span>{{ student.gender|upper }}</span>
+            </div>
         </div>
     </div>
 
+    <!-- Footer — QR + registrar signature, matches id_card_single -->
     <div class="card-footer">
-        OFFICIAL STUDENT IDENTITY CARD
+        <div class="qr-target"
+             data-qr="STUDENT: {{ student.get_full_name }}&#10;MATRIC: {{ student.matric_number }}&#10;INST: {{ school_info.name }}"></div>
+        <div class="signature-container">
+            <div class="signature-line"></div>
+            <div class="signature-label">Registrar</div>
+        </div>
     </div>
 </div>
 {% endfor %}
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.qr-target').forEach(el => {
-        new QRCode(el, {
-            text: el.dataset.qr,
-            width: 42,
-            height: 42,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.M
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.qr-target').forEach(el => {
+            new QRCode(el, {
+                text: el.dataset.qr,
+                width: 42,
+                height: 42,
+                colorDark: "#002366",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
         });
     });
-});
 </script>
 
 </body>

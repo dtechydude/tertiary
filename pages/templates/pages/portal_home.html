@@ -511,15 +511,17 @@
 							<span class="nav-text">ATTENDANCE</span>
 						</a>
 						<ul aria-expanded="false">
-						{% comment %} 
+						
 							{% if user.is_superuser or user.is_staff %}
-							<li><a href="/admin/attendance/attendance/" target="_blank">Take Attendance-MANUAL</a></li>
+							<li><a href="{% url 'attendance:attendance-student-list' %}" target="_blank">Take Attendance-MANUAL</a></li>
 							<li><a href="{% url 'attendance:attendance_scanner' %}"><i class="fas fa-qrcode"></i><span>Take Attendance-SCANNING</span></a>
 							</li> 
+							{% endif %}
 							
-							 {% endcomment %}	
+							
 							 {% if user.lecturer %}
 							<li><a href="{% url 'attendance:attendance-student-list' %}">Mark Attendance</a></li>
+							<li><a href="{% url 'attendance:attendance_scanner' %}">SCANNING Attendance</a></li>
 							{% endif %}						
 							<li><a href="{% url 'attendance:attendance_report' %}">Attendance Report</a></li>
 							<li><a href="{% url 'attendance:attendance-student-list' %}">Attendance List</a></li>
@@ -633,23 +635,27 @@
 							<span class="nav-text">CBT</span>
 						</a>
 						<ul aria-expanded="false">	
-
+							
+							<li><a href="{% url 'cbt:user-guide' %}"> CBT Guides</a></li>					
 							{% if user.is_authenticated and user.is_superuser or user.is_staff %}
 							<li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
-							{% comment %} <li><a href="{% url 'cbt:cbt_lecturer_order' %}">Teacher CBT Page</a></li> {% endcomment %}
+							<li><a href="{% url 'cbt:admin-add-quiz' %}">ADD CBT Exam</a></li>
 							{% comment %} <li><a href="{% url 'cbt:cbt_student_home' %}"> Student CBT Page</a></li>							 {% endcomment %}
 							<li><a href="{% url 'cbt:lecturer-results-view' %}"> Students CBT Scores</a></li>
 							<li><a href="{% url 'cbt:cbt-order' %}">customized CBT Platform</a></li>
 							<li><a href="{% url 'cbt:cbt-home' %}"> Current CBT Subscription</a></li>			
 
 							
-							{% elif user.is_authenticated and user.teacher or user.is_staff %}
+							{% elif user.is_authenticated and user.lecturer or user.is_staff %}
 							<li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
-							{% comment %} <li><a href="{% url 'cbt:cbt_lecturer_order' %}">Set CBT Exams</a></li> {% endcomment %}
+							<li><a href="{% url 'cbt:lecturer-add-question' %}">Set CBT Exams</a></li>
+							<li><a href="{% url 'cbt:request-exam' %}"> Request New CBT</a></li>						
 							<li><a href="{% url 'cbt:lecturer-results-view' %}"> Students CBT Scores</a></li>							
 						
 							{% elif user.is_authenticated and user.student %}
-							{% comment %} <li><a href="{% url 'cbt:cbt_student_home' %}"> My CBT Exams</a></li> {% endcomment %}
+							<li><a href="{% url 'cbt:main-view' %}"> Active CBT</a></li>
+							<li><a href="{% url 'cbt:student-results' %}"> My CBT Results</a></li>
+
 																
 							{% endif %}
 						</ul>					
