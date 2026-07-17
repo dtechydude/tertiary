@@ -22,6 +22,8 @@ urlpatterns = [
     path('payments/', include('payments.urls', namespace='payments')),
     path('finance/', include('finance.urls', namespace='finance')),
     path('ai_center/', include('ai_center.urls', namespace='ai_center')),
+    path('elearning/', include('elearning.urls', namespace='elearning')),
+
 
     # path for result API
     # path('results/', include('results.urls', namespace='results')),

@@ -1,0 +1,18 @@
+{% extends "elearning/base.html" %}
+{% block title %}{% if mode == "create" %}Add Material{% else %}Edit Material{% endif %}{% endblock %}
+{% block content %}
+<a href="{% url 'elearning:material_list' course.id %}">&larr; {{ course.course_code }}</a>
+<h3 class="mt-2">{% if mode == "create" %}Add Material{% else %}Edit Material{% endif %} — {{ course.course_code }}</h3>
+
+<form method="post" enctype="multipart/form-data" class="bg-white p-4 rounded">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>
+{% endblock %}

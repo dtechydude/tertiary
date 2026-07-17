@@ -655,25 +655,26 @@
 						</ul>					
 					</li>
 					
-					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
-						<i class="flaticon-013-checkmark"></i>
-							<span class="nav-text">E-LEARNING</span>
-						</a>
-						<ul aria-expanded="false">							
-						
-							{% if user.is_authenticated and user.student %}
-							{% comment %} <li><a href="{% url 'curriculum:my-standard' %}">Learning Center</a></li> {% endcomment %}
-							
-							{% elif user.is_authenticated and user.teacher %}
-							<li><a href="{% url 'curriculum:standard_list' %}">E-Class List</a></li>
-							
-							{% elif user.is_authenticated and user.is_superuser or user.is_staff %}
-							<li><a href="/admin/curriculum/elearningsubject/" target="_blank">Add Subjects & Lessons </a></li>
-							<li><a href="{% url 'curriculum:standard_list' %}">E-Class List</a></li>										
-																
-							{% endif %}
-						</ul>					
-					</li>
+				<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+				<i class="flaticon-013-checkmark"></i>
+				<span class="nav-text">E-LEARNING</span>
+			</a>
+			<ul aria-expanded="false">
+
+				{% if user.is_authenticated and user.student %}
+				<li><a href="{% url 'elearning:dashboard' %}">Learning Center</a></li>
+
+				{% elif user.is_authenticated and user.lecturer %}
+				<li><a href="{% url 'elearning:dashboard' %}">My Courses</a></li>
+
+				{% elif user.is_authenticated and user.is_staff or user.is_authenticated and user.is_superuser %}
+				<li><a href="{% url 'elearning:dashboard' %}">All Courses</a></li>
+				<li><a href="/admin/elearning/coursematerial/add/" target="_blank">Add Course Material</a></li>
+				<li><a href="/admin/elearning/onlineclasslink/add/" target="_blank">Add Class Link (Classroom/Teams)</a></li>
+
+				{% endif %}
+			</ul>
+		</li>
 					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 						<i class="flaticon-013-checkmark"></i>
 						<span class="nav-text">SCHOOL BUS</span>
@@ -719,13 +720,13 @@
 								{% endif %}	
 								{% if user.is_authenticated and user.is_superuser or user.is_staff %}
 								<ul aria-expanded="false">
-									<li><a href="#">School AI Tools</a></li>
+									<li><a href="{% url 'ai_center:ai_center_dashboard' %}">AI CENTER</a></li>
+									<li><a href="{% url 'ai_center:guide' %}">AI GUIDE</a></li>
+
+
 									{% if user.is_authenticated and user.is_superuser or user.student %}					
-									<li><a href="#">Student AI Tools</a></li>
-									{% endif %}	
-									{% if user.is_authenticated and user.is_superuser or user.teacher %}
-									<li><a href="#">Teachers AI Tools</a></li>
-									{% endif %}			
+									<li><a href="#">Student AI Tools</a></li>									
+									{% endif %}		
 								</ul>
 							</li>
 							{% endif %}

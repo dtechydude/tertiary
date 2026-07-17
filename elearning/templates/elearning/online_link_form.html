@@ -1,0 +1,20 @@
+{% extends "elearning/base.html" %}
+{% block title %}{% if mode == "create" %}Add Class Link{% else %}Edit Class Link{% endif %}{% endblock %}
+{% block content %}
+<a href="{% url 'elearning:material_list' course.id %}">&larr; {{ course.course_code }}</a>
+<h3 class="mt-2">{% if mode == "create" %}Add Online Class Link{% else %}Edit Online Class Link{% endif %} — {{ course.course_code }}</h3>
+<p class="text-muted">Paste your Google Classroom invite link (from Classroom &rarr; Settings &rarr; General &rarr; Invite link) or your Microsoft Teams class/meeting link.</p>
+
+<form method="post" class="bg-white p-4 rounded">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="mb-3">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+        {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>
+{% endblock %}

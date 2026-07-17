@@ -53,6 +53,9 @@ INSTALLED_APPS = [
     'payments.apps.PaymentsConfig',
     'finance.apps.FinanceConfig',
     'ai_center.apps.AiCenterConfig',
+    'elearning.apps.ElearningConfig',
+
+    
 
 
 

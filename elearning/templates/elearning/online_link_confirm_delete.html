@@ -1,0 +1,10 @@
+{% extends "elearning/base.html" %}
+{% block title %}Remove Class Link{% endblock %}
+{% block content %}
+<h4>Remove "{{ link.display_name }}" ({{ link.get_platform_display }})?</h4>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, remove</button>
+    <a href="{% url 'elearning:material_list' link.course_id %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

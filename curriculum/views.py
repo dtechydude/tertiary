@@ -30,7 +30,7 @@ class StandardSelfListView(LoginRequiredMixin, ListView):
 
 # Standard list view for the admin and teachers
 class ClassListView(LoginRequiredMixin, ListView):
-    context_object_name = 'class'
+    context_object_name = 'level'
     model = Level
     # template_name = 'curriculum/class_list.html'
     template_name = 'curriculum/test_elearning_class.html'
@@ -38,9 +38,9 @@ class ClassListView(LoginRequiredMixin, ListView):
 
     
 class SubjectListView(DetailView):
-    context_object_name = 'standards'
-    model = Level
-    template_name = 'curriculum/test_class_subjects.html'
+    context_object_name = 'courses'
+    model = Course
+    template_name = 'curriculum/test_courses.html'
 
 
 class LessonListView(DetailView):

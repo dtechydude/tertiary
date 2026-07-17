@@ -35,7 +35,7 @@ from datetime import date
 from django.views import View
 from django.contrib.admin.views.decorators import staff_member_required
 from curriculum.utils.identity import get_school_identity_for_student
-from curriculum.services.registration import validate_unit_load, resolve_registration_policy
+from curriculum.services.registration import resolve_registration_policy
 
 from django.utils import timezone
 from decimal import Decimal, InvalidOperation
@@ -842,6 +842,34 @@ def student_archive(request):
 
 # TERTIARY LOGIC
 # Course registration
+def _export_course_registrations_csv(queryset):
+    """CSV export for the admin-facing 'Recent Registrations' report on
+    the course registration page. Separate from export_students_csv
+    (student archive export) since the columns are entirely different."""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="course_registrations.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "Student Name", "Matric Number", "Course Code", "Course Title",
+        "Session", "Semester", "Validated", "Registered At",
+    ])
+
+    for reg in queryset.select_related('student__user', 'course', 'session', 'semester'):
+        writer.writerow([
+            reg.student.get_full_name(),
+            reg.student.matric_number,
+            reg.course.course_code,
+            reg.course.title,
+            str(reg.session),
+            str(reg.semester),
+            "Yes" if reg.is_validated else "No",
+            reg.registered_at.strftime("%Y-%m-%d %H:%M"),
+        ])
+
+    return response
+
+
 @login_required
 def course_registration_view(request):
     from finance.services.payments import FinanceService
@@ -905,16 +933,37 @@ def course_registration_view(request):
 
             selected_course_ids = [int(c_id) for c_id in request.POST.getlist("courses")]
 
-            # Enforce the programme/level's min/max unit policy before
-            # touching the database (curriculum.RegistrationPolicy).
+            # Enforce the programme/level's unit policy before touching the
+            # database (curriculum.RegistrationPolicy). MAXIMUM is a hard
+            # block (a real resource/administrative cap). MINIMUM is a
+            # warning only, never a block — if the available course list
+            # for this department/level/semester doesn't even add up to
+            # the configured minimum, a hard block would make registration
+            # permanently impossible for every student in that cohort.
             if selected_course_ids:
                 selected_courses = Course.objects.filter(id__in=selected_course_ids)
                 total_units = sum(c.credit_unit for c in selected_courses)
                 try:
-                    validate_unit_load(student.level, total_units, is_carryover=False)
-                except ValidationError as e:
-                    messages.error(request, str(e))
-                    return redirect("students:course-registration")
+                    policy = resolve_registration_policy(student.level)
+                    if total_units > policy.max_units_per_semester:
+                        messages.error(
+                            request,
+                            f"You selected {total_units} unit(s), which exceeds the maximum of "
+                            f"{policy.max_units_per_semester} allowed for your level. "
+                            f"Please deselect a course and try again."
+                        )
+                        return redirect("students:course-registration")
+                    if total_units < policy.min_units_per_semester:
+                        messages.warning(
+                            request,
+                            f"Note: {total_units} unit(s) is below the recommended minimum of "
+                            f"{policy.min_units_per_semester} for your level. Your registration "
+                            f"was still saved — register more courses if/when more become available."
+                        )
+                except ValidationError:
+                    # No RegistrationPolicy configured yet for this level/programme —
+                    # don't block registration just because policy setup is incomplete.
+                    pass
 
             try:
                 with transaction.atomic():
@@ -969,7 +1018,7 @@ def course_registration_view(request):
             total_amount = Decimal("0.00")
             for item_id in selected_item_ids:
                 item = get_object_or_404(PaymentItem, pk=item_id, student=student)
-                raw_amount = request.POST.get(f"amount_{item_id}", "").strip()
+                raw_amount = request.POST.get(f"amount_{item_id}", "").strip().replace(",", "")
                 try:
                     amount = Decimal(raw_amount) if raw_amount else item.balance
                 except InvalidOperation:
@@ -1018,11 +1067,77 @@ def course_registration_view(request):
     fee_clearance = None
     outstanding_items = []
     recent_payments = []
+    course_search_debug = ""
+    profile_incomplete = False
+    admin_registrations = []
+    admin_reg_stats = None
+
+    admin_semesters = Semester.objects.none()
+    selected_reg_semester = ""
+
+    if is_admin:
+        admin_semesters = Semester.objects.filter(session=current_session).order_by('name') if current_session else Semester.objects.none()
+
+        # Filter by semester — defaults to the current semester, but staff
+        # can pick any semester within the current session from the dropdown.
+        selected_reg_semester = request.GET.get('reg_semester', '')
+        if not selected_reg_semester and current_semester:
+            selected_reg_semester = str(current_semester.id)
+
+        admin_qs = CourseRegistration.objects.filter(session=current_session) if current_session else CourseRegistration.objects.none()
+        if selected_reg_semester:
+            admin_qs = admin_qs.filter(semester_id=selected_reg_semester)
+        admin_qs = admin_qs.select_related('student__user', 'course').order_by('-registered_at')
+
+        total_count = admin_qs.count()
+        validated_count = admin_qs.filter(is_validated=True).count()
+        admin_reg_stats = {
+            'total': total_count,
+            'validated': validated_count,
+            'pending': total_count - validated_count,
+        }
+
+        # CSV export — same filtered queryset, no pagination applied.
+        if request.GET.get('export') == 'csv':
+            return _export_course_registrations_csv(admin_qs)
+
+        paginator = Paginator(admin_qs, 25)
+        page_number = request.GET.get('page', 1)
+        admin_registrations = paginator.get_page(page_number)
 
     if student:
-        available_courses = Course.objects.filter(
-            department=student.department, level=student.level, semester=current_semester
-        )
+        if not student.department or not student.level:
+            # A student without department/level assigned can never match
+            # any Course filter — show this plainly instead of a blank,
+            # unexplained grid.
+            profile_incomplete = True
+            available_courses = Course.objects.none()
+        elif current_semester:
+            # IMPORTANT: match by semester *name* (First/Second/Third), not
+            # the exact Semester row. A Course's curriculum placement ("this
+            # is a First Semester course for HND1 Computer Science") is
+            # stable across academic sessions — but Course.semester is a
+            # hard FK to one specific Semester row, which itself belongs to
+            # one specific Session. Filtering on `semester=current_semester`
+            # therefore goes silently empty the moment the registrar rolls
+            # over to a new session's Semester row, even though nothing
+            # about the curriculum actually changed. The CourseRegistration
+            # itself still correctly ties to the exact
+            # current_session/current_semester below — only the *available
+            # courses to choose from* needed this relaxation.
+            available_courses = Course.objects.filter(
+                department=student.department,
+                level=student.level,
+                semester__name=current_semester.name,
+            ).select_related('semester', 'department', 'level')
+            course_search_debug = (
+                f"Dept={student.department} | Level={student.level} | "
+                f"SemesterName='{current_semester.name}' | Found={available_courses.count()}"
+            )
+        else:
+            available_courses = Course.objects.none()
+            course_search_debug = "No current semester configured — cannot resolve available courses."
+
         regs = CourseRegistration.objects.filter(
             student=student, session=current_session, semester=current_semester
         ).select_related('course')
@@ -1077,6 +1192,12 @@ def course_registration_view(request):
         "fee_clearance": fee_clearance,
         "outstanding_items": outstanding_items,
         "recent_payments": recent_payments,
+        "course_search_debug": course_search_debug,
+        "profile_incomplete": profile_incomplete,
+        "admin_registrations": admin_registrations,
+        "admin_reg_stats": admin_reg_stats,
+        "admin_semesters": admin_semesters,
+        "selected_reg_semester": selected_reg_semester,
     })
 
 

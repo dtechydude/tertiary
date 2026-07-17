@@ -1,0 +1,10 @@
+{% extends "elearning/base.html" %}
+{% block title %}Delete Material{% endblock %}
+{% block content %}
+<h4>Delete "{{ material.title }}"?</h4>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete</button>
+    <a href="{% url 'elearning:material_detail' material.pk %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

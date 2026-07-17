@@ -1,0 +1,24 @@
+{% extends "elearning/base.html" %}
+{% block title %}My E-Learning{% endblock %}
+{% block content %}
+<h3 class="mb-4">My Courses</h3>
+
+{% if not course_rows %}
+    <p class="text-muted">No courses found yet. Students see this once registered for courses; lecturers see this once assigned to courses.</p>
+{% endif %}
+
+<div class="row g-3">
+    {% for row in course_rows %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ row.course.course_code }}</h5>
+                <p class="card-subtitle text-muted mb-2">{{ row.course.title }}</p>
+                <p class="mb-1"><small>{{ row.material_count }} material(s) · {{ row.live_class_count }} live class link(s)</small></p>
+                <a href="{% url 'elearning:material_list' row.course.id %}" class="btn btn-primary btn-sm mt-2">Open</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

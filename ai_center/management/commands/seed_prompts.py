@@ -1,406 +1,645 @@
 from django.core.management.base import BaseCommand
+from django.utils.text import slugify
 
 from ai_center.models import (
     PromptCategory,
     PromptLibrary
 )
-from django.utils.text import slugify
 
 
 class Command(BaseCommand):
 
-    help = "Load Educational Prompt Library"
+    help = "Load Prompt Library for a Tertiary Institution"
 
     def handle(self, *args, **kwargs):
 
         prompts = [
 
-            # LESSON NOTES
+            # ================= LECTURE NOTES & COURSE MATERIALS =================
 
             {
-                "category": "Lesson Notes",
-                "title": "Generate Weekly Lesson Note",
-                "school_level": "SECONDARY",
-                "subject": "Any Subject",
+                "category": "Lecture Notes & Course Materials",
+                "title": "Generate a Full Lecture Note",
+                "school_level": "TERTIARY",
+                "subject": "Any Course",
                 "prompt_text": """
-Act as an experienced teacher.
+Act as an experienced university/college lecturer.
 
-Generate a complete lesson note for:
+Generate a complete lecture note for:
 
-Subject: [SUBJECT]
-Class: [CLASS]
+Course: [COURSE CODE] - [COURSE TITLE]
+Level: [LEVEL, e.g. 200L / ND2 / HND1]
 Topic: [TOPIC]
 
 Include:
 
-1. Behavioural Objectives
-2. Previous Knowledge
-3. Instructional Materials
-4. Introduction
-5. Presentation Steps
-6. Evaluation
-7. Assignment
-8. Reference
+1. Learning Outcomes
+2. Prerequisite Knowledge
+3. Introduction
+4. Detailed Content (with sub-headings)
+5. Diagrams/Examples Where Relevant
+6. In-Class Activity or Case Study
+7. Summary
+8. Suggested Reading / References
 """
             },
 
             {
-                "category": "Lesson Notes",
-                "title": "Generate Scheme-Based Lesson Plan",
-                "school_level": "GENERAL",
+                "category": "Lecture Notes & Course Materials",
+                "title": "Generate Slide-Ready Lecture Outline",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Act as a professional teacher.
+Act as a university lecturer preparing slides.
 
-Generate a lesson plan aligned with the national curriculum.
+Generate a slide-by-slide outline for:
 
+Course: [COURSE CODE] - [COURSE TITLE]
 Topic: [TOPIC]
-Class: [CLASS]
+Number of Slides: [NUMBER]
 
-Output in table format.
+For each slide, provide a heading and 3-5 bullet points.
 """
             },
 
-            # CBT
+            {
+                "category": "Lecture Notes & Course Materials",
+                "title": "Simplify a Complex Topic",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Act as a lecturer explaining a difficult concept to first-year students.
+
+Topic: [TOPIC]
+Course: [COURSE CODE]
+
+Explain it in plain language, then provide one real-world analogy and
+one worked example.
+"""
+            },
+
+            # ================= CBT / OBJECTIVE QUESTIONS =================
 
             {
-                "category": "CBT Questions",
+                "category": "CBT / Objective Questions",
                 "title": "Generate 40 CBT Questions",
-                "school_level": "SECONDARY",
-                "subject": "Any",
+                "school_level": "TERTIARY",
+                "subject": "Any Course",
                 "prompt_text": """
-Act as a WAEC examiner.
+Act as a university examiner.
 
-Generate 40 CBT questions.
+Generate 40 multiple-choice (CBT) questions.
 
-Subject: [SUBJECT]
-Class: [CLASS]
-Topic: [TOPIC]
+Course: [COURSE CODE] - [COURSE TITLE]
+Level: [LEVEL]
+Topic(s): [TOPIC]
 
 Requirements:
 
 - Four options A-D
-- Correct answer
-- Explanation
+- One correct answer clearly marked
+- A short explanation for the correct answer
+- Mix of recall, application, and analysis-level questions
 """
             },
 
             {
-                "category": "CBT Questions",
-                "title": "Generate Objective Test",
-                "school_level": "PRIMARY",
+                "category": "CBT / Objective Questions",
+                "title": "Generate Objective Test from Course Outline",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate 20 multiple-choice questions.
+Generate 20 multiple-choice questions based on this course outline.
 
-Class: [CLASS]
+Course Outline:
 
-Topic: [TOPIC]
+[PASTE COURSE OUTLINE]
 
-Provide answers at the end.
+Provide the answer key at the end.
 """
             },
 
-            # THEORY
+            {
+                "category": "CBT / Objective Questions",
+                "title": "Convert Past Questions into a CBT Bank",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Act as an exams officer.
+
+Convert the following past exam questions into a structured CBT-ready
+question bank with options A-D, correct answers, and difficulty ratings
+(Easy/Medium/Hard).
+
+Questions:
+
+[PASTE PAST QUESTIONS]
+"""
+            },
+
+            # ================= THEORY & ESSAY QUESTIONS =================
 
             {
-                "category": "Theory Questions",
-                "title": "Generate Theory Examination",
-                "school_level": "SECONDARY",
+                "category": "Theory & Essay Questions",
+                "title": "Generate a Theory Examination Paper",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
 Generate a theory examination paper.
 
-Subject: [SUBJECT]
+Course: [COURSE CODE] - [COURSE TITLE]
+Level: [LEVEL]
+Duration: [DURATION]
 
-Class: [CLASS]
+Section A: Short Answer Questions (5)
+Section B: Essay Questions (3, answer any 2)
 
-Section A:
-Short Answer
-
-Section B:
-Essay Questions
-
-Include marking guide.
+Include a marking guide with allocated marks for each part.
 """
             },
 
             {
-                "category": "Theory Questions",
-                "title": "Generate WAEC Style Questions",
-                "school_level": "SECONDARY",
+                "category": "Theory & Essay Questions",
+                "title": "Generate Case-Study Based Questions",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate WAEC-standard theory questions.
+Act as a course examiner.
 
-Subject: [SUBJECT]
-
-Topic: [TOPIC]
-
-Include examiner expectations.
+Generate a realistic case study relevant to [COURSE/DISCIPLINE, e.g.
+Nursing, Business Administration, Civil Engineering] and 4 follow-up
+questions that test application of course concepts to the case.
 """
             },
 
-            # MARKING SCHEME
+            # ================= MARKING SCHEMES & RUBRICS =================
 
             {
-                "category": "Marking Schemes",
-                "title": "Generate Marking Scheme",
-                "school_level": "GENERAL",
+                "category": "Marking Schemes & Rubrics",
+                "title": "Generate a Marking Scheme",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate a complete marking scheme.
+Generate a complete marking scheme for the following questions.
 
-Subject: [SUBJECT]
+Course: [COURSE CODE]
 
 Questions:
 
 [PASTE QUESTIONS]
 
-Allocate marks appropriately.
+Allocate marks per point and show the total per question.
 """
             },
 
             {
-                "category": "Marking Schemes",
-                "title": "Generate Rubric",
-                "school_level": "GENERAL",
+                "category": "Marking Schemes & Rubrics",
+                "title": "Generate an Assessment Rubric",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Create a grading rubric.
+Create a grading rubric for the following assessment.
 
-Assessment Type:
+Assessment Type: [e.g. Group Project, Seminar Presentation, Lab Report]
 
-[ASSESSMENT]
+Criteria to score:
 
-Criteria:
-Knowledge
-Presentation
-Accuracy
-Creativity
+Knowledge/Understanding
+Application/Practical Skill
+Presentation/Communication
+Originality
 
-Output in table format.
+Output as a table with 4 performance bands (Excellent, Good, Fair, Poor)
+and the mark range for each.
 """
             },
 
-            # ASSIGNMENT
+            # ================= ASSIGNMENTS & PROJECTS =================
 
             {
-                "category": "Assignments",
-                "title": "Generate Assignment",
-                "school_level": "GENERAL",
+                "category": "Assignments & Projects",
+                "title": "Generate a Course Assignment",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate take-home assignment.
+Generate a take-home assignment.
 
-Subject:
+Course: [COURSE CODE] - [COURSE TITLE]
 
-[SUBJECT]
+Level: [LEVEL]
 
-Class:
+Topic: [TOPIC]
 
-[CLASS]
+Difficulty: Medium
 
-Topic:
-
-[TOPIC]
-
-Difficulty:
-Medium
+Include clear submission instructions and a word/page limit.
 """
             },
 
             {
-                "category": "Assignments",
-                "title": "Generate Project Work",
-                "school_level": "SECONDARY",
+                "category": "Assignments & Projects",
+                "title": "Generate a Group Project Brief",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate project-based learning activity.
+Generate a group project brief.
 
-Subject:
+Course: [COURSE CODE]
 
-[SUBJECT]
-
-Class:
-
-[CLASS]
+Discipline: [e.g. Mechanical Engineering, Social Work, Accounting]
 
 Include:
 
 Objectives
-Tasks
-Assessment Method
+Deliverables
+Suggested Timeline
+Assessment Criteria
 """
             },
 
-            # TIMETABLE
+            # ================= PRACTICAL & CLINICAL ASSESSMENT =================
+
+            {
+                "category": "Practical & Clinical Assessment",
+                "title": "Generate a Laboratory/Workshop Practical Sheet",
+                "school_level": "TERTIARY",
+                "subject": "Engineering / Sciences",
+                "prompt_text": """
+Act as a laboratory instructor.
+
+Generate a practical/lab sheet for:
+
+Course: [COURSE CODE] - [COURSE TITLE]
+Experiment/Task: [TITLE]
+
+Include:
+
+Aim
+Apparatus/Materials
+Procedure (step-by-step)
+Observation Table
+Post-Lab Questions
+Safety Precautions
+"""
+            },
+
+            {
+                "category": "Practical & Clinical Assessment",
+                "title": "Generate an OSCE / Clinical Skills Checklist",
+                "school_level": "TERTIARY",
+                "subject": "Nursing / Medicine",
+                "prompt_text": """
+Act as a clinical skills examiner in a School of Nursing/Medicine.
+
+Generate an OSCE-style checklist for the procedure:
+
+[PROCEDURE, e.g. Wound Dressing, Vital Signs Assessment, IV Cannulation]
+
+Include:
+
+Step-by-step checklist with Pass/Fail criteria per step
+Common errors to watch for
+Overall competency rating scale
+"""
+            },
+
+            {
+                "category": "Practical & Clinical Assessment",
+                "title": "Generate an Industrial Training (SIWES) Assessment Form",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Generate a supervisor's assessment form for a student on industrial
+attachment/SIWES.
+
+Programme: [PROGRAMME]
+
+Include rating scales for:
+
+Punctuality & Discipline
+Technical/Practical Skill
+Initiative
+Report Writing
+Overall Recommendation
+"""
+            },
+
+            # ================= TIMETABLE GENERATION =================
 
             {
                 "category": "Timetable Generation",
-                "title": "Generate School Timetable",
-                "school_level": "GENERAL",
+                "title": "Generate a Departmental Lecture Timetable",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Create a weekly timetable.
+Create a weekly lecture timetable.
 
-School Level:
+Department/Faculty: [DEPARTMENT]
 
-[LEVEL]
+Courses & Levels:
 
-Subjects:
+[LIST COURSES AND LEVELS]
 
-[SUBJECTS]
-
-School Hours:
+Available Lecture Hours:
 
 [HOURS]
 
-Output in table format.
+Avoid clashes for shared courses. Output in table format.
 """
             },
 
             {
                 "category": "Timetable Generation",
-                "title": "Teacher Timetable",
-                "school_level": "GENERAL",
+                "title": "Generate a Lecturer's Personal Timetable",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate timetable for teacher.
+Generate a personal weekly timetable for a lecturer.
 
-Teacher Name:
+Lecturer Name: [NAME]
 
-[NAME]
+Courses Assigned:
 
-Subjects:
+[LIST COURSES]
 
-[SUBJECTS]
-
-Classes:
-
-[CLASSES]
-
-Avoid clashes.
+Avoid clashes and leave time for office hours and research.
 """
             },
-
-            # CURRICULUM
 
             {
-                "category": "Curriculum Planning",
-                "title": "Generate Scheme of Work",
-                "school_level": "GENERAL",
+                "category": "Timetable Generation",
+                "title": "Generate an Examination Timetable",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate a termly scheme of work.
+Create an examination timetable.
 
-Subject:
+Faculty/Department: [DEPARTMENT]
 
-[SUBJECT]
+Courses to Examine:
 
-Class:
+[LIST COURSES]
 
-[CLASS]
+Exam Period:
 
-Weeks:
+[DATE RANGE]
 
-12
-
-Output in table format.
+Ensure no student sits two exams at the same time, and space papers
+for the same level at least one day apart where possible.
 """
             },
 
-            # RESULT ANALYSIS
+            # ================= COURSE OUTLINE & CURRICULUM PLANNING =================
+
+            {
+                "category": "Course Outline & Curriculum Planning",
+                "title": "Generate a Semester Course Outline",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Generate a full-semester course outline.
+
+Course: [COURSE CODE] - [COURSE TITLE]
+
+Credit Units: [UNITS]
+
+Weeks: [NUMBER, e.g. 15]
+
+Output as a week-by-week table with Topic, Learning Outcomes, and
+Suggested Reading per week.
+"""
+            },
+
+            {
+                "category": "Course Outline & Curriculum Planning",
+                "title": "Align Course Outline to Accreditation Standard",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Act as a curriculum planning officer.
+
+Review the course outline below against a standard accreditation
+benchmark (e.g. NUC/NBTE/professional body) and suggest gaps or
+missing learning outcomes.
+
+Course Outline:
+
+[PASTE COURSE OUTLINE]
+"""
+            },
+
+            # ================= RESULT ANALYSIS =================
 
             {
                 "category": "Result Analysis",
-                "title": "Student Result Analysis",
-                "school_level": "GENERAL",
+                "title": "Analyze Course Result Performance",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Analyze student performance.
+Analyze the following course result data.
 
-Provide:
-
-Strengths
-Weaknesses
-Recommendations
+Course: [COURSE CODE]
 
 Data:
 
 [PASTE RESULT DATA]
+
+Provide:
+
+Highest, Lowest, and Average Score
+Pass Rate and Fail Rate
+Grade Distribution (A-F)
+Observations and Recommendations for the Course Coordinator
 """
             },
 
             {
                 "category": "Result Analysis",
-                "title": "Class Performance Report",
-                "school_level": "GENERAL",
+                "title": "Generate Departmental Performance Report",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate class performance report.
+Generate a departmental academic performance report.
 
-Subject:
+Department: [DEPARTMENT]
 
-[SUBJECT]
+Semester: [SEMESTER]
 
 Result Data:
 
-[PASTE SCORES]
+[PASTE SCORES/CGPA DATA]
 
-Provide charts recommendation.
+Include a summary suitable for presentation to the Head of Department.
 """
             },
 
-            # PARENT COMMUNICATION
-
             {
-                "category": "Parent Communication",
-                "title": "Parent Meeting Invitation",
-                "school_level": "GENERAL",
+                "category": "Result Analysis",
+                "title": "Draft Academic Standing / Probation Comment",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Draft professional parent invitation letter.
+Act as an academic adviser.
+
+Draft a professional, constructive comment on a student's academic
+standing.
+
+CGPA: [CGPA]
+
+Academic Standing: [e.g. Good Standing / Probation / Withdrawal Warning]
+
+Attendance: [ATTENDANCE]
+
+Provide the comment plus 2-3 specific, actionable recommendations for
+the student.
+"""
+            },
+
+            # ================= RESEARCH & PROJECT SUPERVISION =================
+
+            {
+                "category": "Research & Project Supervision",
+                "title": "Generate Final Year Project Topic Ideas",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Act as a project supervisor.
+
+Suggest 10 final year project topics for a student in:
+
+Department: [DEPARTMENT, e.g. Computer Engineering, Public Health,
+Business Administration]
+
+Area of Interest: [AREA OF INTEREST]
+
+For each topic, include a one-sentence justification of relevance.
+"""
+            },
+
+            {
+                "category": "Research & Project Supervision",
+                "title": "Review a Project Proposal / Abstract",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Act as an academic supervisor reviewing a student's project proposal.
+
+Proposal/Abstract:
+
+[PASTE PROPOSAL OR ABSTRACT]
+
+Give feedback on: clarity of problem statement, feasibility, gaps in
+methodology, and suggested improvements.
+"""
+            },
+
+            {
+                "category": "Research & Project Supervision",
+                "title": "Generate Seminar/Defense Questions",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Act as a panel member at a project/thesis defense.
+
+Based on this project summary, generate 8 likely defense questions,
+ranging from methodology to findings and implications.
+
+Project Summary:
+
+[PASTE SUMMARY]
+"""
+            },
+
+            # ================= STUDENT COMMUNICATION =================
+
+            {
+                "category": "Student Communication",
+                "title": "Draft a Class/Level Announcement",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Draft a professional announcement to students.
+
+Audience: [e.g. 300L Nursing Students, All Engineering Finalists]
 
 Purpose:
 
 [PURPOSE]
 
-Meeting Date:
+Key Details:
 
-[DATE]
+[DATE / VENUE / DEADLINE ETC.]
+
+Keep it concise and clear.
 """
             },
 
             {
-                "category": "Parent Communication",
-                "title": "Student Behaviour Report",
-                "school_level": "GENERAL",
+                "category": "Student Communication",
+                "title": "Draft a Response to a Student Complaint",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate student behaviour report.
+Act as a student affairs officer.
 
-Student Name:
+Draft a professional, empathetic response to the following student
+complaint or inquiry.
 
-[NAME]
+Complaint/Inquiry:
 
-Behaviour Observed:
+[PASTE COMPLAINT]
 
-[DETAILS]
-
-Professional and constructive tone.
+Tone: Respectful, solution-oriented, and clear on next steps.
 """
             },
 
-            # ADMINISTRATION
+            # ================= ADMISSIONS & ENROLLMENT =================
 
             {
-                "category": "School Administration",
-                "title": "School Circular",
-                "school_level": "GENERAL",
+                "category": "Admissions & Enrollment",
+                "title": "Generate Admission Interview Questions",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Draft an official school circular.
+Generate admission/screening interview questions for prospective
+students.
+
+Programme Seeking Admission: [PROGRAMME]
+
+Include:
+
+Academic/Subject-Knowledge Questions
+Motivation & Career-Goal Questions
+Situational/Behavioural Questions
+"""
+            },
+
+            {
+                "category": "Admissions & Enrollment",
+                "title": "Draft an Admission Offer / Regret Letter",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Draft a formal admission [OFFER/REGRET] letter.
+
+Programme: [PROGRAMME]
+
+Applicant Name: [NAME]
+
+Keep the tone formal, warm, and clear on next steps (if an offer) or
+respectful and encouraging (if a regret letter).
+"""
+            },
+
+            # ================= INSTITUTION ADMINISTRATION =================
+
+            {
+                "category": "Institution Administration",
+                "title": "Draft an Official Circular",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Draft an official institutional circular.
 
 Topic:
 
@@ -408,339 +647,55 @@ Topic:
 
 Target Audience:
 
-[STAFF/PARENTS/STUDENTS]
+[STAFF / STUDENTS / ALL]
+
+Keep it formal and unambiguous, with a clear effective date.
 """
             },
 
             {
-                "category": "School Administration",
-                "title": "Staff Memo",
-                "school_level": "GENERAL",
+                "category": "Institution Administration",
+                "title": "Draft a Staff Memo",
+                "school_level": "TERTIARY",
                 "subject": "",
                 "prompt_text": """
-Generate staff memo.
+Generate a staff memo.
 
 Purpose:
 
 [PURPOSE]
 
-Professional tone.
+Department(s) Affected:
+
+[DEPARTMENTS]
+
+Professional tone, clearly stating any required action and deadline.
 """
             },
 
+            {
+                "category": "Institution Administration",
+                "title": "Draft a Departmental Meeting Agenda",
+                "school_level": "TERTIARY",
+                "subject": "",
+                "prompt_text": """
+Draft a meeting agenda for a departmental/faculty board meeting.
 
+Department/Faculty: [DEPARTMENT]
 
-{
-    "category": "Report Card Comments",
-    "title": "Generate Teacher Remarks",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Act as an experienced school teacher.
+Meeting Date: [DATE]
 
-Generate professional report card remarks.
+Key Matters to Discuss:
 
-Student Average:
-[AVERAGE]
+[LIST MATTERS]
 
-Behaviour:
-[BEHAVIOUR]
-
-Attendance:
-[ATTENDANCE]
-
-Provide:
-
-Teacher Comment
-Strengths
-Areas for Improvement
+Output as a numbered agenda with an estimated time allocation per item.
 """
-},
-
-
-{
-    "category": "Report Card Comments",
-    "title": "Generate Principal Remark",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Act as a school principal.
-
-Generate a professional principal's remark.
-
-Average Score:
-[AVERAGE]
-
-Position:
-[POSITION]
-
-Conduct:
-[CONDUCT]
-"""
-},
-
-
-{
-    "category": "Psychomotor Assessment",
-    "title": "Generate Psychomotor Assessment",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Assess student psychomotor skills.
-
-Student Name:
-[NAME]
-
-Provide ratings and comments for:
-
-Handwriting
-Sports
-Practical Skills
-Creativity
-Coordination
-"""
-},
-
-
-{
-    "category": "Affective Assessment",
-    "title": "Generate Affective Domain Report",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Evaluate student affective traits.
-
-Provide ratings and comments for:
-
-Punctuality
-Honesty
-Leadership
-Neatness
-Obedience
-Respect
-Teamwork
-"""
-},
-
-
-{
-    "category": "Scheme of Work",
-    "title": "Generate Termly Scheme of Work",
-    "school_level": "SECONDARY",
-    "subject": "",
-    "prompt_text": """
-Generate a complete 12-week scheme of work.
-
-Subject:
-[SUBJECT]
-
-Class:
-[CLASS]
-
-Output:
-
-Week
-Topic
-Objectives
-Activities
-"""
-},
-
-
-{
-    "category": "CBT Questions",
-    "title": "Generate WAEC CBT Questions",
-    "school_level": "SECONDARY",
-    "subject": "",
-    "prompt_text": """
-Act as a WAEC examiner.
-
-Generate 50 CBT questions.
-
-Subject:
-[SUBJECT]
-
-Topic:
-[TOPIC]
-
-Requirements:
-
-A-D options
-Correct Answer
-Difficulty Level
-Explanation
-"""
-},
-
-
-{
-    "category": "Assignments",
-    "title": "Generate Holiday Assignment",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Generate a holiday assignment.
-
-Subject:
-[SUBJECT]
-
-Class:
-[CLASS]
-
-Include:
-
-Objective Questions
-Theory Questions
-Project Work
-"""
-},
-
-{
-    "category": "Result Analysis",
-    "title": "Class Result Analysis",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Analyze this class result.
-
-Data:
-
-[PASTE SCORES]
-
-Provide:
-
-Highest Score
-Lowest Score
-Average Score
-Pass Rate
-Fail Rate
-Recommendations
-"""
-},
-
-
-{
-    "category": "Parent Communication",
-    "title": "Generate Parent SMS",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Generate a professional SMS to parents.
-
-Purpose:
-
-[PURPOSE]
-
-Maximum Length:
-160 characters
-"""
-},
-
-{
-    "category": "School Administration",
-    "title": "Generate PTA Invitation",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Create a PTA meeting invitation.
-
-Date:
-[DATE]
-
-Venue:
-[VENUE]
-
-Agenda:
-[AGENDA]
-"""
-},
-
-{
-    "category": "Admissions & Enrollment",
-    "title": "Admission Interview Questions",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Generate admission interview questions.
-
-Class Seeking Admission:
-[CLASS]
-
-Include:
-
-Academic Questions
-Behaviour Questions
-Parent Questions
-"""
-},
-
-
-{
-    "category": "Teacher Productivity",
-    "title": "Generate Weekly Teaching Plan",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Create a weekly teaching plan.
-
-Teacher:
-[NAME]
-
-Subjects:
-[SUBJECTS]
-
-Classes:
-[CLASSES]
-
-Output in timetable format.
-"""
-},
-
-
-{
-    "category": "Lesson Notes",
-    "title": "Complete Lesson Note Generator",
-    "school_level": "GENERAL",
-    "subject": "",
-    "prompt_text": """
-Act as an experienced teacher.
-
-Generate a complete lesson note.
-
-Subject:
-[SUBJECT]
-
-Class:
-[CLASS]
-
-Topic:
-[TOPIC]
-
-Sub-topic:
-[SUBTOPIC]
-
-Include:
-
-General Objectives
-Specific Objectives
-Entry Behaviour
-Instructional Materials
-Presentation
-Evaluation
-Assignment
-Reference
-
-Format professionally.
-"""
-},
+            },
 
         ]
 
         for item in prompts:
-
-            # category = PromptCategory.objects.get(
-            #     name=item["category"]
-            # )
 
             category, created = PromptCategory.objects.get_or_create(
                 name=item["category"],
@@ -748,27 +703,6 @@ Format professionally.
                     "slug": slugify(item["category"])
                 }
             )
-
-            # PromptLibrary.objects.get_or_create(
-
-            #     title=item["title"],
-
-            #     defaults={
-
-            #         "category": category,
-
-            #         "school_level": item["school_level"],
-
-            #         "subject": item["subject"],
-
-            #         "prompt_text": item["prompt_text"],
-
-            #         "is_featured": True,
-
-            #         "is_active": True,
-
-            #     }
-            # )
 
             PromptLibrary.objects.update_or_create(
                 title=item["title"],
@@ -784,6 +718,6 @@ Format professionally.
 
         self.stdout.write(
             self.style.SUCCESS(
-                "Educational Prompts Loaded Successfully."
+                "Tertiary Prompt Library Loaded Successfully."
             )
         )

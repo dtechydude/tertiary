@@ -8,7 +8,7 @@ from ai_center.models import (
 
 class Command(BaseCommand):
 
-    help = "Load AI Tools Seed Data"
+    help = "Load AI Tools Seed Data for a Tertiary Institution"
 
     def handle(self, *args, **kwargs):
 
@@ -16,17 +16,17 @@ class Command(BaseCommand):
 
             "General AI": "fas fa-robot",
 
-            "Education AI": "fas fa-graduation-cap",
-
-            "Research & Curriculum": "fas fa-book",
+            "Academic Research & Literature Review": "fas fa-book",
 
             "Presentation & Content Creation": "fas fa-chalkboard",
 
             "Assessment & CBT": "fas fa-clipboard-check",
 
-            "Visual Learning": "fas fa-project-diagram",
+            "Visual Learning & Mind Mapping": "fas fa-project-diagram",
 
             "Video & Media Creation": "fas fa-video",
+
+            "Writing & Academic Integrity": "fas fa-pen-nib",
 
         }
 
@@ -44,8 +44,8 @@ class Command(BaseCommand):
             {
                 "category": "General AI",
                 "name": "ChatGPT",
-                "description": "Generate lesson notes, CBT, examinations and school documents.",
-                "best_for": "Lesson Notes, CBT, Exams",
+                "description": "Generate lecture notes, CBT questions, examinations, and administrative documents for any course or department.",
+                "best_for": "Lecture Notes, CBT, Exams, Memos",
                 "website_url": "https://chatgpt.com",
                 "icon_class": "fas fa-comments",
                 "is_featured": True,
@@ -54,65 +54,65 @@ class Command(BaseCommand):
             {
                 "category": "General AI",
                 "name": "Gemini",
-                "description": "Google AI assistant.",
-                "best_for": "Research, Curriculum",
+                "description": "Google's AI assistant, useful for research, drafting, and quick summaries across disciplines.",
+                "best_for": "Research, Course Planning",
                 "website_url": "https://gemini.google.com",
                 "icon_class": "fab fa-google",
                 "is_featured": True,
             },
 
             {
-                "category": "Education AI",
+                "category": "Academic Research & Literature Review",
                 "name": "NotebookLM",
-                "description": "Google AI study assistant.",
-                "best_for": "Research, Study Materials",
+                "description": "Upload lecture slides, journals, or textbooks and get an AI study companion grounded in your own material.",
+                "best_for": "Literature Review, Study Materials",
                 "website_url": "https://notebooklm.google.com",
                 "icon_class": "fas fa-book-open",
                 "is_featured": True,
             },
 
             {
-                "category": "Education AI",
-                "name": "MagicSchool AI",
-                "description": "AI built for teachers.",
-                "best_for": "Lesson Planning",
-                "website_url": "https://www.magicschool.ai",
-                "icon_class": "fas fa-school",
-            },
-
-            {
-                "category": "Education AI",
-                "name": "Eduaide AI",
-                "description": "Teacher productivity tool.",
-                "best_for": "Teaching Resources",
-                "website_url": "https://www.eduaide.ai",
-                "icon_class": "fas fa-chalkboard-teacher",
-            },
-
-            {
-                "category": "Research & Curriculum",
+                "category": "Academic Research & Literature Review",
                 "name": "Perplexity",
-                "description": "AI-powered research assistant.",
-                "best_for": "Research",
+                "description": "AI-powered research assistant that cites sources — useful for evidence-based research across Engineering, Medicine, Social Sciences and Management.",
+                "best_for": "Research, Fact-Checking",
                 "website_url": "https://www.perplexity.ai",
                 "icon_class": "fas fa-search",
                 "is_featured": True,
             },
 
             {
-                "category": "Research & Curriculum",
+                "category": "Academic Research & Literature Review",
                 "name": "Claude",
-                "description": "Long-form educational content generation.",
-                "best_for": "Lesson Notes",
+                "description": "Strong at long-form academic writing, literature reviews, and reasoning through technical or clinical material.",
+                "best_for": "Long-form Writing, Research Synthesis",
                 "website_url": "https://claude.ai",
                 "icon_class": "fas fa-brain",
             },
 
             {
+                "category": "Academic Research & Literature Review",
+                "name": "Elicit",
+                "description": "AI research assistant that finds, summarizes, and extracts data from academic papers.",
+                "best_for": "Literature Review, Systematic Reviews",
+                "website_url": "https://elicit.com",
+                "icon_class": "fas fa-flask",
+            },
+
+            {
+                "category": "Academic Research & Literature Review",
+                "name": "Consensus",
+                "description": "Search engine that surfaces findings directly from peer-reviewed research papers.",
+                "best_for": "Evidence-Based Research",
+                "website_url": "https://consensus.app",
+                "icon_class": "fas fa-balance-scale",
+            },
+
+            {
                 "category": "Presentation & Content Creation",
                 "name": "Canva AI",
-                "description": "Presentation and graphics generation.",
-                "best_for": "Presentations",
+                "description": "Design presentation slides, posters, and departmental flyers quickly.",
+                "best_for": "Presentations, Posters",
                 "website_url": "https://www.canva.com",
                 "icon_class": "fas fa-palette",
             },
@@ -120,8 +120,8 @@ class Command(BaseCommand):
             {
                 "category": "Presentation & Content Creation",
                 "name": "Gamma",
-                "description": "AI slide creator.",
-                "best_for": "Slides",
+                "description": "Turn an outline or lecture topic into a polished slide deck in minutes.",
+                "best_for": "Lecture Slides",
                 "website_url": "https://gamma.app",
                 "icon_class": "fas fa-desktop",
             },
@@ -129,8 +129,8 @@ class Command(BaseCommand):
             {
                 "category": "Assessment & CBT",
                 "name": "Quizizz",
-                "description": "Interactive classroom quizzes.",
-                "best_for": "CBT",
+                "description": "Build interactive quizzes for in-class or take-home assessment.",
+                "best_for": "CBT, Formative Assessment",
                 "website_url": "https://quizizz.com",
                 "icon_class": "fas fa-question-circle",
             },
@@ -138,8 +138,8 @@ class Command(BaseCommand):
             {
                 "category": "Assessment & CBT",
                 "name": "Kahoot",
-                "description": "Gamified assessments.",
-                "best_for": "Quizzes",
+                "description": "Gamified quizzes for lecture halls and revision sessions.",
+                "best_for": "Interactive Quizzes",
                 "website_url": "https://kahoot.com",
                 "icon_class": "fas fa-gamepad",
             },
@@ -147,35 +147,35 @@ class Command(BaseCommand):
             {
                 "category": "Assessment & CBT",
                 "name": "Quizlet",
-                "description": "Flashcards and revision.",
-                "best_for": "Revision",
+                "description": "Flashcards and revision sets — useful for terminology-heavy courses like Medicine, Nursing, and Law.",
+                "best_for": "Revision, Flashcards",
                 "website_url": "https://quizlet.com",
                 "icon_class": "fas fa-clone",
             },
 
             {
-                "category": "Visual Learning",
+                "category": "Visual Learning & Mind Mapping",
                 "name": "Miro",
-                "description": "Collaborative whiteboard.",
-                "best_for": "Brainstorming",
+                "description": "Collaborative whiteboard for project planning, brainstorming, and process diagrams.",
+                "best_for": "Project Planning, Brainstorming",
                 "website_url": "https://miro.com",
                 "icon_class": "fas fa-project-diagram",
             },
 
             {
-                "category": "Visual Learning",
+                "category": "Visual Learning & Mind Mapping",
                 "name": "MindMeister",
-                "description": "Mind mapping.",
-                "best_for": "Lesson Planning",
+                "description": "Mind mapping tool for structuring course outlines, research proposals, and thesis chapters.",
+                "best_for": "Course Planning, Research Structuring",
                 "website_url": "https://www.mindmeister.com",
                 "icon_class": "fas fa-sitemap",
             },
 
             {
-                "category": "Visual Learning",
+                "category": "Visual Learning & Mind Mapping",
                 "name": "Napkin AI",
-                "description": "Visual explanation generator.",
-                "best_for": "Visual Learning",
+                "description": "Turns written explanations into visual diagrams — handy for engineering processes and workflows.",
+                "best_for": "Diagrams, Visual Explanations",
                 "website_url": "https://napkin.ai",
                 "icon_class": "fas fa-lightbulb",
             },
@@ -183,8 +183,8 @@ class Command(BaseCommand):
             {
                 "category": "Video & Media Creation",
                 "name": "HeyGen",
-                "description": "AI video creation.",
-                "best_for": "Educational Videos",
+                "description": "Create AI presenter videos for online courses or orientation content.",
+                "best_for": "Course Videos, Orientation Content",
                 "website_url": "https://www.heygen.com",
                 "icon_class": "fas fa-video",
             },
@@ -192,10 +192,28 @@ class Command(BaseCommand):
             {
                 "category": "Video & Media Creation",
                 "name": "Synthesia",
-                "description": "AI training videos.",
-                "best_for": "Staff Training",
+                "description": "AI video generation, useful for staff training and induction videos.",
+                "best_for": "Staff Training Videos",
                 "website_url": "https://www.synthesia.io",
                 "icon_class": "fas fa-film",
+            },
+
+            {
+                "category": "Writing & Academic Integrity",
+                "name": "Grammarly",
+                "description": "Grammar, clarity, and tone checking for reports, memos, and academic writing.",
+                "best_for": "Proofreading, Academic Writing",
+                "website_url": "https://www.grammarly.com",
+                "icon_class": "fas fa-spell-check",
+            },
+
+            {
+                "category": "Writing & Academic Integrity",
+                "name": "QuillBot",
+                "description": "Paraphrasing and citation tool to help students and staff rework and reference written work.",
+                "best_for": "Paraphrasing, Citations",
+                "website_url": "https://quillbot.com",
+                "icon_class": "fas fa-quote-right",
             },
 
         ]

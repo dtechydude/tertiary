@@ -1,0 +1,61 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<form method="get" style="margin: 1em 0; display: flex; gap: 1em; align-items: center;">
+    <label>
+        Session:
+        <select name="session" onchange="this.form.submit()">
+            <option value="">All</option>
+            {% for s in sessions %}
+            <option value="{{ s.id }}" {% if selected_session == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label>
+        Semester:
+        <select name="semester" onchange="this.form.submit()">
+            <option value="">All</option>
+            {% for sem in semesters %}
+            <option value="{{ sem.id }}" {% if selected_semester == sem.id|stringformat:"s" %}selected{% endif %}>{{ sem }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</form>
+
+<div style="display: flex; gap: 2em; margin-bottom: 1.5em;">
+    <div><strong>Total Registered:</strong> {{ grand_total_registered }}</div>
+    <div><strong>Total Validated:</strong> {{ grand_total_validated }}</div>
+    <div><strong>Total Income Collected:</strong> {{ grand_total_income }}</div>
+</div>
+
+<table style="width: 100%; border-collapse: collapse;">
+    <thead>
+        <tr style="text-align: left; border-bottom: 2px solid #444;">
+            <th style="padding: 6px;">Course</th>
+            <th style="padding: 6px;">Department</th>
+            <th style="padding: 6px;">Registered</th>
+            <th style="padding: 6px;">Validated</th>
+            <th style="padding: 6px;">Pending Validation</th>
+            <th style="padding: 6px;">Income Collected</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in course_stats %}
+        <tr style="border-bottom: 1px solid #ddd;">
+            <td style="padding: 6px;">{{ row.course__course_code }} — {{ row.course__title }}</td>
+            <td style="padding: 6px;">{{ row.course__department__name }}</td>
+            <td style="padding: 6px;">{{ row.registered_count }}</td>
+            <td style="padding: 6px;">{{ row.validated_count }}</td>
+            <td style="padding: 6px; {% if row.pending_validation_count > 0 %}color: #c0392b; font-weight: bold;{% endif %}">
+                {{ row.pending_validation_count }}
+            </td>
+            <td style="padding: 6px;">{{ row.total_collected }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="padding: 6px;">No registrations found for this filter.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

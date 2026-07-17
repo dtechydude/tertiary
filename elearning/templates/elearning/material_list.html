@@ -1,0 +1,65 @@
+{% extends "elearning/base.html" %}
+{% block title %}{{ course.course_code }} — E-Learning{% endblock %}
+{% block content %}
+<a href="{% url 'elearning:dashboard' %}">&larr; My Courses</a>
+<h3 class="mt-2">{{ course.course_code }} — {{ course.title }}</h3>
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+    <h5 class="mb-0">Live / Virtual Classes</h5>
+    {% if can_manage %}
+        <a href="{% url 'elearning:online_link_create' course.id %}" class="btn btn-outline-secondary btn-sm">+ Add Class Link</a>
+    {% endif %}
+</div>
+{% if online_links %}
+<div class="row g-2 mb-4">
+    {% for link in online_links %}
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <p class="mb-1 fw-bold">{{ link.display_name }}</p>
+                <p class="mb-1"><small class="text-muted">{{ link.get_platform_display }}</small></p>
+                {% if link.class_code %}<p class="mb-2"><small>Class code: <code>{{ link.class_code }}</code></small></p>{% endif %}
+                <a href="{{ link.join_link }}" target="_blank" rel="noopener" class="btn btn-success btn-sm">Join</a>
+                {% if can_manage %}
+                    <a href="{% url 'elearning:online_link_update' link.id %}" class="btn btn-link btn-sm">Edit</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">No live class link added yet.</p>
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+    <h5 class="mb-0">Course Materials</h5>
+    {% if can_manage %}
+        <a href="{% url 'elearning:material_create' course.id %}" class="btn btn-primary btn-sm">+ Add Material</a>
+    {% endif %}
+</div>
+
+<table class="table bg-white">
+    <thead><tr><th>Week</th><th>Title</th><th>Type</th><th></th></tr></thead>
+    <tbody>
+        {% for material in materials %}
+        <tr>
+            <td>{{ material.week_number }}</td>
+            <td>
+                <a href="{% url 'elearning:material_detail' material.pk %}">{{ material.title }}</a>
+                {% if not material.is_published %}<span class="badge bg-warning text-dark">Draft</span>{% endif %}
+            </td>
+            <td>{{ material.get_material_type_display }}</td>
+            <td class="text-end">
+                {% if can_manage %}
+                <a href="{% url 'elearning:material_update' material.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                <a href="{% url 'elearning:material_delete' material.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-muted">No materials uploaded yet.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
