@@ -472,14 +472,32 @@ def department_dashboard_view(request):
 # Faculty & Department Directory — browsable by everyone, richest for admin
 # =====================================================================
 
+# @login_required
+# def faculty_list_view(request):
+#     faculties = Faculty.objects.annotate(
+#         department_count=Count('department', distinct=True),
+#         student_count=Count('department__student', distinct=True),
+#     ).order_by('name')
+
+#     return render(request, 'curriculum/faculty_list.html', {'faculties': faculties})
+
+from django.db.models import Count
+
 @login_required
 def faculty_list_view(request):
-    faculties = Faculty.objects.annotate(
-        department_count=Count('department', distinct=True),
-        student_count=Count('department__student', distinct=True),
-    ).order_by('name')
+    faculties = (
+        Faculty.objects.annotate(
+            department_count=Count("departments", distinct=True),
+            student_count=Count("departments__students", distinct=True),
+        )
+        .order_by("name")
+    )
 
-    return render(request, 'curriculum/faculty_list.html', {'faculties': faculties})
+    return render(
+        request,
+        "curriculum/faculty_list.html",
+        {"faculties": faculties},
+    )
 
 
 @login_required

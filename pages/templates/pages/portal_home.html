@@ -653,32 +653,31 @@
 				<li><a href="/admin/elearning/onlineclasslink/add/" target="_blank">Add Class Link (Classroom/Teams)</a></li>
 
 				{% endif %}
-			</ul>
-		</li>
+				</ul>
+				</li>
 					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 						<i class="flaticon-013-checkmark"></i>
-						<span class="nav-text">SCHOOL BUS</span>
+						<span class="nav-text">CURRICULUM</span>
 					</a>
-					{% comment %} <ul aria-expanded="false">
-						<li><a href="{% url 'transport:bus_route_list' %}">Bus Route/Fare</a></li>
-						{% if user.student %}						
-						<li><a href="{% url 'transport:create_bus_signup' %}">SignUp For Bus</a></li>
-						<li><a href="{% url 'transport:student_own_route_detail' %}">My Route Details</a></li>						
-						<li><a href="{% url 'transport:signup' %}">Signup For Bus</a></li>
-						<li><a href="{% url 'transport:my_pass' %}">My Bus Pass</a></li>
-						
-
-						{% endif %}
-						{% if user.is_superuser or user.is_staff %}
-						<li><a href="/admin/transport/route/" target="_blank">Set/Edit Route</a></li>
-						<li><a href="/admin/transport/studentonroute/" target="_blank">Add Student To Route</a></li>
-						<li><a href="{% url 'transport:staff_signup' %}">Singup Student On Bus</a></li>	
-						<li><a href="{% url 'transport:bus_signup_list' %}">Students In Route</a></li>
-						<li><a href="{% url 'transport:enrollment_list' %}">Bus Enrollment List</a></li>
-						<li><a href="{% url 'transport:payment_report' %}">Bus Payment Report</a></li>					
+					<ul aria-expanded="false">
+						<li><a href="{% url 'curriculum:academic-calendar' %}">Calendar</a></li>
+						<li><a href="{% url 'curriculum:faculty-list' %}">Faculty List</a></li>
 					
+						{% if user.student %}	
+						<li><a href="{% url 'curriculum:my-programme' %}">My Programme</a></li>
+						<li><a href="{% url 'curriculum:course-registration' %}">Course Registration</a></li>
+						{% endif %}
+						{% if user.lecturer %}	
+						<li><a href="{% url 'curriculum:lecturer-courses' %}">My Courses</a></li>
+						<li><a href="{% url 'curriculum:department-dashboard' %}">Departments</a></li>				
+						{% endif %}
+
+						{% if user.is_superuser or user.is_staff %}
+						<li><a href="{% url 'curriculum:session-admin' %}">Set Current Session</a></li>
+						{% comment %} <li><a href="{% url 'curriculum:set-current-semester' %}">Set Current Semester</a></li> {% endcomment %}
+						<li><a href="{% url 'curriculum:pending-registrations' %}">Pending Registration</a></li>
 						{% endif %}						
-					</ul> {% endcomment %}
+					</ul> 
 					</li>
 						{% endif %}
 

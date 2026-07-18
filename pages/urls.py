@@ -14,7 +14,7 @@ urlpatterns = [
 
      path('dashboard/', page_views.dashboard, name="portal-home"),     
      path('help-center/', page_views.help_center, name='help-center'),
-     path('support-info/', page_views.support_info, name='support_info'),
+     path('support-info/', page_views.contact_support, name='support_info'),
      path('lock-screen/', page_views.lock_screen, name='lock-screen'),
      path('bank-detail/', page_views.bank_detail, name='bank-detail'),
      # path('record-result/', page_views.record_result, name='record-result'),

@@ -125,9 +125,16 @@ def help_center(request):
 
 
 @login_required
-def support_info(request):
-    school_contact = SchoolIdentity.objects.all()
-    return render(request, 'pages/support_info.html', {'school_contact':school_contact})
+def contact_support(request):
+    user = request.user
+    context = {
+        "is_student": hasattr(user, "student"),
+        "is_lecturer": hasattr(user, "lecturer"),
+        "is_staff_or_admin": user.is_staff or user.is_superuser,
+    }
+    return render(request, "pages/support_info.html", context)
+
+
 
 @login_required
 def lock_screen(request):

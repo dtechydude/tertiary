@@ -180,14 +180,35 @@ class Faculty(models.Model):
         return self.name
 
 
-# Department
+# # Department
+# class Department(models.Model):
+#     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE)
+#     name = models.CharField(max_length=150)
+#     hod = models.ForeignKey("staff.Lecturer", on_delete=models.SET_NULL, null=True, blank=True, related_name="heading_department")
+
+#     def __str__(self):
+#         return self.name
+
 class Department(models.Model):
-    faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE)
+    faculty = models.ForeignKey(
+        Faculty,
+        on_delete=models.CASCADE,
+        related_name="departments"
+    )
+
     name = models.CharField(max_length=150)
-    hod = models.ForeignKey("staff.Lecturer", on_delete=models.SET_NULL, null=True, blank=True, related_name="heading_department")
+
+    hod = models.ForeignKey(
+        "staff.Lecturer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="heading_departments"
+    )
 
     def __str__(self):
         return self.name
+
 
 # Program
 class QualificationType(models.Model):

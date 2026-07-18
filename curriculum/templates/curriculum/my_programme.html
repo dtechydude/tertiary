@@ -5,6 +5,19 @@
 <title>My Programme</title>
 {% endblock title %}
 
+{% block style %}
+{{ block.super }}
+<style>
+    /* This page's content was overflowing past the base layout's footer.
+       Give the main content area room to fill the viewport now that the
+       footer block below is removed for this page only. */
+    .content-body {
+        min-height: 100vh;
+        padding-bottom: 3rem;
+    }
+</style>
+{% endblock style %}
+
 {% block content_body %}
 <div class="content-body">
     <div class="container-fluid">
@@ -102,7 +115,7 @@
             </div>
         </div>
 
-        <div class="row mt-4">
+        <div class="row mt-4 mb-5 pb-4">
             <div class="col-12 d-flex gap-2 flex-wrap">
                 <a href="{% url 'curriculum:course-registration' %}" class="btn btn-primary">
                     <i class="fas fa-pen-to-square me-1"></i> Register Courses
@@ -116,3 +129,6 @@
     </div>
 </div>
 {% endblock content_body %}
+
+{% block footer %}
+{% endblock footer %}
