@@ -27,6 +27,11 @@ urlpatterns = [
         name="api_category_report",
     ),
 
+
+    # School Bank Details
+    path('bank-detail/', views.bank_details_view, name='bank-detail'),
+
+
     # --- Printable documents (PDF) ---
     path(
         "documents/registration-slip/<int:student_id>/<int:session_id>/<int:semester_id>/",

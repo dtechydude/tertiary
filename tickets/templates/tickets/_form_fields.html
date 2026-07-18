@@ -1,0 +1,33 @@
+{% comment %}
+Reusable manual form renderer, used instead of django-crispy-forms
+({{ form|crispy }}). All form widgets already carry their Bootstrap
+classes (form-control / form-select) from forms.py, so this just handles
+labels, help text, and validation errors consistently across every
+ticket form in the app.
+
+Usage: {% include "tickets/_form_fields.html" with form=form %}
+{% endcomment %}
+{% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% for field in form %}
+    <div class="mb-3">
+        {% if field.label %}
+            <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+            </label>
+        {% endif %}
+        {{ field }}
+        {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+        {% endif %}
+        {% for error in field.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+        {% endfor %}
+    </div>
+{% endfor %}

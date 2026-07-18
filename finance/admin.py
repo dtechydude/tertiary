@@ -2,8 +2,15 @@ from django.contrib import admin
 from django.template.response import TemplateResponse
 from django.urls import path
 
-from .models import FeeAssignment, FeeCategory, Payment, PaymentAllocation, PaymentItem
+from .models import FeeAssignment, FeeCategory, Payment, PaymentAllocation, PaymentItem, SchoolBankDetail
 from .services.reports import FinanceReportService
+
+
+@admin.register(SchoolBankDetail)
+class SchoolBankDetailAdmin(admin.ModelAdmin):
+    list_display = ("acc_name", "acc_number", "bank_name")
+    search_fields = ("name", "bank")
+    list_filter = ("bank_name",)
 
 
 @admin.register(FeeCategory)

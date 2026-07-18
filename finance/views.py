@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 
 from curriculum.models import Course, CourseAssignment, CourseRegistration, Session, Semester
 
-from .models import Payment
+from .models import Payment, SchoolBankDetail
 from .permissions import CanViewFinanceReports, IsFinanceStaff
 from .serializers import PaymentSerializer, RecordPaymentSerializer
 from .services.documents import build_payment_receipt_pdf, build_registration_slip_pdf
@@ -28,6 +28,23 @@ from .services.exam_eligibility import ExamEligibilityService
 from .services.payments import FinanceService
 from .services.reports import FinanceReportService
 
+
+
+
+
+@login_required
+def bank_details_view(request):
+    """
+    Read-only display of the school's official bank accounts, visible to
+    students and other logged-in users, so payments (tuition, hostel,
+    etc.) always go to a verified account rather than word-of-mouth or
+    outdated details.
+    """
+    bank_details = SchoolBankDetail.objects.all()
+
+    return render(request, 'finance/bank_detail.html', {
+        'bank_detail': bank_details,
+    })
 
 # ---------------------------------------------------------------------------
 # Student-facing

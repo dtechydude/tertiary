@@ -7,31 +7,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-    .card-body p {
-        font-size: 1.1em;
-        margin-bottom: 0.5em;
-    }
-    .card-body p strong {
-        font-size: 1.2em;
-        color: #007bff;
-        display: inline-block;
-        min-width: 150px;
-    }
-    .card-footer {
-        border-top: 1px solid #e9ecef;
-        padding-top: 1.5rem;
-    }
-    .status-badge {
-        padding: 0.3em 0.6em;
-        border-radius: 0.25rem;
-        font-weight: bold;
-    }
-    .status-badge-Open { background-color: #ffc107; color: #000; }
-    .status-badge-InProgress { background-color: #007bff; color: #fff; }
-    .status-badge-Resolved { background-color: #28a745; color: #fff; }
-    .status-badge-Closed { background-color: #6c757d; color: #fff; }
-</style>
+<link rel="stylesheet" href="{% static 'tickets/css/tickets.css' %}">
 {% endblock head %}
 
 {% block content_body %}
@@ -56,12 +32,14 @@
         <div class="row justify-content-center">
             <div class="col-lg-12">
                 <div class="card shadow-lg">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">🎫 All Support Tickets</h4>
-                        <div>
-                            <a href="{% url 'tickets:broadcast_ticket_create' %}" class="btn btn-light btn-sm me-2"><i class="fas fa-bullhorn"></i> Broadcast Ticket</a>
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h4 class="mb-0"><i class="fas fa-ticket-alt me-2"></i>All Support Tickets</h4>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'tickets:broadcast_ticket_create' %}" class="btn btn-light btn-sm">
+                                <i class="fas fa-bullhorn me-1"></i> Broadcast
+                            </a>
                             <div class="dropdown d-inline-block">
-                                <button class="btn btn-light dropdown-toggle" type="button" id="categoryFilter" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button class="btn btn-light dropdown-toggle btn-sm" type="button" id="categoryFilter" data-bs-toggle="dropdown" aria-expanded="false">
                                     Category: {{ selected_category|default:"All" }}
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="categoryFilter">
@@ -73,18 +51,20 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body ticket-card-body">
                         {% if tickets %}
                             <div class="table-responsive">
-                                <table class="table table-hover table-striped">
+                                <table class="table table-hover table-striped align-middle">
                                     <thead>
                                         <tr>
                                             <th>Ticket ID</th>
                                             <th>Subject</th>
                                             <th>Author</th>
+                                            <th>Category</th>
                                             <th>Type</th>
                                             <th>Audience</th>
                                             <th>Status</th>
+                                            <th>Pending Response</th>
                                             <th>Priority</th>
                                             <th>Submitted On</th>
                                             <th>Actions</th>
@@ -92,7 +72,7 @@
                                     </thead>
                                     <tbody>
                                         {% for ticket in tickets %}
-                                        <tr>
+                                        <tr{% if ticket.needs_reply %} class="table-warning"{% endif %}>
                                             <td>#{{ ticket.id|stringformat:"04d" }}</td>
                                             <td><a href="{% url 'tickets:admin_ticket_detail' ticket.pk %}">{{ ticket.title }}</a></td>
                                             <td>
@@ -102,6 +82,7 @@
                                                     {{ ticket.author.get_full_name|default:ticket.author.username }}
                                                 {% endif %}
                                             </td>
+                                            <td><span class="text-muted small">{{ ticket.get_category_display }}</span></td>
                                             <td>
                                                 {% if ticket.is_broadcast %}
                                                     Broadcast
@@ -113,10 +94,19 @@
                                                 {% if ticket.is_broadcast %}
                                                     <span class="badge bg-primary">{{ ticket.get_audience_display }}</span>
                                                 {% else %}
-                                                    N/A
+                                                    <span class="text-muted">N/A</span>
                                                 {% endif %}
                                             </td>
                                             <td><span class="status-badge status-badge-{{ ticket.status|slugify }}">{{ ticket.status }}</span></td>
+                                            <td>
+                                                {% if ticket.needs_reply %}
+                                                    <span class="badge bg-danger"><i class="fas fa-triangle-exclamation me-1"></i>Needs Reply</span>
+                                                {% elif not ticket.is_broadcast %}
+                                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i>Replied</span>
+                                                {% else %}
+                                                    <span class="text-muted small">—</span>
+                                                {% endif %}
+                                            </td>
                                             <td>{{ ticket.priority }}</td>
                                             <td>{{ ticket.created_at|date:"M j, Y" }}</td>
                                             <td>
@@ -130,15 +120,16 @@
                                 </table>
                             </div>
                         {% else %}
-                            <div class="alert alert-info" role="alert">
-                                There are no support tickets in this category.
-                            </div>
+                        <div class="ticket-empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p class="mb-0">There are no support tickets in this category.</p>
+                        </div>
                         {% endif %}
                     </div>
                     {% if tickets.has_other_pages %}
-                    <div class="card-footer text-center">
+                    <div class="card-footer text-center ticket-card-footer">
                         <nav aria-label="Page navigation">
-                            <ul class="pagination justify-content-center">
+                            <ul class="pagination justify-content-center mb-0">
                                 {% if tickets.has_previous %}
                                     <li class="page-item"><a class="page-link" href="?page=1&category={{ selected_category }}"><i class="fas fa-angle-double-left"></i> First</a></li>
                                     <li class="page-item"><a class="page-link" href="?page={{ tickets.previous_page_number }}&category={{ selected_category }}"><i class="fas fa-angle-left"></i> Previous</a></li>

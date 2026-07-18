@@ -79,6 +79,13 @@ class SchoolIdentity(models.Model):
     def __str__(self):
         return f"{self.name} ({self.identity_label})"
 
+    class Meta:            
+            verbose_name = "School Main Identity"
+            verbose_name_plural = "School Main Identity"
+    
+
+    
+
 
     
 class AcademicIdentityMapping(models.Model):
@@ -111,6 +118,12 @@ class AcademicIdentityMapping(models.Model):
         if self.faculty:
             return f"{self.faculty.name} → {self.school_identity.identity_label}"
         return "Unassigned Mapping"
+
+    class Meta:            
+            verbose_name = "School Identity Mapping (Branch)"
+            verbose_name_plural = "School Identity Mapping (Branch)"
+        
+    
 
 
 class Session(models.Model):

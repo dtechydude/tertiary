@@ -1,6 +1,5 @@
 {% extends 'pages/portal_home.html' %}
 {% load static %}
-{% load crispy_forms_tags %}
 
 {% block title %}
 <title>Create Broadcast Ticket</title>
@@ -8,6 +7,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'tickets/css/tickets.css' %}">
 {% endblock head %}
 
 {% block content_body %}
@@ -35,10 +35,15 @@
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-bullhorn me-2"></i> Create a New Broadcast</h4>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body ticket-card-body">
+                        <p class="text-muted small mb-4">
+                            Broadcasts are one-way announcements, not tickets a recipient can reply to — use
+                            this for portal-wide notices (e.g. registration deadlines, exam timetable
+                            changes, planned maintenance) rather than a specific complaint.
+                        </p>
                         <form method="post">
                             {% csrf_token %}
-                            {{ form|crispy }}
+                            {% include "tickets/_form_fields.html" with form=form %}
                             <div class="d-flex justify-content-between mt-4">
                                 <a href="{% url 'tickets:admin_ticket_list' %}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left"></i> Back to Tickets

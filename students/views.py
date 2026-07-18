@@ -98,6 +98,62 @@ def student_list(request):
     })
 
 
+# # TERTIARY LOGIC =============================================================================
+# class StudentDetailView(LoginRequiredMixin, DetailView):
+#     """
+#     Used by Staff/Admins to view any student's profile via Matric Number.
+#     """
+#     model = Student
+#     template_name = 'students/student_detail.html'
+#     context_object_name = 'student'
+
+#     def get_object(self):
+#         # Updated from USN=id_ to matric_number=matric_number
+#         matric_number = self.kwargs.get("matric_number")
+#         return get_object_or_404(Student, matric_number=matric_number)
+
+#     def get_context_data(self, **kwargs):
+#         from students.services.dashboard import build_student_dashboard_context
+
+#         context = super().get_context_data(**kwargs)
+#         context.update(build_student_dashboard_context(self.object))
+#         return context
+
+
+# # TERTIARY LOGIC===================================================
+# class StudentSelfDetailView(LoginRequiredMixin, DetailView):
+#     """
+#     Used by the logged-in student to view their own profile — including
+#     their current course registration, fee clearance status, and
+#     published results/GPA (pulled from the finance and results apps via
+#     students.services.dashboard).
+#     """
+#     model = Student
+#     template_name = 'students/student_self_detail.html'
+#     context_object_name = 'student'
+
+#     def dispatch(self, request, *args, **kwargs):
+#         # Check if student profile exists before proceeding to get_object
+#         if not hasattr(request.user, 'student'):
+#             messages.error(request, "Your student profile could not be found. Please contact administration.")
+#             return redirect('pages:portal-home')
+#         return super().dispatch(request, *args, **kwargs)
+
+#     def get_object(self, queryset=None):
+#         return self.request.user.student
+
+#     def get_context_data(self, **kwargs):
+#         from students.services.dashboard import build_student_dashboard_context
+
+#         context = super().get_context_data(**kwargs)
+#         context.update(build_student_dashboard_context(self.object))
+#         return context
+
+
+
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+
 # TERTIARY LOGIC =============================================================================
 class StudentDetailView(LoginRequiredMixin, DetailView):
     """
@@ -107,10 +163,23 @@ class StudentDetailView(LoginRequiredMixin, DetailView):
     template_name = 'students/student_detail.html'
     context_object_name = 'student'
 
+    def dispatch(self, request, *args, **kwargs):
+        # LoginRequiredMixin only guarantees "logged in" — it does not
+        # restrict this to staff, despite the docstring above. Without
+        # this check, any authenticated student could view any other
+        # student's full profile (fee balance, medical info, guardian
+        # details, results) just by changing the matric number in the URL.
+        if not (request.user.is_staff or request.user.is_superuser):
+            messages.error(request, "You do not have permission to view this page.")
+            return redirect('pages:portal-home')
+        return super().dispatch(request, *args, **kwargs)
+
     def get_object(self):
-        # Updated from USN=id_ to matric_number=matric_number
         matric_number = self.kwargs.get("matric_number")
-        return get_object_or_404(Student, matric_number=matric_number)
+        return get_object_or_404(
+            Student.objects.select_related('department__faculty', 'level', 'programme', 'user__profile'),
+            matric_number=matric_number,
+        )
 
     def get_context_data(self, **kwargs):
         from students.services.dashboard import build_student_dashboard_context
@@ -133,7 +202,14 @@ class StudentSelfDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'student'
 
     def dispatch(self, request, *args, **kwargs):
-        # Check if student profile exists before proceeding to get_object
+        # Authentication check must run first — previously the student-
+        # profile check ran before super().dispatch(), so an anonymous
+        # visitor (who also fails hasattr(user, 'student')) got the
+        # "profile not found" message and a redirect to the portal home,
+        # instead of LoginRequiredMixin's normal redirect to the login page.
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+
         if not hasattr(request.user, 'student'):
             messages.error(request, "Your student profile could not be found. Please contact administration.")
             return redirect('pages:portal-home')

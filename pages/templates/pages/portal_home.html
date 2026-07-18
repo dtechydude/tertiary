@@ -18,13 +18,12 @@
 	
 	<!-- PAGE TITLE HERE -->
 	{% block title %}
-	<title>KwikSchools Users Dashboard</title>
+	<title>{{ school_info.name }} Users Dashboard</title>
 	{% endblock title %}
 	
 	<!-- FAVICONS ICON -->
 	
-	{% comment %} <link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" /> {% endcomment %}
-	<link rel="shortcut icon" type="image/png" href="{{ school_info.name }}" />
+	<link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
 
 	{% block favicon %}
 	<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
@@ -566,15 +565,16 @@
 					</li> 
 					{% endif %}
 
-					{% if user.is_authenticated and user.is_superuser or user.is_staff or user.student or user.parent %}
+					{% if user.is_authenticated and user.is_superuser or user.is_staff or user.student or user.lecturer %}
 					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 						<i class="flaticon-013-checkmark"></i>
 							<span class="nav-text">REG. & PAYMENTS</span>
 						</a>					
 						<ul aria-expanded="false"> 
-							
-							{% comment %} {% if user.is_superuser or user.is_staff %}		
-							<li><a href="{% url 'payments:finance_dashboard' %}">Finance Dashboard</a></li>								
+							{% comment %} 	
+							{% if user.is_superuser or user.is_staff %}	
+							<li><a href="{% url 'finance:bank-detail' %}">Bank Details</a></li>	
+													
 							<li><a href="{% url 'payments:notification-list' %}">Payments Notifications </a></li>
 							<li><a href="{% url 'payments:payment_history' %}">Payments History</a></li>
 							<li><a href="{% url 'payments:total_payments_report' %}">Payments Summary</a></li>
@@ -584,8 +584,10 @@
 							<li><a href="/admin/payments/paymentcategory/" target="_blank">Add/Edit PAYMENT TYPE</a></li>
 															
 							{% endif %}							 {% endcomment %}
-							{% if user.student or user.is_superuser or user.is_staff %}	
-							<li><a href="{% url 'students:course-registration' %}">Course Registration</a></li>						
+							{% if user.student or user.is_superuser or user.is_staff or user.lecturer %}	
+							<li><a href="{% url 'students:course-registration' %}">Course Registration</a></li>	
+							<li><a href="{% url 'finance:bank-detail' %}">School Bank Details</a></li>	
+					
 							{% comment %} <li><a href="{% url 'pages:help-center' %}">Payment Instruction</a></li>
 							<li><a href="{% url 'pages:bank-detail' %}">School Account Details</a></li>
 							 {% endcomment %}
@@ -623,6 +625,7 @@
 							{% elif user.is_authenticated and user.lecturer or user.is_staff %}
 							<li><a href="{% url 'cbt:main-view' %}">Active CBT</a></li>
 							<li><a href="{% url 'cbt:lecturer-add-question' %}">Set CBT Exams</a></li>
+							<li><a href="{% url 'cbt:lecturer-view-questions' %}"> Question View</a></li>					
 							<li><a href="{% url 'cbt:request-exam' %}"> Request New CBT</a></li>						
 							<li><a href="{% url 'cbt:lecturer-results-view' %}"> Students CBT Scores</a></li>							
 						

@@ -1,0 +1,103 @@
+/* tickets/static/tickets/css/tickets.css
+   Shared styling for the Support Ticket app. Previously each of the 5
+   templates repeated its own near-identical <style> block (status badge
+   colors especially) — centralised here so there's one place to update
+   the look, and templates just link this file instead of duplicating CSS. */
+
+.ticket-card-body p {
+    font-size: 1.05em;
+    margin-bottom: 0.5em;
+}
+
+.ticket-card-body p strong {
+    display: inline-block;
+    min-width: 150px;
+}
+
+.ticket-card-footer {
+    border-top: 1px solid #e9ecef;
+    padding-top: 1.5rem;
+}
+
+/* Status badges */
+.status-badge {
+    padding: 0.35em 0.7em;
+    border-radius: 0.3rem;
+    font-weight: 600;
+    font-size: 0.8em;
+    letter-spacing: 0.2px;
+}
+.status-badge-Open { background-color: #ffc107; color: #000; }
+.status-badge-InProgress { background-color: #0d6efd; color: #fff; }
+.status-badge-Resolved { background-color: #198754; color: #fff; }
+.status-badge-Closed { background-color: #6c757d; color: #fff; }
+
+/* Conversation thread */
+.comment-container {
+    border-left: 4px solid #e9ecef;
+    padding: 10px 0 10px 15px;
+    margin-bottom: 16px;
+}
+.comment-container.comment-admin {
+    border-left-color: #0d6efd;
+    background: #f8f9ff;
+    border-radius: 0 6px 6px 0;
+}
+.comment-container .comment-meta {
+    font-size: 0.8rem;
+}
+
+/* Ticket meta row (status/priority/submitted-by/etc) */
+.ticket-meta-row {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-bottom: 1rem;
+}
+.ticket-meta-row .meta-item strong {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: #8a94a6;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+/* Admin action buttons (assign/resolve/close) */
+.ticket-admin-actions form {
+    display: inline-block;
+    margin-left: 8px;
+}
+
+/* Empty state */
+.ticket-empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #8a94a6;
+}
+.ticket-empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    display: block;
+    opacity: 0.5;
+}
+
+/* Scrollable conversation thread inside the single ticket-detail card —
+   keeps a long back-and-forth contained instead of pushing the reply box
+   and page footer far down the page. */
+.ticket-thread-scroll {
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+.ticket-thread-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.ticket-thread-scroll::-webkit-scrollbar-thumb {
+    background: #d7dce3;
+    border-radius: 3px;
+}
+.ticket-thread-scroll .comment-container:last-child {
+    margin-bottom: 4px;
+}

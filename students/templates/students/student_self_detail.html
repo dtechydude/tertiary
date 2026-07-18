@@ -10,6 +10,15 @@
 <link href="{% static 'pages/vendor/lightgallery/css/lightgallery.min.css' %}" rel="stylesheet">
 <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
 <style>
+    /* Same fix as the footer-overlap issue on other pages: a fragile
+       min-height/vh trick isn't needed — generous real bottom padding on
+       the content area, plus suppressing this page's footer block below,
+       is what actually stops a tall Fee Clearance list (or any other
+       card) from ending up hidden under/against the footer. */
+    .content-body {
+        padding-bottom: 4rem;
+    }
+
     .clearance-ok { color: #0f9d58; }
     .clearance-bad { color: #d93025; }
 
@@ -46,21 +55,29 @@
             border-left: 1px solid #eef0f4;
         }
     }
+
+    /* Left-column info cards previously sat flush against each other
+       with zero gap (no margin between .card elements at all) — that's
+       what read as the Contact Details card "overflowing"/crowding into
+       whatever sat below it. Fixed with explicit spacing below. */
+    .info-card {
+        border: none;
+        border-radius: 0.85rem;
+    }
+    .info-card .card-header {
+        background: #fff;
+        border-top-left-radius: 0.85rem;
+        border-top-right-radius: 0.85rem;
+    }
 </style>
 {% endblock %}
 
 {% block content_body %}
 <div class="content-body">
-    <div class="container-fluid">
-        <div class="row page-titles">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item active"><a href="javascript:void(0)">My Portal</a></li>
-                <li class="breadcrumb-item"><a href="javascript:void(0)">My Profile</a></li>
-            </ol>
-        </div>
+     <div class="container-fluid">
 
         <!-- Header: identity + quick actions, no banner image -->
-        <div class="card border-0 shadow-sm mb-3">
+        <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div class="d-flex align-items-center gap-3">
@@ -119,24 +136,24 @@
         <!-- Fee clearance banner -->
         {% if current_session and current_semester %}
             {% if fee_summary.fully_cleared_for_exams %}
-            <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-3">
+            <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4">
                 <i class="fas fa-check-circle me-2"></i>
                 You are fully cleared for exams this semester.
             </div>
             {% else %}
-            <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-3">
+            <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 You have outstanding mandatory fees — see the Fee Clearance panel below. Some courses may not be exam-eligible until cleared.
             </div>
             {% endif %}
         {% endif %}
 
-        <div class="row">
+        <div class="row g-4">
             <div class="col-xl-4 col-lg-5">
                 <!-- Fee Clearance -->
-                <div class="card">
+                <div class="card info-card shadow-sm mb-4">
                     <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Fee Clearance</h5>
+                        <h5 class="card-title mb-0"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Fee Clearance</h5>
                         {% if fee_summary.fully_cleared_for_exams %}
                         <span class="badge badge-success">Cleared</span>
                         {% else %}
@@ -167,9 +184,9 @@
                 </div>
 
                 <!-- Contact -->
-                <div class="card">
+                <div class="card info-card shadow-sm mb-4">
                     <div class="card-header border-0 pb-0">
-                        <h5 class="card-title">Contact Details</h5>
+                        <h5 class="card-title"><i class="fas fa-address-book text-primary me-2"></i>Contact Details</h5>
                     </div>
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
@@ -190,23 +207,23 @@
             </div>
 
             <div class="col-xl-8 col-lg-7">
-                <div class="card">
+                <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <div class="profile-tab">
                             <div class="custom-tab-1">
-                                <ul class="nav nav-tabs">
-                                    <li class="nav-item"><a href="#courses" data-bs-toggle="tab" class="nav-link active show">My Courses</a></li>
-                                    <li class="nav-item"><a href="#results" data-bs-toggle="tab" class="nav-link">Results</a></li>
-                                    <li class="nav-item"><a href="#payments" data-bs-toggle="tab" class="nav-link">Payment History</a></li>
-                                    <li class="nav-item"><a href="#personal" data-bs-toggle="tab" class="nav-link">Bio-Data</a></li>
-                                    <li class="nav-item"><a href="#nok" data-bs-toggle="tab" class="nav-link">Next of Kin</a></li>
+                                <ul class="nav nav-tabs flex-nowrap overflow-auto">
+                                    <li class="nav-item"><a href="#courses" data-bs-toggle="tab" class="nav-link active show text-nowrap"><i class="fas fa-book-open me-1"></i> My Courses</a></li>
+                                    <li class="nav-item"><a href="#results" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-chart-line me-1"></i> Results</a></li>
+                                    <li class="nav-item"><a href="#payments" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-receipt me-1"></i> Payment History</a></li>
+                                    <li class="nav-item"><a href="#personal" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-user me-1"></i> Bio-Data</a></li>
+                                    <li class="nav-item"><a href="#nok" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-people-group me-1"></i> Next of Kin</a></li>
                                 </ul>
                                 <div class="tab-content">
 
                                     <!-- My Courses -->
                                     <div id="courses" class="tab-pane fade active show">
                                         <div class="pt-4">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                                                 <p class="text-muted mb-0">
                                                     {{ current_session|default:"No active session" }}
                                                     {% if current_semester %} — {{ current_semester }}{% endif %}
@@ -216,38 +233,40 @@
                                                     <i class="fas fa-edit me-1"></i> Edit Registration
                                                 </a>
                                             </div>
-                                            <table class="table table-sm">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Code</th>
-                                                        <th>Title</th>
-                                                        <th class="text-center">Units</th>
-                                                        <th class="text-center">Exam Eligible</th>
-                                                        <th>Reason</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for row in registration_summary.registrations %}
-                                                    <tr>
-                                                        <td>{{ row.course.course_code }}</td>
-                                                        <td>{{ row.course.title }}</td>
-                                                        <td class="text-center">{{ row.course.credit_unit }}</td>
-                                                        <td class="text-center">
-                                                            {% if row.is_exam_eligible %}
-                                                            <span class="badge badge-success">Yes</span>
-                                                            {% else %}
-                                                            <span class="badge badge-danger">No</span>
-                                                            {% endif %}
-                                                        </td>
-                                                        <td class="small text-muted">
-                                                            {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
-                                                        </td>
-                                                    </tr>
-                                                    {% empty %}
-                                                    <tr><td colspan="5" class="text-center text-muted">No courses registered this semester.</td></tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Code</th>
+                                                            <th>Title</th>
+                                                            <th class="text-center">Units</th>
+                                                            <th class="text-center">Exam Eligible</th>
+                                                            <th>Reason</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for row in registration_summary.registrations %}
+                                                        <tr>
+                                                            <td>{{ row.course.course_code }}</td>
+                                                            <td>{{ row.course.title }}</td>
+                                                            <td class="text-center">{{ row.course.credit_unit }}</td>
+                                                            <td class="text-center">
+                                                                {% if row.is_exam_eligible %}
+                                                                <span class="badge badge-success">Yes</span>
+                                                                {% else %}
+                                                                <span class="badge badge-danger">No</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="small text-muted">
+                                                                {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
+                                                            </td>
+                                                        </tr>
+                                                        {% empty %}
+                                                        <tr><td colspan="5" class="text-center text-muted">No courses registered this semester.</td></tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -259,28 +278,30 @@
                                                     <i class="fas fa-chart-line me-1"></i> View Full Academic Progress
                                                 </a>
                                             </div>
-                                            <table class="table table-sm">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Session</th>
-                                                        <th>Course</th>
-                                                        <th class="text-center">Score</th>
-                                                        <th class="text-center">Grade</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for result in academic_summary.results %}
-                                                    <tr>
-                                                        <td>{{ result.session }} / {{ result.semester }}</td>
-                                                        <td>{{ result.course.course_code }}</td>
-                                                        <td class="text-center">{{ result.total_score }}</td>
-                                                        <td class="text-center"><span class="badge badge-info">{{ result.grade }}</span></td>
-                                                    </tr>
-                                                    {% empty %}
-                                                    <tr><td colspan="4" class="text-center text-muted">No published results yet.</td></tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Session</th>
+                                                            <th>Course</th>
+                                                            <th class="text-center">Score</th>
+                                                            <th class="text-center">Grade</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for result in academic_summary.results %}
+                                                        <tr>
+                                                            <td>{{ result.session }} / {{ result.semester }}</td>
+                                                            <td>{{ result.course.course_code }}</td>
+                                                            <td class="text-center">{{ result.total_score }}</td>
+                                                            <td class="text-center"><span class="badge badge-info">{{ result.grade }}</span></td>
+                                                        </tr>
+                                                        {% empty %}
+                                                        <tr><td colspan="4" class="text-center text-muted">No published results yet.</td></tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                             <div class="alert alert-info mt-3 light">
                                                 <i class="fa fa-info-circle me-2"></i> Only results the Registrar has published are shown here.
                                             </div>
@@ -290,32 +311,34 @@
                                     <!-- Payment History -->
                                     <div id="payments" class="tab-pane fade">
                                         <div class="pt-4">
-                                            <table class="table table-sm">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Reference</th>
-                                                        <th>Date</th>
-                                                        <th class="text-end">Amount</th>
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for payment in recent_payments %}
-                                                    <tr>
-                                                        <td>{{ payment.reference }}</td>
-                                                        <td>{{ payment.paid_at|date:"M j, Y" }}</td>
-                                                        <td class="text-end">₦{{ payment.amount|floatformat:2 }}</td>
-                                                        <td class="text-end">
-                                                            <a href="{% url 'finance:payment_receipt_html' payment.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                                                Receipt
-                                                            </a>
-                                                        </td>
-                                                    </tr>
-                                                    {% empty %}
-                                                    <tr><td colspan="4" class="text-center text-muted">No payments recorded yet.</td></tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Reference</th>
+                                                            <th>Date</th>
+                                                            <th class="text-end">Amount</th>
+                                                            <th></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for payment in recent_payments %}
+                                                        <tr>
+                                                            <td>{{ payment.reference }}</td>
+                                                            <td>{{ payment.paid_at|date:"M j, Y" }}</td>
+                                                            <td class="text-end">₦{{ payment.amount|floatformat:2 }}</td>
+                                                            <td class="text-end">
+                                                                <a href="{% url 'finance:payment_receipt_html' payment.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                                    Receipt
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                        {% empty %}
+                                                        <tr><td colspan="4" class="text-center text-muted">No payments recorded yet.</td></tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -381,3 +404,6 @@
     </div>
 </div>
 {% endblock content_body %}
+
+{% block footer %}
+{% endblock footer %}

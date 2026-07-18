@@ -89,7 +89,7 @@ class Dept(models.Model):
         return self.name
     
     class Meta:
-        verbose_name = 'School Departments'
-        verbose_name_plural = 'School Departments'
+        verbose_name = 'Administrative Departments'
+        verbose_name_plural = 'Administrative Departments'
 
     

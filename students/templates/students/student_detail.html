@@ -9,6 +9,23 @@
 <link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
 <link href="{% static 'pages/vendor/lightgallery/css/lightgallery.min.css' %}" rel="stylesheet">
 <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    /* Same defensive spacing used on the student-facing profile page —
+       stops a long Fee Clearance/medical list from ending up crowded
+       against the footer. */
+    .content-body {
+        padding-bottom: 4rem;
+    }
+    .info-card {
+        border: none;
+        border-radius: 0.85rem;
+    }
+    .info-card .card-header {
+        background: #fff;
+        border-top-left-radius: 0.85rem;
+        border-top-right-radius: 0.85rem;
+    }
+</style>
 {% endblock %}
 
 {% block content_body %}
@@ -23,7 +40,7 @@
 
         <div class="row">
             <div class="col-lg-12">
-                <div class="profile card card-body px-3 pt-3 pb-0">
+                <div class="profile card card-body px-3 pt-3 pb-0 shadow-sm mb-4">
                     <div class="profile-head">
                         <div class="photo-content">
                             <div class="cover-photo rounded" style="background: linear-gradient(rgba(30, 80, 180, 0.6), rgba(30, 80, 180, 0.6)), url('{% static 'pages/images/profile/cover.jpg' %}'); background-size: cover;"></div>
@@ -58,7 +75,7 @@
 
         <div class="row">
             <div class="col-xl-12">
-                <div class="card mb-3">
+                <div class="card shadow-sm mb-4">
                     <div class="card-body p-3">
                         <div class="d-flex flex-wrap justify-content-around align-items-center">
                             <div class="text-center px-4 border-end">
@@ -85,13 +102,13 @@
             </div>
         </div>
 
-        <div class="row">
+        <div class="row g-4">
             <div class="col-xl-4 col-lg-5">
-                <div class="card">
+                <div class="card info-card shadow-sm mb-4">
                     <div class="card-body">
                         <div class="profile-statistics">
                             <div class="text-center">
-                                <h6>Portal Access Status: 
+                                <h6>Portal Access Status:
                                     <span class="badge {% if student.student_status == 'active' %}badge-success{% else %}badge-danger{% endif %} shadow-sm">
                                         {{ student.get_student_status_display|upper }}
                                     </span>
@@ -110,24 +127,30 @@
                                             <small class="text-muted">CGPA</small>
                                         </div>
                                     </div>
-                                     <hr>
-                                <div class="mt-3">
-                                <h5 class="text-primary border-bottom pb-2">Medical Profile</h5>                        
-                                <h4 class="mb-0 text-danger">{{ student.blood_group|default:"--" }}</h4>
-                                <small>Blood Group</small>                        
-                                <h4 class="mb-0 text-info">{{ student.genotype|default:"--" }}</h4>
-                                <small>Genotype</small>  
-                            </div>                            
-                            </div>                                
+                                    <hr>
+                                    <div class="mt-3">
+                                        <h5 class="text-primary border-bottom pb-2"><i class="fas fa-briefcase-medical me-1"></i> Medical Profile</h5>
+                                        <div class="row text-center mt-2">
+                                            <div class="col-6 border-end">
+                                                <h4 class="mb-0 text-danger">{{ student.blood_group|default:"--" }}</h4>
+                                                <small>Blood Group</small>
+                                            </div>
+                                            <div class="col-6">
+                                                <h4 class="mb-0 text-info">{{ student.genotype|default:"--" }}</h4>
+                                                <small>Genotype</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Fee Clearance -->
-                <div class="card">
+                <div class="card info-card shadow-sm mb-4">
                     <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
-                        <h6 class="card-title mb-0">Fee Clearance</h6>
+                        <h6 class="card-title mb-0"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Fee Clearance</h6>
                         {% if fee_summary.fully_cleared_for_exams %}
                         <span class="badge badge-success">Cleared</span>
                         {% else %}
@@ -151,35 +174,19 @@
                         {% endif %}
                     </div>
                 </div>
-
-                {% comment %} <div class="card">
-                    <div class="card-body">
-                        <h5 class="text-primary border-bottom pb-2">Medical Profile</h5>
-                        <div class="row mt-3">
-                            <div class="col-6 border-end text-center">
-                                <h4 class="mb-0 text-danger">{{ student.blood_group|default:"--" }}</h4>
-                                <small>Blood Group</small>
-                            </div>
-                            <div class="col-6 text-center">
-                                <h4 class="mb-0 text-info">{{ student.genotype|default:"--" }}</h4>
-                                <small>Genotype</small>
-                            </div>
-                        </div>
-                    </div>
-                </div> {% endcomment %}
             </div>
 
             <div class="col-xl-8 col-lg-7">
-                <div class="card">
+                <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <div class="profile-tab">
                             <div class="custom-tab-1">
-                                <ul class="nav nav-tabs">
-                                    <li class="nav-item"><a href="#personal-info" data-bs-toggle="tab" class="nav-link active show">Bio-Data</a></li>
-                                    <li class="nav-item"><a href="#courses" data-bs-toggle="tab" class="nav-link">Courses</a></li>
-                                    <li class="nav-item"><a href="#results" data-bs-toggle="tab" class="nav-link">Results</a></li>
-                                    <li class="nav-item"><a href="#contact" data-bs-toggle="tab" class="nav-link">Residential</a></li>
-                                    <li class="nav-item"><a href="#nok" data-bs-toggle="tab" class="nav-link">Next of Kin</a></li>
+                                <ul class="nav nav-tabs flex-nowrap overflow-auto">
+                                    <li class="nav-item"><a href="#personal-info" data-bs-toggle="tab" class="nav-link active show text-nowrap"><i class="fas fa-user me-1"></i> Bio-Data</a></li>
+                                    <li class="nav-item"><a href="#courses" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-book-open me-1"></i> Courses</a></li>
+                                    <li class="nav-item"><a href="#results" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-chart-line me-1"></i> Results</a></li>
+                                    <li class="nav-item"><a href="#contact" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-house me-1"></i> Residential</a></li>
+                                    <li class="nav-item"><a href="#nok" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-people-group me-1"></i> Next of Kin</a></li>
                                 </ul>
                                 <div class="tab-content">
                                     <div id="personal-info" class="tab-pane fade active show">
@@ -201,52 +208,54 @@
                                                 <div class="col-sm-4 text-muted">Admission Date:</div>
                                                 <div class="col-sm-8"><span>{{ student.date_admitted|date:"d M Y" }}</span></div>
                                             </div>
-                                            
+
                                             <h4 class="text-primary mb-4 mt-5">Medical Remarks</h4>
                                             <div class="alert alert-light border">
                                                 {{ student.health_remark|default:"No critical health conditions reported to the clinic." }}
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div id="courses" class="tab-pane fade">
                                         <div class="pt-4">
                                             <p class="text-muted mb-3">
                                                 {{ current_session|default:"No active session" }}{% if current_semester %} — {{ current_semester }}{% endif %}
                                                 · {{ registration_summary.total_units }} unit(s) registered
                                             </p>
-                                            <table class="table table-sm">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Code</th>
-                                                        <th>Title</th>
-                                                        <th class="text-center">Units</th>
-                                                        <th class="text-center">Exam Eligible</th>
-                                                        <th>Reason</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for row in registration_summary.registrations %}
-                                                    <tr>
-                                                        <td>{{ row.course.course_code }}</td>
-                                                        <td>{{ row.course.title }}</td>
-                                                        <td class="text-center">{{ row.course.credit_unit }}</td>
-                                                        <td class="text-center">
-                                                            {% if row.is_exam_eligible %}
-                                                            <span class="badge badge-success">Yes</span>
-                                                            {% else %}
-                                                            <span class="badge badge-danger">No</span>
-                                                            {% endif %}
-                                                        </td>
-                                                        <td class="small text-muted">
-                                                            {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
-                                                        </td>
-                                                    </tr>
-                                                    {% empty %}
-                                                    <tr><td colspan="5" class="text-center text-muted">No courses registered this semester.</td></tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Code</th>
+                                                            <th>Title</th>
+                                                            <th class="text-center">Units</th>
+                                                            <th class="text-center">Exam Eligible</th>
+                                                            <th>Reason</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for row in registration_summary.registrations %}
+                                                        <tr>
+                                                            <td>{{ row.course.course_code }}</td>
+                                                            <td>{{ row.course.title }}</td>
+                                                            <td class="text-center">{{ row.course.credit_unit }}</td>
+                                                            <td class="text-center">
+                                                                {% if row.is_exam_eligible %}
+                                                                <span class="badge badge-success">Yes</span>
+                                                                {% else %}
+                                                                <span class="badge badge-danger">No</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td class="small text-muted">
+                                                                {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
+                                                            </td>
+                                                        </tr>
+                                                        {% empty %}
+                                                        <tr><td colspan="5" class="text-center text-muted">No courses registered this semester.</td></tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -257,28 +266,30 @@
                                                     <i class="fas fa-chart-line me-1"></i> View Full Academic Progress
                                                 </a>
                                             </div>
-                                            <table class="table table-sm">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Session</th>
-                                                        <th>Course</th>
-                                                        <th class="text-center">Score</th>
-                                                        <th class="text-center">Grade</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for result in academic_summary.results %}
-                                                    <tr>
-                                                        <td>{{ result.session }} / {{ result.semester }}</td>
-                                                        <td>{{ result.course.course_code }}</td>
-                                                        <td class="text-center">{{ result.total_score }}</td>
-                                                        <td class="text-center"><span class="badge badge-info">{{ result.grade }}</span></td>
-                                                    </tr>
-                                                    {% empty %}
-                                                    <tr><td colspan="4" class="text-center text-muted">No published results yet.</td></tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Session</th>
+                                                            <th>Course</th>
+                                                            <th class="text-center">Score</th>
+                                                            <th class="text-center">Grade</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for result in academic_summary.results %}
+                                                        <tr>
+                                                            <td>{{ result.session }} / {{ result.semester }}</td>
+                                                            <td>{{ result.course.course_code }}</td>
+                                                            <td class="text-center">{{ result.total_score }}</td>
+                                                            <td class="text-center"><span class="badge badge-info">{{ result.grade }}</span></td>
+                                                        </tr>
+                                                        {% empty %}
+                                                        <tr><td colspan="4" class="text-center text-muted">No published results yet.</td></tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
 
