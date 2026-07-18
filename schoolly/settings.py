@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'tinymce',
     'django_cleanup.apps.CleanupConfig',
     'rest_framework',
+    # 'qr_code',
 ]
 
 MIDDLEWARE = [

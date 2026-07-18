@@ -67,6 +67,29 @@ class SchoolIdentity(models.Model):
     logo = models.ImageField(upload_to='official_pics', default='school_logo.jpg')
     signature = models.ImageField(upload_to='official_pics', blank=True, null=True)
 
+    registrar_name = models.CharField(
+        max_length=150, blank=True,
+        help_text="Full name of the Registrar, as it should appear on official documents."
+    )
+    registrar_signature = models.ImageField(
+        upload_to='signatures/registrar/', blank=True, null=True,
+        help_text="Transparent-background PNG of the Registrar's signature works best."
+    )
+    
+    authorized_signee_name = models.CharField(
+        max_length=150, blank=True,
+        help_text="Full name of the second authorized signatory (e.g. the Vice Chancellor/Rector)."
+    )
+    authorized_signee_title = models.CharField(
+        max_length=100, blank=True, default="Vice Chancellor",
+        help_text="Official title, e.g. 'Vice Chancellor', 'Rector', 'Provost', 'Director'."
+    )
+    authorized_signature = models.ImageField(
+        upload_to='signatures/authorized/', blank=True, null=True,
+        help_text="Transparent-background PNG of this signatory's signature works best."
+    )
+
+
     slug = models.SlugField(null=True, blank=True)
 
     def save(self, *args, **kwargs):

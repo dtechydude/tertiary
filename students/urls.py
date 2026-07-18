@@ -4,9 +4,9 @@ from students import views as students_views
 from students.views import (
     StudentDetailView,
     StudentUpdateView,
-    StudentDeleteView,
     StudentSelfDetailView,
-    MyTeacherDetailView,
+    AdmissionLetterSelfView,
+    AdmissionLetterView,
 )
 
 app_name = 'students'
@@ -47,4 +47,34 @@ urlpatterns = [
     path('my-profile/', StudentSelfDetailView.as_view(), name='student-self-detail'),
 
     path('student/edit/<str:matric_number>/', StudentUpdateView.as_view(), name='student-update'),
+
+    #Admission Letter
+    #  --- New (this round): staff list + bulk print ---
+#     path('admission-letters/', students_views.admission_letter_list_view, name='admission-letter-list'),
+#     path('admission-letters/bulk-print/', students_views.admission_letter_bulk_print_view, name='admission-letter-bulk-print'),
+
+#    # Add these to students/urls.py (inside urlpatterns, app_name = "students")
+# # --- Existing (from the first round) ---
+#     path('admission-letter/', students_views.AdmissionLetterSelfView.as_view(), name='admission-letter-self'),
+#     path('admission-letter/<str:matric_number>/', students_views.AdmissionLetterView.as_view(), name='admission-letter'),
+#     path('admission-letter/<str:matric_number>/pdf/', students_views.admission_letter_pdf, name='admission-letter-pdf'),
+#     path('admission-letter/self/pdf/', students_views.admission_letter_self_pdf, name='admission-letter-self-pdf'),
+
+    path('admission-letter/', students_views.AdmissionLetterSelfView.as_view(), name='admission-letter-self'),
+    path('admission-letter/<str:matric_number>/', students_views.AdmissionLetterView.as_view(), name='admission-letter'),
+    path('admission-letter/<str:matric_number>/pdf/', students_views.admission_letter_pdf, name='admission-letter-pdf'),
+    path('admission-letter/self/pdf/', students_views.admission_letter_self_pdf, name='admission-letter-self-pdf'),
+
+    # Public — no login required, this is the QR code's target
+    path('verify/admission/<str:matric_number>/', students_views.verify_admission_letter, name='verify-admission'),
+
+# --- New (this round): staff list + bulk print ---
+    path('admission-letters/', students_views.admission_letter_list_view, name='admission-letter-list'),
+    path('admission-letters/bulk-print/', students_views.admission_letter_bulk_print_view, name='admission-letter-bulk-print'),
+
+
+    # Public — no login required, this is the QR code's target
+    # path('verify/admission/<str:matric_number>/', students_views.verify_admission_letter, name='verify-admission'),
+
+
 ]

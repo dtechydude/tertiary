@@ -1,0 +1,102 @@
+{% comment %}
+Reusable admission letter content. Included by both the single-letter
+page and the bulk-print page so the two never drift apart.
+
+Expects in context: student, student_full_name, verify_url, school_info
+(each of these is passed explicitly via {% include %} with ... in the
+bulk-print page, since a single request there covers many students, each
+potentially needing a DIFFERENT department-resolved school_info).
+{% endcomment %}
+<div class="letter-paper">
+
+    <div class="letterhead">
+        {% if school_info.logo %}
+        <img src="{{ school_info.logo.url }}" class="logo" alt="School Logo">
+        {% endif %}
+        <div>
+            <h3>{% if school_info %}{{ school_info.name }}{% else %}School{% endif %}</h3>
+            <div class="school-meta">
+                {% if school_info.address %}{{ school_info.address }}<br>{% endif %}
+                {% if school_info.phone %}Tel: {{ school_info.phone }}{% endif %}
+                {% if school_info.email %} &bull; {{ school_info.email }}{% endif %}
+                {% if school_info.website %} &bull; {{ school_info.website }}{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="letter-ref-row">
+        <span>Ref: {{ student.matric_number }}/ADM</span>
+        <span>Date: {{ student.date_admitted|date:"F d, Y" }}</span>
+    </div>
+
+    <div>
+        <strong>{{ student_full_name }}</strong><br>
+        {% if student.guardian_address %}{{ student.guardian_address }}<br>{% endif %}
+    </div>
+
+    <h5 class="letter-title">LETTER OF ADMISSION</h5>
+
+    <div class="letter-body">
+        <p>Dear {{ student.user.first_name|default:student_full_name }},</p>
+
+        <p>
+            We are pleased to inform you that you have been offered admission into the
+            <strong>{{ student.department.name|default:"—" }}</strong> Department,
+            {% if student.department.faculty %}Faculty of {{ student.department.faculty.name }},{% endif %}
+            to study <strong>{{ student.programme|default:"—" }}</strong>
+            {% if student.programme.qualification_type %}
+                leading to the award of <strong>{{ student.programme.qualification_type }}</strong>
+            {% endif %}
+            at <strong>{{ student.level|default:"—" }}</strong> level, under the
+            <strong>{{ student.get_student_type_display }}</strong> mode of study, with effect from
+            <strong>{{ student.date_admitted|date:"F d, Y" }}</strong>.
+        </p>
+
+        <p>Your Matriculation Number has been assigned as:</p>
+        <div class="matric-highlight">{{ student.matric_number }}</div>
+
+        <p class="fw-bold mt-4 mb-2">Conditions of Admission</p>
+        <p>This offer of admission is subject to the following conditions:</p>
+        <ol class="conditions-list">
+            <li>Presentation of original copies of your credentials for verification during physical registration.</li>
+            <li>Payment of all prescribed tuition and other fees before the commencement of academic activities.</li>
+            <li>Full compliance with the rules, regulations, and code of conduct of the institution.</li>
+            <li>This admission is provisional and may be revoked at any time if any information provided in your application is found to be false or misleading.</li>
+            <li>You are required to complete your registration formalities within the period communicated by the Registry/Admissions Office.</li>
+        </ol>
+
+        <p>
+            We congratulate you on this achievement and look forward to your success at
+            {% if school_info %}{{ school_info.name }}{% else %}our institution{% endif %}.
+        </p>
+
+        <p class="mt-4">Yours faithfully,</p>
+    </div>
+
+    <div class="signature-block">
+        <div class="signature-column">
+            {% if school_info.registrar_signature %}
+            <img src="{{ school_info.registrar_signature.url }}" class="signature-img" alt="Registrar Signature">
+            {% endif %}
+            <div class="signature-line">
+                <div class="signature-name">{{ school_info.registrar_name|default:"Registrar" }}</div>
+                <div class="signature-title">Registrar</div>
+            </div>
+        </div>
+        <div class="signature-column">
+            {% if school_info.authorized_signature %}
+            <img src="{{ school_info.authorized_signature.url }}" class="signature-img" alt="Authorized Signature">
+            {% endif %}
+            <div class="signature-line">
+                <div class="signature-name">{{ school_info.authorized_signee_name|default:"—" }}</div>
+                <div class="signature-title">{{ school_info.authorized_signee_title|default:"Vice Chancellor" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="qr-block">
+        <div class="qr-canvas" data-verify-url="{{ verify_url }}"></div>
+        <small>Scan to verify authenticity</small>
+    </div>
+
+</div>

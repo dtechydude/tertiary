@@ -1513,3 +1513,290 @@ def assign_room(request):
 
         messages.success(request, "Student assigned successfully.")
         return redirect("students:hostel-dashboard")
+
+
+
+
+"""
+students.views (Admission Letter additions)
+=============================================
+
+Mirrors the Lecturer self/admin view split already used in this project:
+  - Self view:  the logged-in student sees their own letter.
+  - Admin view: staff view any student's letter, addressed by
+                matric_number (not pk) — deliberately, so it matches the
+                `matric_number` URL kwarg the school_info context
+                processor already special-cases, and the page
+                automatically renders with THAT student's department
+                branding rather than the viewing staff member's own.
+
+The admission letter itself is never stored/generated ahead of time —
+same as the ID card, it's rendered on demand straight from the Student
+record, so it's "ready" the moment a student is registered.
+"""
+
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
+from django.views.generic import DetailView
+
+from curriculum.utils.identity import get_school_identity_for_department
+
+from .models import Student
+
+
+def _student_full_name(student):
+    parts = [
+        student.user.first_name,
+        student.middle_name,
+        student.user.last_name,
+    ]
+    return " ".join(p for p in parts if p).strip() or student.user.username
+
+
+def _admission_context(student, request):
+    verify_url = request.build_absolute_uri(
+        reverse('students:verify-admission', kwargs={'matric_number': student.matric_number})
+    )
+    return {
+        'student': student,
+        'student_full_name': _student_full_name(student),
+        'verify_url': verify_url,
+    }
+
+
+# =====================================================================
+# HTML views
+# =====================================================================
+
+class AdmissionLetterSelfView(LoginRequiredMixin, DetailView):
+    """Student views/prints their own admission letter."""
+    model = Student
+    template_name = 'students/admission_letter.html'
+    context_object_name = 'student'
+
+    def get_object(self):
+        return get_object_or_404(
+            Student.objects.select_related(
+                'user', 'department', 'department__faculty', 'programme',
+                'programme__qualification_type', 'level',
+            ),
+            user=self.request.user,
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(_admission_context(self.object, self.request))
+        context['is_self_view'] = True
+        return context
+
+
+class AdmissionLetterView(LoginRequiredMixin, DetailView):
+    """Staff/admin views/prints any student's admission letter."""
+    model = Student
+    template_name = 'students/admission_letter.html'
+    context_object_name = 'student'
+
+    def get_object(self):
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            raise PermissionDenied("Not permitted.")
+
+        return get_object_or_404(
+            Student.objects.select_related(
+                'user', 'department', 'department__faculty', 'programme',
+                'programme__qualification_type', 'level',
+            ),
+            matric_number=self.kwargs.get('matric_number'),
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(_admission_context(self.object, self.request))
+        context['is_self_view'] = False
+        return context
+
+
+# =====================================================================
+# Public verification page — the QR code's target. No login required:
+# an employer, agency, or the school's own front desk should be able to
+# scan the code and immediately see whether the letter is genuine,
+# without needing a portal account.
+# =====================================================================
+
+def verify_admission_letter(request, matric_number):
+    student = Student.objects.select_related(
+        'user', 'department', 'programme', 'level'
+    ).filter(matric_number=matric_number).first()
+
+    return render(request, 'students/verify_admission.html', {
+        'student': student,
+        'student_full_name': _student_full_name(student) if student else None,
+    })
+
+
+# =====================================================================
+# PDF export
+# =====================================================================
+
+@login_required
+def admission_letter_self_pdf(request):
+    student = get_object_or_404(
+        Student.objects.select_related(
+            'user', 'department', 'department__faculty', 'programme',
+            'programme__qualification_type', 'level',
+        ),
+        user=request.user,
+    )
+    return _render_admission_letter_pdf(student, request)
+
+
+@login_required
+def admission_letter_pdf(request, matric_number):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Not permitted.", status=403)
+
+    student = get_object_or_404(
+        Student.objects.select_related(
+            'user', 'department', 'department__faculty', 'programme',
+            'programme__qualification_type', 'level',
+        ),
+        matric_number=matric_number,
+    )
+    return _render_admission_letter_pdf(student, request)
+
+
+def _render_admission_letter_pdf(student, request):
+    """Split out so both PDF entry points share one code path."""
+    from ..students.services.admission_letter_pdf import build_admission_letter_pdf
+
+    school_identity = get_school_identity_for_department(student.department)
+    verify_url = request.build_absolute_uri(
+        reverse('students:verify-admission', kwargs={'matric_number': student.matric_number})
+    )
+
+    return build_admission_letter_pdf(
+        student=student,
+        school_identity=school_identity,
+        student_full_name=_student_full_name(student),
+        verify_url=verify_url,
+    )
+
+"""
+students.views (Admission Letter list / bulk-print additions)
+================================================================
+
+Two staff-only views:
+  - AdmissionLetterListView: browsable, filterable table of every
+    student's admission letter, with per-row View/Verify/PDF links.
+  - admission_letter_bulk_print_view: renders every matching student's
+    full letter, stacked with page breaks, for one big Print/Save-as-PDF
+    run over a filtered batch (e.g. "everyone admitted to Computer
+    Science in 2025").
+
+Both filters (department, year) apply to the SAME queryset logic, reused
+by both views so the list and the bulk print of "what you're currently
+looking at" can never disagree with each other.
+"""
+
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models.functions import ExtractYear
+from django.shortcuts import render
+from django.urls import reverse
+
+from curriculum.models import Department
+from curriculum.utils.identity import get_school_identity_for_department
+
+from .models import Student
+from .views import _student_full_name  # reuse the existing helper
+
+
+def _filtered_students(request):
+    students = Student.objects.select_related(
+        'user', 'department', 'department__faculty', 'programme',
+        'programme__qualification_type', 'level',
+    ).order_by('department__name', '-date_admitted')
+
+    department_id = request.GET.get('department')
+    year = request.GET.get('year')
+
+    if department_id:
+        students = students.filter(department_id=department_id)
+    if year:
+        students = students.filter(date_admitted__year=year)
+
+    return students, department_id, year
+
+
+def _filter_options():
+    """Shared by the list and bulk-print pages so their filter dropdowns
+    are always built from the exact same source, never two copies that
+    can quietly drift apart."""
+    departments = Department.objects.all().order_by('name')
+    available_years = (
+        Student.objects.annotate(admit_year=ExtractYear('date_admitted'))
+        .values_list('admit_year', flat=True)
+        .distinct()
+        .order_by('-admit_year')
+    )
+    return departments, available_years
+
+
+@staff_member_required
+def admission_letter_list_view(request):
+    students, department_id, year = _filtered_students(request)
+    departments, available_years = _filter_options()
+
+    return render(request, 'students/admission_letter_list.html', {
+        'students': students,
+        'departments': departments,
+        'available_years': available_years,
+        'selected_department': department_id,
+        'selected_year': year,
+        'total_count': students.count(),
+    })
+
+
+@staff_member_required
+def admission_letter_bulk_print_view(request):
+    students, department_id, year = _filtered_students(request)
+    departments, available_years = _filter_options()
+
+    department_obj = None
+    if department_id:
+        department_obj = Department.objects.filter(id=department_id).first()
+
+    # Resolve school_info per student, but cache by department so a batch
+    # that's mostly (or entirely) one department doesn't re-run the
+    # AcademicIdentityMapping lookup for every single row.
+    identity_cache = {}
+    letters = []
+
+    for student in students:
+        dept_id = student.department_id
+        if dept_id not in identity_cache:
+            identity_cache[dept_id] = get_school_identity_for_department(student.department)
+
+        verify_url = request.build_absolute_uri(
+            reverse('students:verify-admission', kwargs={'matric_number': student.matric_number})
+        )
+
+        letters.append({
+            'student': student,
+            'student_full_name': _student_full_name(student),
+            'school_info': identity_cache[dept_id],
+            'verify_url': verify_url,
+        })
+
+    return render(request, 'students/admission_letter_bulk_print.html', {
+        'letters': letters,
+        'departments': departments,
+        'available_years': available_years,
+        'selected_department': department_id,
+        'selected_year': year,
+        'department': department_obj,
+        'year': year,
+        'total_count': len(letters),
+    })

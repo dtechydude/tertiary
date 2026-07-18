@@ -658,3 +658,5 @@ def set_current_semester(request, semester_id):
 
     messages.success(request, f"{semester} is now the current semester.")
     return redirect('curriculum:session-admin')
+
+
