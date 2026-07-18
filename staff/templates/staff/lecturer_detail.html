@@ -2,58 +2,285 @@
 {% load static %}
 
 {% block title %}
-<title>Lecturer Profile</title>
+<title>{{ lecturer.get_full_name }} | Lecturer Profile</title>
 {% endblock title %}
+
+{% block style %}
+{{ block.super }}
+<style>
+    /* Profile Header Styling */
+    .profile-banner {
+        background: linear-gradient(135deg, #002366 0%, #1a237e 100%);
+        height: 100px;
+        border-radius: 12px 12px 0 0;
+    }
+    .profile-img-container {
+        margin-top: -50px;
+        position: relative;
+    }
+    .profile-img-container img {
+        border: 4px solid #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: white;
+    }
+
+    /* Section Headers in Right Card */
+    .section-divider {
+        display: flex;
+        align-items: center;
+        margin: 1.5rem 0 1rem 0;
+    }
+    .section-divider span {
+        font-weight: 700;
+        color: #1a237e;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        padding-right: 15px;
+        white-space: nowrap;
+    }
+    .section-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #e2e8f0;
+    }
+
+    /* Data Presentation */
+    .data-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    .data-value {
+        font-weight: 500;
+        color: #1e293b;
+        word-break: break-word;
+    }
+
+    /* Footer visibility fix */
+    .content-body {
+        min-height: 85vh;
+        padding-bottom: 50px;
+    }
+
+    .card {
+        border: none;
+        border-radius: 12px;
+    }
+
+    /* Print letterhead — hidden on screen, shown only in @media print below */
+    .print-letterhead {
+        display: none;
+    }
+
+    @media print {
+        .no-print,
+        .profile-banner,
+        nav, .sidebar, .navbar, header, footer {
+            display: none !important;
+        }
+
+        .print-letterhead {
+            display: block !important;
+            text-align: center;
+            border-bottom: 2px solid #1a237e;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .print-letterhead h4 {
+            color: #1a237e;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+        .print-letterhead small {
+            color: #64748b;
+        }
+
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #dee2e6 !important;
+        }
+
+        body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+    }
+</style>
+{% endblock style %}
 
 {% block content_body %}
 <div class="content-body">
-<div class="container-fluid">
+    <div class="container-fluid">
 
-    <div class="d-flex justify-content-between mb-3">
-        <h3>Lecturer Profile</h3>
-        <a href="{% url 'staff:lecturer-list' %}" class="btn btn-outline-secondary">
-            Back
-        </a>
-    </div>
+        <!-- PRINT-ONLY LETTERHEAD -->
+        <div class="print-letterhead">
+            <h4>{% if school_info %}{{ school_info.name }}{% else %}School{% endif %}</h4>
+            <small>Lecturer Profile &mdash; Printed {% now "M d, Y" %}</small>
+        </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
+        <!-- TOP NAVIGATION -->
+        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+            <h4 class="fw-bold mb-0 text-dark">Lecturer Profile</h4>
+            <div class="d-flex gap-2">
+                <a href="{% url 'staff:lecturer-profile-pdf' lecturer.id %}" class="btn btn-primary btn-sm shadow-sm">
+                    <i class="fas fa-file-pdf me-1"></i> Download PDF
+                </a>
+                <button onclick="window.print()" class="btn btn-outline-primary btn-sm shadow-sm">
+                    <i class="fas fa-print me-1"></i> Print / Save as PDF
+                </button>
+                <a href="{% url 'staff:lecturer-list' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="fas fa-chevron-left me-1"></i> Back to Lecturer List
+                </a>
+            </div>
+        </div>
 
-            <div class="row">
+        <div class="row g-4">
+            <!-- LEFT CARD: IDENTITY & LINKS -->
+            <div class="col-xl-4 col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="profile-banner"></div>
+                    <div class="card-body text-center pt-0">
+                        <div class="profile-img-container mb-3">
+                            <img src="{{ lecturer.user.profile.image_url|default:'/static/pages/images/default.png' }}"
+                                 class="rounded-circle" width="100" height="100" alt="Avatar">
+                        </div>
 
-                <div class="col-md-3 text-center">
-                    <img src="{{ lecturer.user.profile.image_url }}"
-                         class="rounded-circle mb-2"
-                         width="120" height="120">
+                        <h5 class="fw-bold text-dark mb-0">{{ lecturer.get_full_name }}</h5>
+                        <p class="text-muted small">@{{ lecturer.user.username }}</p>
 
-                    <h5>{{ lecturer.get_full_name }}</h5>
-                    <p class="text-muted">@{{ lecturer.user.username }}</p>
+                        <div class="badge bg-soft-primary text-primary border border-primary-subtle px-3 py-2 mb-2">
+                            <i class="fas fa-graduation-cap me-2"></i>{{ lecturer.department.name|default:"Academics" }}
+                        </div>
+                        {% if lecturer.position %}
+                        <div class="badge bg-soft-secondary text-secondary border border-secondary-subtle px-3 py-2 mb-4">
+                            <i class="fas fa-ribbon me-2"></i>{{ lecturer.position }}
+                        </div>
+                        {% endif %}
+
+                        <!-- Status & Meta Row -->
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <div class="p-2 border rounded-3 bg-light">
+                                    <small class="text-muted d-block">Staff Status</small>
+                                    <span class="fw-bold {% if lecturer.is_active %}text-success{% else %}text-danger{% endif %}">
+                                        {{ lecturer.is_active|yesno:"ACTIVE,INACTIVE" }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 border rounded-3 bg-light">
+                                    <small class="text-muted d-block">Employment</small>
+                                    <span class="fw-bold">{{ lecturer.date_employed|date:"Y"|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Admin Actions (replaces the self-service "Resources" panel) -->
+                        <div class="text-start px-2 no-print">
+                            <h6 class="fw-bold small text-muted mb-3">ADMIN ACTIONS</h6>
+                            <a href="{% url 'staff:lecturer_id_card' lecturer.id %}" class="btn btn-primary w-100 mb-2 shadow-sm">
+                                <i class="fas fa-id-card me-2"></i> View ID Card
+                            </a>
+                            <a href="mailto:{{ lecturer.user.email }}" class="text-decoration-none d-block py-2 text-dark border-bottom small">
+                                <i class="far fa-envelope me-2 text-primary"></i> Email {{ lecturer.get_full_name }}
+                            </a>
+                            {% if lecturer.phone %}
+                            <a href="tel:{{ lecturer.phone }}" class="text-decoration-none d-block py-2 text-dark small">
+                                <i class="fas fa-phone me-2 text-primary"></i> Call {{ lecturer.phone }}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-
-                <div class="col-md-9">
-
-                    <h6 class="text-primary">Details</h6>
-
-                    <p><strong>Department:</strong> {{ lecturer.department.name }}</p>
-                    <p><strong>Phone:</strong> {{ lecturer.phone }}</p>
-                    <p><strong>Email:</strong> {{ lecturer.user.email }}</p>
-                    <p><strong>Gender:</strong> {{ lecturer.gender }}</p>
-                    <p><strong>Employment Date:</strong> {{ lecturer.date_employed }}</p>
-
-                    <hr>
-
-                    <a href="{% url 'staff:lecturer_id_card' lecturer.id %}"
-                       class="btn btn-primary">
-                        View ID Card
-                    </a>
-
-                </div>
-
             </div>
 
+            <!-- RIGHT CARD: CONSOLIDATED DATA -->
+            <div class="col-xl-8 col-lg-8">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body p-4">
+
+                        <!-- Personal Info Section -->
+                        <div class="section-divider">
+                            <span><i class="fas fa-id-card me-2"></i>Personal Details</span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="data-label">Email Address</div>
+                                <div class="data-value">{{ lecturer.user.email }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="data-label">Phone Number</div>
+                                <div class="data-value">{{ lecturer.phone|default:"---" }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="data-label">Gender</div>
+                                <div class="data-value">{{ lecturer.gender|default:"---" }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="data-label">Date of Birth</div>
+                                <div class="data-value">{{ lecturer.DOB|default:"---" }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="data-label">Marital Status</div>
+                                <div class="data-value">{{ lecturer.marital_status|default:"---" }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Academic Info Section -->
+                        <div class="section-divider mt-5">
+                            <span><i class="fas fa-university me-2"></i>Academic Credentials</span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="data-label">Academic Rank / Position</div>
+                                <div class="data-value fw-bold text-primary">{{ lecturer.position|default:"---" }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="data-label">Highest Qualification</div>
+                                <div class="data-value fw-bold text-primary">{{ lecturer.highest_qualification }}</div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="data-label">Awarding Institution</div>
+                                <div class="data-value">{{ lecturer.institution }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="data-label">Year Obtained</div>
+                                <div class="data-value">{{ lecturer.year_obtained }}</div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="data-label">Professional Memberships</div>
+                                <div class="data-value">{{ lecturer.professional_body|default:"No memberships listed" }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Guarantor Info Section -->
+                        <div class="section-divider mt-5">
+                            <span><i class="fas fa-user-shield me-2"></i>Guarantor Information</span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="data-label">Guarantor Name</div>
+                                <div class="data-value">{{ lecturer.guarantor_name }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="data-label">Contact Phone</div>
+                                <div class="data-value">{{ lecturer.guarantor_phone }}</div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="data-label">Residential Address</div>
+                                <div class="data-value small">{{ lecturer.guarantor_address }}</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-</div>
 </div>
 {% endblock content_body %}

@@ -288,29 +288,6 @@ def admin_course_assignments(request):
   
 
 
-
-
-@login_required
-def my_clas(request, teacher_id, choice):
-    teacher1 = get_object_or_404(Lecturer, id=teacher_id)
-    return render(request, 'attendance/t_clas.html', {'teacher1': teacher1, 'choice': choice})
-
-
-
-def classroom_students(request, class_id):
-    classroom = get_object_or_404(Class, id=class_id)
-    students = Student.objects.filter(class_id=class_id)
-    students_in_classroom = classroom.students.all().order_by('full_name')
-
-    context = {
-        'classroom': classroom,
-        'students_in_classroom': students_in_classroom,
-        'students':students
-        
-    }
-    return render(request, 'staff/classroom_students.html', context)
-
-
 # Teachers Student Count In Class
 
 class LecturerStudentCountListView(ListView):
@@ -355,155 +332,176 @@ class LecturerStudentCountListView(ListView):
         context['teachers'] = filtered_teachers
         return context
     
+"""
+staff.views (PDF export additions)
+===================================
 
-# Teachers Subjects & Classes Assigned
-def teacher_subjects_standards_view(request):
-    """
-    Displays a list of all teachers, their subjects taught,
-    and the standards they are assigned to.
-    """
-    # Fetch all teacher objects from the database
-    # The .prefetch_related() method is used for efficiency to
-    # fetch all related subjects and standards in a single query.
-    teachers = Teacher.objects.all().prefetch_related('subjects_taught', 'standards_assigned')
+Server-rendered "Download PDF" for a lecturer's profile, as an alternative
+to the browser's Print / Save as PDF button already on both templates.
+Mirrors the reportlab pattern already used in finance.services.documents
+(build_payment_receipt_pdf / build_registration_slip_pdf), so a downloaded
+file looks consistent regardless of the viewer's browser/print settings.
+"""
 
-    context = {
-        'teachers': teachers,
-        'title': 'Teacher Assignments'
-    }
-    return render(request, 'staff/teacher_assignments.html', context)
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 
-# Visiting An Individual Teachers Assigned Classes And Subjects
-def teacher_profile_view(request, teacher_id):
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+)
+
+from curriculum.utils.identity import get_school_identity_for_department
+
+from .models import Lecturer
+
+
+def _build_lecturer_profile_pdf(lecturer, school_identity):
     """
-    Displays the subjects and standards assigned to a specific teacher.
+    Shared PDF layout for both the self-view and admin-view downloads,
+    so the document never drifts out of sync between the two.
+
+    `school_identity` must be an already-resolved SchoolIdentity instance
+    (or None) — resolve it via curriculum.utils.identity.
+    get_school_identity_for_department() before calling this, since
+    context processors never run outside of template rendering and can't
+    be reached from a raw reportlab view.
     """
-    # Fetch the specific teacher object by ID, or return a 404 error if not found.
-    teacher = get_object_or_404(
-        Teacher.objects.prefetch_related('subjects_taught', 'standards_assigned'), 
-        id=teacher_id
+    response = HttpResponse(content_type='application/pdf')
+    filename = f"{lecturer.user.username}_profile.pdf"
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+    doc = SimpleDocTemplate(
+        response, pagesize=A4,
+        topMargin=0.6 * inch, bottomMargin=0.6 * inch,
+        leftMargin=0.7 * inch, rightMargin=0.7 * inch,
     )
-    
-    context = {
-        'teacher': teacher,
-        'title': f'{teacher.get_full_name()} Assignments'
-    }
-    return render(request, 'staff/teacher_assigned_page.html', context)
 
-# Each Teachers Seeing Their Assigned Subects & Classes
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'SchoolTitle', parent=styles['Heading1'],
+        fontSize=16, textColor=colors.HexColor('#1a237e'), spaceAfter=2,
+    )
+    subtitle_style = ParagraphStyle(
+        'Subtitle', parent=styles['Normal'],
+        fontSize=9, textColor=colors.HexColor('#64748b'),
+    )
+    section_style = ParagraphStyle(
+        'Section', parent=styles['Heading3'],
+        fontSize=11, textColor=colors.HexColor('#1a237e'),
+        spaceBefore=14, spaceAfter=6,
+    )
+
+    elements = []
+
+    school_name = school_identity.name if school_identity else "School"
+    elements.append(Paragraph(school_name, title_style))
+    elements.append(Paragraph("Lecturer Academic Profile", subtitle_style))
+    elements.append(Spacer(1, 6))
+    elements.append(HRFlowable(width="100%", color=colors.HexColor('#1a237e'), thickness=1.5))
+    elements.append(Spacer(1, 16))
+
+    # --- Identity block ---
+    identity_data = [
+        ["Name:", lecturer.get_full_name(), "Username:", f"@{lecturer.user.username}"],
+        ["Department:", str(lecturer.department) if lecturer.department else "—",
+         "Position:", str(lecturer.position) if lecturer.position else "—"],
+        ["Status:", "ACTIVE" if lecturer.is_active else "INACTIVE",
+         "Employed:", lecturer.date_employed.strftime('%b %d, %Y') if lecturer.date_employed else "—"],
+    ]
+    identity_table = Table(identity_data, colWidths=[70, 170, 70, 170])
+    identity_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9.5),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#64748b')),
+        ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor('#64748b')),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.append(identity_table)
+
+    def section(title, rows, col_widths=(140, 340)):
+        elements.append(Paragraph(title, section_style))
+        table = Table(rows, colWidths=list(col_widths))
+        table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9.5),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#64748b')),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.4, colors.HexColor('#e2e8f0')),
+        ]))
+        elements.append(table)
+
+    section("Personal Details", [
+        ["Email Address", lecturer.user.email or "—"],
+        ["Phone Number", lecturer.phone or "—"],
+        ["Gender", lecturer.gender or "—"],
+        ["Date of Birth", str(lecturer.DOB) if lecturer.DOB else "—"],
+        ["Marital Status", lecturer.marital_status or "—"],
+    ])
+
+    section("Academic Credentials", [
+        ["Highest Qualification", lecturer.highest_qualification or "—"],
+        ["Awarding Institution", lecturer.institution or "—"],
+        ["Year Obtained", str(lecturer.year_obtained) if lecturer.year_obtained else "—"],
+        ["Professional Memberships", lecturer.professional_body or "No memberships listed"],
+    ])
+
+    section("Guarantor Information", [
+        ["Guarantor Name", lecturer.guarantor_name or "—"],
+        ["Contact Phone", lecturer.guarantor_phone or "—"],
+        ["Residential Address", lecturer.guarantor_address or "—"],
+    ])
+
+    elements.append(Spacer(1, 24))
+    elements.append(HRFlowable(width="100%", color=colors.HexColor('#e2e8f0'), thickness=0.5))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(
+        "This document was generated by the school's portal system and reflects the "
+        "record on file at the time of generation.",
+        subtitle_style,
+    ))
+
+    doc.build(elements)
+    return response
+
+
 @login_required
-def my_assignments_view(request):
+def lecturer_self_profile_pdf(request):
+    """Lecturer downloads their own profile as a PDF."""
+    lecturer = get_object_or_404(
+        Lecturer.objects.select_related('user', 'department', 'position'),
+        user=request.user,
+    )
+    school_identity = get_school_identity_for_department(lecturer.department)
+    return _build_lecturer_profile_pdf(lecturer, school_identity)
+
+
+@login_required
+def lecturer_profile_pdf(request, pk):
     """
-    Displays the subjects and standards assigned to the currently logged-in teacher.
+    Staff/admin downloads any lecturer's profile as a PDF.
+
+    Identity is resolved from the department of the lecturer the document
+    is ABOUT, not the viewing admin's own department — mirroring how the
+    school_info context processor resolves branding from the *subject*
+    of a matric_number-based student page rather than the viewer.
     """
-    try:
-        # Get the Teacher object associated with the logged-in user.
-        teacher = Teacher.objects.prefetch_related(
-            'subjects_taught', 
-            'standards_assigned'
-        ).get(user=request.user)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Not permitted.", status=403)
 
-        context = {
-            'teacher': teacher,
-            'title': 'My Assignments'
-        }
-        return render(request, 'staff/teacher_self_assignments.html', context)
-        
-    except Teacher.DoesNotExist:
-        # This block handles the case where the current user is not a teacher.
-        messages.info(request, "Your profile is not linked to a teacher account. Please contact the administrator.")
-        return redirect('pages:portal-home') # Redirect to a safe page like the dashboard
+    lecturer = get_object_or_404(
+        Lecturer.objects.select_related('user', 'department', 'position'),
+        pk=pk,
+    )
+    school_identity = get_school_identity_for_department(lecturer.department)
+    return _build_lecturer_profile_pdf(lecturer, school_identity)
 
-# View to Assign a Form Teacher to A Standard
-def is_superuser(user):
-    return user.is_superuser
 
-@user_passes_test(is_superuser)
-def assign_form_teacher_view(request):
-    """
-    View to assign a form teacher to a class and update all students in that class.
-    """
-    if request.method == 'POST':
-        class_id = request.POST.get('class')
-        teacher_id = request.POST.get('teacher')
-
-        if not class_id or not teacher_id:
-            messages.error(request, "Please select both a class and a teacher.")
-            return redirect('assign_form_teacher')
-
-        try:
-            standard = get_object_or_404(Standard, id=class_id)
-            teacher = get_object_or_404(Teacher, id=teacher_id)
-
-            with transaction.atomic():
-                # 1. Update the Standard model with the new form teacher.
-                standard.form_teacher = teacher
-                standard.save()
-                
-                # 2. Update all students in that class with the new form teacher.
-                students_in_class = Student.objects.filter(current_class=standard)
-                count = students_in_class.count()
-                students_in_class.update(form_teacher=teacher)
-
-            messages.success(request, f"Successfully assigned {teacher} as the form teacher for {standard.name} and updated {count} students.")
-
-        except Exception as e:
-            messages.error(request, f"An error occurred: {e}")
-
-        return redirect('staff:assign_form_teacher')
-
-    classes = Standard.objects.all().order_by('name')
-    teachers = Teacher.objects.all().order_by('user__last_name')
-    
-    context = {
-        'classes': classes,
-        'teachers': teachers,
-        'title': 'Assign Form Teacher',
-    }
-    return render(request, 'staff/assign_form_teacher.html', context)
-
-# Assign A Form Teacher To A ClassGroup
-def is_authorized_staff(user):
-    return user.is_superuser or user.is_staff
-
-@user_passes_test(is_authorized_staff)
-def assign_form_teacher_to_classgroup_view(request):
-    """
-    Assigns a form teacher to a specific class group.
-    """
-    if request.method == 'POST':
-        class_group_id = request.POST.get('class_group')
-        teacher_id = request.POST.get('teacher')
-
-        if not class_group_id or not teacher_id:
-            messages.error(request, "Please select both a class group and a teacher.")
-            return redirect('staff:assign_form_teacher_to_classgroup')
-
-        try:
-            class_group = get_object_or_404(ClassGroup, id=class_group_id)
-            teacher = get_object_or_404(Teacher, id=teacher_id)
-
-            with transaction.atomic():
-                class_group.form_teacher = teacher
-                class_group.save()
-            
-            messages.success(request, f"Successfully assigned {teacher.user.get_full_name()} as the form teacher for {class_group.name}.")
-
-        except Exception as e:
-            messages.error(request, f"An error occurred: {e}")
-
-        return redirect('staff:assign_form_teacher_to_classgroup')
-
-    # GET request
-    class_groups = ClassGroup.objects.all().order_by('standard__name', 'name')
-    teachers = Teacher.objects.all().order_by('user__first_name')
-    
-    context = {
-        'class_groups': class_groups,
-        'teachers': teachers,
-        'title': 'Assign Form Teacher to Class Group',
-    }
-    return render(request, 'staff/assign_formteacher_to_classgroup.html', context)
 
 
 # Teachers Signup View

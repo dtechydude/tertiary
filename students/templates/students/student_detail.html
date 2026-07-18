@@ -10,12 +10,99 @@
 <link href="{% static 'pages/vendor/lightgallery/css/lightgallery.min.css' %}" rel="stylesheet">
 <link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
 <style>
-    /* Same defensive spacing used on the student-facing profile page —
-       stops a long Fee Clearance/medical list from ending up crowded
-       against the footer. */
-    .content-body {
-        padding-bottom: 4rem;
+    :root {
+        --portal-accent: #3b5fe2;
+        --portal-accent-2: #6a4fd9;
+        --portal-gold: #c5a059;
     }
+
+    /* Same mobile-tuned clearance fix as the student-facing profile page. */
+    .content-body {
+        padding-bottom: 5rem;
+    }
+    @media (max-width: 767px) {
+        .content-body {
+            padding-bottom: 8rem;
+        }
+    }
+
+    /* Cover-photo header replaced with a flat identity bar — saves a full
+       screen-height of vertical space on mobile, where the old banner +
+       overlapping avatar layout was pushing everything else (including
+       Fee Clearance) further down toward the footer. */
+    .profile-hero {
+        background: linear-gradient(135deg, var(--portal-accent) 0%, var(--portal-accent-2) 100%);
+        border-radius: 1rem;
+        color: #fff;
+        padding: 1.5rem 2rem;
+    }
+    .profile-hero .avatar-photo {
+        width: 64px;
+        height: 64px;
+        min-width: 64px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(255,255,255,0.65);
+    }
+    /* Solid, opaque pill instead of a translucent one — reads clearly
+       against any part of the gradient rather than blending into it. */
+    .profile-hero .matric-chip {
+        background: #fff;
+        color: var(--portal-accent);
+        border-radius: 50px;
+        padding: 0.2rem 0.85rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+    .profile-hero .hero-subtext {
+        color: rgba(255,255,255,0.92);
+        font-weight: 500;
+    }
+
+    /* Solid white "chip" buttons instead of the previous plain btn-light
+       (fine) mixed with borderless icon buttons — unified so every header
+       action reads with the same, unmistakably visible style. */
+    .profile-hero .btn-hero {
+        background: #fff;
+        color: var(--portal-accent);
+        border: none;
+        font-weight: 600;
+        border-radius: 50px;
+        padding: 0.4rem 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+    }
+    .profile-hero .btn-hero:hover {
+        color: var(--portal-accent-2);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+    }
+    .profile-hero .dropdown-toggle::after {
+        display: none;
+    }
+
+    .quick-stat {
+        text-align: center;
+        padding: 0 1rem;
+    }
+    .quick-stat .stat-label {
+        font-size: 0.72rem;
+        color: #8a92a6;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        display: block;
+    }
+    .quick-stat .stat-value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #222;
+    }
+    @media (min-width: 576px) {
+        .quick-stat.with-divider {
+            border-left: 1px solid #eef0f4;
+        }
+    }
+
     .info-card {
         border: none;
         border-radius: 0.85rem;
@@ -24,6 +111,78 @@
         background: #fff;
         border-top-left-radius: 0.85rem;
         border-top-right-radius: 0.85rem;
+    }
+
+    /* CSS Grid instead of Bootstrap's col-xl-4/col-xl-8 split: `gap` is
+       structural, so sections can never end up flush against each other
+       or the tab panel just because a margin class was missed. Collapses
+       to a single natural column on mobile with no extra bookkeeping. */
+    .profile-grid {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @media (max-width: 991px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .info-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* Same as the student-facing page: keep a 30-50+ row table from
+       stretching the whole card/page, with a sticky header so column
+       labels stay visible while scrolling within the panel. */
+    .scroll-table-wrap {
+        max-height: 420px;
+        overflow-y: auto;
+        border: 1px solid #eef0f4;
+        border-radius: 0.5rem;
+    }
+    .scroll-table-wrap table {
+        margin-bottom: 0;
+    }
+    .scroll-table-wrap thead th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fc;
+        z-index: 1;
+    }
+
+    /* Print / Save-as-PDF — same isolation pattern as the student-facing
+       page: a hidden .print-sheet holds a full biodata summary (tabs use
+       display:none on inactive panes, so printing the live page would
+       only capture whichever tab happens to be open). No PDF library
+       needed — the browser's own print-to-PDF handles export. */
+    .print-sheet { display: none; }
+
+    @media print {
+        body * { visibility: hidden; }
+        .print-sheet, .print-sheet * { visibility: visible; }
+        .print-sheet {
+            display: block !important;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            padding: 1.5rem;
+        }
+        .print-sheet .letterhead {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 2px solid #222;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .print-sheet .letterhead img { height: 60px; }
+        .print-sheet table { width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; }
+        .print-sheet table td { padding: 4px 8px; vertical-align: top; }
+        .print-sheet table td.label { color: #555; width: 40%; }
+        .print-sheet h6 { border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 1.25rem; }
     }
 </style>
 {% endblock %}
@@ -38,36 +197,33 @@
             </ol>
         </div>
 
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="profile card card-body px-3 pt-3 pb-0 shadow-sm mb-4">
-                    <div class="profile-head">
-                        <div class="photo-content">
-                            <div class="cover-photo rounded" style="background: linear-gradient(rgba(30, 80, 180, 0.6), rgba(30, 80, 180, 0.6)), url('{% static 'pages/images/profile/cover.jpg' %}'); background-size: cover;"></div>
+        <!-- Identity bar — replaces the old cover-photo + overlapping-avatar header -->
+        <div class="profile-hero mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <img src="{{ student.user.profile.image.url|default:'/static/pages/images/default_user.png' }}" class="avatar-photo" alt="Profile">
+                    <div>
+                        <h4 class="mb-1 fw-bold"><span style="color:white;">{{ student.get_full_name|upper }}</span></h4>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="matric-chip">{{ student.matric_number }}</span>
+                            <span class="hero-subtext">
+                                {{ student.department.name|default:"Unassigned Department" }}
+                                {% if student.department.faculty %} &middot; {{ student.department.faculty.name }}{% endif %}
+                            </span>
                         </div>
-                        <div class="profile-info">
-                            <div class="profile-photo">
-                                <img src="{{ student.user.profile.image.url|default:'/static/pages/images/default_user.png' }}" class="img-fluid rounded-circle" alt="Profile" style="width: 100px; height: 100px; object-fit: cover; border: 3px solid #fff;">
-                            </div>
-                            <div class="profile-details">
-                                <div class="profile-name px-3 pt-2">
-                                    <h4 class="text-primary mb-0">{{ student.get_full_name|upper }}</h4>
-                                    <p>Matric: <strong>{{ student.matric_number }}</strong></p>
-                                </div>
-                                <div class="profile-email px-2 pt-2">
-                                    <h4 class="text-muted mb-0">{{ student.department.name|default:"Unassigned Department" }}</h4>
-                                    <p>{{ student.department.faculty.name|default:"Faculty Office" }}</p>
-                                </div>
-                                <div class="dropdown ms-auto">
-                                    <a href="#" class="btn btn-primary light sharp" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></a>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li class="dropdown-item"><a href="{% url 'students:student-update' student.matric_number %}"><i class="fa fa-edit text-primary me-2"></i> Edit Academic Record</a></li>
-                                        <li class="dropdown-item"><a href="{% url 'students:student_id_card' student.matric_number %}" target="_blank"><i class="fa fa-id-card text-primary me-2"></i> Preview ID Card</a></li>
-                                        <li class="dropdown-item"><a href="javascript:void(0);" class="text-danger"><i class="fa fa-ban text-danger me-2"></i> Suspend Portal</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" onclick="window.print()" class="btn btn-hero btn-sm">
+                        <i class="fas fa-print me-1"></i> Print Biodata
+                    </button>
+                    <div class="dropdown">
+                        <a href="#" class="btn btn-hero btn-sm" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li class="dropdown-item"><a href="{% url 'students:student-update' student.matric_number %}"><i class="fa fa-edit text-primary me-2"></i> Edit Academic Record</a></li>
+                            <li class="dropdown-item"><a href="{% url 'students:student_id_card' student.matric_number %}" target="_blank"><i class="fa fa-id-card text-primary me-2"></i> Preview ID Card</a></li>
+                            <li class="dropdown-item"><a href="javascript:void(0);" class="text-danger"><i class="fa fa-ban text-danger me-2"></i> Suspend Portal</a></li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -78,23 +234,23 @@
                 <div class="card shadow-sm mb-4">
                     <div class="card-body p-3">
                         <div class="d-flex flex-wrap justify-content-around align-items-center">
-                            <div class="text-center px-4 border-end">
-                                <span class="text-muted d-block small">Programme</span>
-                                <h5 class="mb-0 text-dark">{{ student.programme|default:"Not Set" }}</h5>
+                            <div class="quick-stat">
+                                <span class="stat-label">Programme</span>
+                                <span class="stat-value">{{ student.programme|default:"Not Set" }}</span>
                             </div>
-                            <div class="text-center px-4 border-end">
-                                <span class="text-muted d-block small">Level</span>
-                                <h5 class="mb-0 text-dark">{{ student.level.name|default:"N/A" }}</h5>
+                            <div class="quick-stat with-divider">
+                                <span class="stat-label">Level</span>
+                                <span class="stat-value">{{ student.level.name|default:"N/A" }}</span>
                             </div>
-                            <div class="text-center px-4 border-end">
-                                <span class="text-muted d-block small">Study Mode</span>
-                                <h5 class="mb-0 text-dark">{{ student.get_student_type_display }}</h5>
+                            <div class="quick-stat with-divider">
+                                <span class="stat-label">Study Mode</span>
+                                <span class="stat-value">{{ student.get_student_type_display }}</span>
                             </div>
-                            <div class="text-center px-4">
-                                <span class="text-muted d-block small">Fee Balance</span>
-                                <h5 class="mb-0 {% if student.fee_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                            <div class="quick-stat with-divider">
+                                <span class="stat-label">Fee Balance</span>
+                                <span class="stat-value {% if student.fee_balance > 0 %}text-danger{% else %}text-success{% endif %}">
                                     ₦{{ student.fee_balance|default:"0.00" }}
-                                </h5>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -102,9 +258,9 @@
             </div>
         </div>
 
-        <div class="row g-4">
-            <div class="col-xl-4 col-lg-5">
-                <div class="card info-card shadow-sm mb-4">
+        <div class="profile-grid">
+            <div class="info-stack">
+                <div class="card info-card shadow-sm">
                     <div class="card-body">
                         <div class="profile-statistics">
                             <div class="text-center">
@@ -148,7 +304,7 @@
                 </div>
 
                 <!-- Fee Clearance -->
-                <div class="card info-card shadow-sm mb-4">
+                <div class="card info-card shadow-sm">
                     <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
                         <h6 class="card-title mb-0"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Fee Clearance</h6>
                         {% if fee_summary.fully_cleared_for_exams %}
@@ -176,154 +332,152 @@
                 </div>
             </div>
 
-            <div class="col-xl-8 col-lg-7">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <div class="profile-tab">
-                            <div class="custom-tab-1">
-                                <ul class="nav nav-tabs flex-nowrap overflow-auto">
-                                    <li class="nav-item"><a href="#personal-info" data-bs-toggle="tab" class="nav-link active show text-nowrap"><i class="fas fa-user me-1"></i> Bio-Data</a></li>
-                                    <li class="nav-item"><a href="#courses" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-book-open me-1"></i> Courses</a></li>
-                                    <li class="nav-item"><a href="#results" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-chart-line me-1"></i> Results</a></li>
-                                    <li class="nav-item"><a href="#contact" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-house me-1"></i> Residential</a></li>
-                                    <li class="nav-item"><a href="#nok" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-people-group me-1"></i> Next of Kin</a></li>
-                                </ul>
-                                <div class="tab-content">
-                                    <div id="personal-info" class="tab-pane fade active show">
-                                        <div class="profile-personal-info pt-4">
-                                            <h4 class="text-primary mb-4">Identity Details</h4>
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">University Email:</div>
-                                                <div class="col-sm-8"><span>{{ student.user.email }}</span></div>
-                                            </div>
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">Gender:</div>
-                                                <div class="col-sm-8"><span class="text-capitalize">{{ student.gender }}</span></div>
-                                            </div>
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">Birth Date:</div>
-                                                <div class="col-sm-8"><span>{{ student.DOB|date:"F d, Y" }}</span></div>
-                                            </div>
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">Admission Date:</div>
-                                                <div class="col-sm-8"><span>{{ student.date_admitted|date:"d M Y" }}</span></div>
-                                            </div>
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="profile-tab">
+                        <div class="custom-tab-1">
+                            <ul class="nav nav-tabs flex-nowrap overflow-auto">
+                                <li class="nav-item"><a href="#personal-info" data-bs-toggle="tab" class="nav-link active show text-nowrap"><i class="fas fa-user me-1"></i> Bio-Data</a></li>
+                                <li class="nav-item"><a href="#courses" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-book-open me-1"></i> Courses</a></li>
+                                <li class="nav-item"><a href="#results" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-chart-line me-1"></i> Results</a></li>
+                                <li class="nav-item"><a href="#contact" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-house me-1"></i> Residential</a></li>
+                                <li class="nav-item"><a href="#nok" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-people-group me-1"></i> Next of Kin</a></li>
+                            </ul>
+                            <div class="tab-content">
+                                <div id="personal-info" class="tab-pane fade active show">
+                                    <div class="profile-personal-info pt-4">
+                                        <h4 class="text-primary mb-4">Identity Details</h4>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">University Email:</div>
+                                            <div class="col-sm-8"><span>{{ student.user.email }}</span></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">Gender:</div>
+                                            <div class="col-sm-8"><span class="text-capitalize">{{ student.gender }}</span></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">Birth Date:</div>
+                                            <div class="col-sm-8"><span>{{ student.DOB|date:"F d, Y" }}</span></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">Admission Date:</div>
+                                            <div class="col-sm-8"><span>{{ student.date_admitted|date:"d M Y" }}</span></div>
+                                        </div>
 
-                                            <h4 class="text-primary mb-4 mt-5">Medical Remarks</h4>
-                                            <div class="alert alert-light border">
-                                                {{ student.health_remark|default:"No critical health conditions reported to the clinic." }}
-                                            </div>
+                                        <h4 class="text-primary mb-4 mt-5">Medical Remarks</h4>
+                                        <div class="alert alert-light border">
+                                            {{ student.health_remark|default:"No critical health conditions reported to the clinic." }}
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div id="courses" class="tab-pane fade">
-                                        <div class="pt-4">
-                                            <p class="text-muted mb-3">
-                                                {{ current_session|default:"No active session" }}{% if current_semester %} — {{ current_semester }}{% endif %}
-                                                · {{ registration_summary.total_units }} unit(s) registered
-                                            </p>
-                                            <div class="table-responsive">
-                                                <table class="table table-sm">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Code</th>
-                                                            <th>Title</th>
-                                                            <th class="text-center">Units</th>
-                                                            <th class="text-center">Exam Eligible</th>
-                                                            <th>Reason</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for row in registration_summary.registrations %}
-                                                        <tr>
-                                                            <td>{{ row.course.course_code }}</td>
-                                                            <td>{{ row.course.title }}</td>
-                                                            <td class="text-center">{{ row.course.credit_unit }}</td>
-                                                            <td class="text-center">
-                                                                {% if row.is_exam_eligible %}
-                                                                <span class="badge badge-success">Yes</span>
-                                                                {% else %}
-                                                                <span class="badge badge-danger">No</span>
-                                                                {% endif %}
-                                                            </td>
-                                                            <td class="small text-muted">
-                                                                {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
-                                                            </td>
-                                                        </tr>
-                                                        {% empty %}
-                                                        <tr><td colspan="5" class="text-center text-muted">No courses registered this semester.</td></tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                <div id="courses" class="tab-pane fade">
+                                    <div class="pt-4">
+                                        <p class="text-muted mb-3">
+                                            {{ current_session|default:"No active session" }}{% if current_semester %} — {{ current_semester }}{% endif %}
+                                            · {{ registration_summary.total_units }} unit(s) registered
+                                        </p>
+                                        <div class="table-responsive scroll-table-wrap">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Code</th>
+                                                        <th>Title</th>
+                                                        <th class="text-center">Units</th>
+                                                        <th class="text-center">Exam Eligible</th>
+                                                        <th>Reason</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for row in registration_summary.registrations %}
+                                                    <tr>
+                                                        <td>{{ row.course.course_code }}</td>
+                                                        <td>{{ row.course.title }}</td>
+                                                        <td class="text-center">{{ row.course.credit_unit }}</td>
+                                                        <td class="text-center">
+                                                            {% if row.is_exam_eligible %}
+                                                            <span class="badge badge-success">Yes</span>
+                                                            {% else %}
+                                                            <span class="badge badge-danger">No</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="small text-muted">
+                                                            {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
+                                                        </td>
+                                                    </tr>
+                                                    {% empty %}
+                                                    <tr><td colspan="5" class="text-center text-muted">No courses registered this semester.</td></tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div id="results" class="tab-pane fade">
-                                        <div class="pt-4">
-                                            <div class="text-end mb-2">
-                                                <a href="{% url 'results:staff_student_progress' student.matric_number %}" class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-chart-line me-1"></i> View Full Academic Progress
-                                                </a>
-                                            </div>
-                                            <div class="table-responsive">
-                                                <table class="table table-sm">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Session</th>
-                                                            <th>Course</th>
-                                                            <th class="text-center">Score</th>
-                                                            <th class="text-center">Grade</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {% for result in academic_summary.results %}
-                                                        <tr>
-                                                            <td>{{ result.session }} / {{ result.semester }}</td>
-                                                            <td>{{ result.course.course_code }}</td>
-                                                            <td class="text-center">{{ result.total_score }}</td>
-                                                            <td class="text-center"><span class="badge badge-info">{{ result.grade }}</span></td>
-                                                        </tr>
-                                                        {% empty %}
-                                                        <tr><td colspan="4" class="text-center text-muted">No published results yet.</td></tr>
-                                                        {% endfor %}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                <div id="results" class="tab-pane fade">
+                                    <div class="pt-4">
+                                        <div class="text-end mb-2">
+                                            <a href="{% url 'results:staff_student_progress' student.matric_number %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-chart-line me-1"></i> View Full Academic Progress
+                                            </a>
+                                        </div>
+                                        <div class="table-responsive scroll-table-wrap">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Session</th>
+                                                        <th>Course</th>
+                                                        <th class="text-center">Score</th>
+                                                        <th class="text-center">Grade</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for result in academic_summary.results %}
+                                                    <tr>
+                                                        <td>{{ result.session }} / {{ result.semester }}</td>
+                                                        <td>{{ result.course.course_code }}</td>
+                                                        <td class="text-center">{{ result.total_score }}</td>
+                                                        <td class="text-center"><span class="badge badge-info">{{ result.grade }}</span></td>
+                                                    </tr>
+                                                    {% empty %}
+                                                    <tr><td colspan="4" class="text-center text-muted">No published results yet.</td></tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div id="contact" class="tab-pane fade">
-                                        <div class="pt-4">
-                                            <h4 class="text-primary mb-4">Residential Details</h4>
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">Hostel/Hall:</div>
-                                                <div class="col-sm-8"><span>{{ student.hostel_name.name|default:"Non-Resident" }}</span></div>
-                                            </div>
-                                            {% if student.assigned_room %}
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">Room:</div>
-                                                <div class="col-sm-8"><span>{{ student.assigned_room.room_number }}</span></div>
-                                            </div>
-                                            {% endif %}
+                                <div id="contact" class="tab-pane fade">
+                                    <div class="pt-4">
+                                        <h4 class="text-primary mb-4">Residential Details</h4>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">Hostel/Hall:</div>
+                                            <div class="col-sm-8"><span>{{ student.hostel_name.name|default:"Non-Resident" }}</span></div>
                                         </div>
+                                        {% if student.assigned_room %}
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">Room:</div>
+                                            <div class="col-sm-8"><span>{{ student.assigned_room.room_number }}</span></div>
+                                        </div>
+                                        {% endif %}
                                     </div>
+                                </div>
 
-                                    <div id="nok" class="tab-pane fade">
-                                        <div class="profile-personal-info pt-4">
-                                            <h4 class="text-primary mb-4">Guardian / Next of Kin</h4>
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">Full Name:</div>
-                                                <div class="col-sm-8"><span>{{ student.guardian_name }}</span></div>
-                                            </div>
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">Phone Number:</div>
-                                                <div class="col-sm-8"><span>{{ student.guardian_phone }}</span></div>
-                                            </div>
-                                            <div class="row mb-3">
-                                                <div class="col-sm-4 text-muted">Residential Address:</div>
-                                                <div class="col-sm-8"><span>{{ student.guardian_address }}</span></div>
-                                            </div>
+                                <div id="nok" class="tab-pane fade">
+                                    <div class="profile-personal-info pt-4">
+                                        <h4 class="text-primary mb-4">Guardian / Next of Kin</h4>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">Full Name:</div>
+                                            <div class="col-sm-8"><span>{{ student.guardian_name }}</span></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">Phone Number:</div>
+                                            <div class="col-sm-8"><span>{{ student.guardian_phone }}</span></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-sm-4 text-muted">Residential Address:</div>
+                                            <div class="col-sm-8"><span>{{ student.guardian_address }}</span></div>
                                         </div>
                                     </div>
                                 </div>
@@ -333,9 +487,59 @@
                 </div>
             </div>
         </div>
+
+        <!-- Print / Save-as-PDF sheet: hidden on screen, shown only by
+             the @media print rules above. Lets staff print/export a
+             clean biodata summary for a student regardless of which tab
+             happens to be open. -->
+        <div class="print-sheet">
+            <div class="letterhead">
+                {% if school_info.logo %}<img src="{{ school_info.logo.url }}" alt="Logo">{% endif %}
+                <div>
+                    <h4 class="mb-0">{{ school_info.name|default:"Institution Name" }}</h4>
+                    <small>Student Biodata Summary — Generated {% now "F j, Y" %}</small>
+                </div>
+            </div>
+
+            <h6>Academic Identification</h6>
+            <table>
+                <tr><td class="label">Full Name</td><td>{{ student.get_full_name|upper }}</td></tr>
+                <tr><td class="label">Matric Number</td><td>{{ student.matric_number }}</td></tr>
+                <tr><td class="label">Programme</td><td>{{ student.programme|default:"—" }}</td></tr>
+                <tr><td class="label">Department</td><td>{{ student.department.name|default:"—" }}</td></tr>
+                <tr><td class="label">Faculty</td><td>{{ student.department.faculty.name|default:"—" }}</td></tr>
+                <tr><td class="label">Level</td><td>{{ student.level.name|default:"—" }}</td></tr>
+                <tr><td class="label">Study Mode</td><td>{{ student.get_student_type_display }}</td></tr>
+                <tr><td class="label">Status</td><td>{{ student.get_student_status_display }}</td></tr>
+                <tr><td class="label">Fee Balance</td><td>₦{{ student.fee_balance|default:"0.00" }}</td></tr>
+            </table>
+
+            <h6>Personal Details</h6>
+            <table>
+                <tr><td class="label">Date of Birth</td><td>{{ student.DOB|date:"F d, Y" }}</td></tr>
+                <tr><td class="label">Gender</td><td class="text-capitalize">{{ student.gender }}</td></tr>
+                <tr><td class="label">Blood Group / Genotype</td><td>{{ student.blood_group|default:"--" }} / {{ student.genotype|default:"--" }}</td></tr>
+                <tr><td class="label">Admission Date</td><td>{{ student.date_admitted|date:"d M Y" }}</td></tr>
+                <tr><td class="label">University Email</td><td>{{ student.user.email }}</td></tr>
+                <tr><td class="label">Hostel/Hall</td><td>{{ student.hostel_name.name|default:"Non-Resident" }}{% if student.assigned_room %} — Room {{ student.assigned_room.room_number }}{% endif %}</td></tr>
+            </table>
+
+            <h6>Medical Remarks</h6>
+            <p>{{ student.health_remark|default:"No critical health conditions reported to the clinic." }}</p>
+
+            <h6>Guardian / Next of Kin</h6>
+            <table>
+                <tr><td class="label">Full Name</td><td>{{ student.guardian_name }}</td></tr>
+                <tr><td class="label">Phone Number</td><td>{{ student.guardian_phone }}</td></tr>
+                <tr><td class="label">Residential Address</td><td>{{ student.guardian_address }}</td></tr>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
+
+{% block footer %}
+{% endblock footer %}
 
 {% block script %}
 <script src="{% static 'pages/vendor/global/global.min.js' %}"></script>

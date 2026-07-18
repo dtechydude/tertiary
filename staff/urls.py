@@ -48,6 +48,9 @@ urlpatterns = [
 
     # admin view
     path('lecturer/<int:pk>/', LecturerDetailView.as_view(), name='lecturer_detail'),   
+
+    path('profile/pdf/', staff_views.lecturer_self_profile_pdf, name='lecturer-self-profile-pdf'),
+    path('<int:pk>/profile/pdf/', staff_views.lecturer_profile_pdf, name='lecturer-profile-pdf'),
         
 
 ]
