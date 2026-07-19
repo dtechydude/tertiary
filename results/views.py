@@ -8,10 +8,13 @@ Nothing here computes a grade, a GPA, or decides the next workflow status.
 """
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from rest_framework import generics, status
 from rest_framework.pagination import PageNumberPagination
@@ -21,13 +24,15 @@ from rest_framework.views import APIView
 
 from curriculum.models import Course, CourseAssignment, CourseRegistration, Session, Semester
 
-from .models import Result
+from .models import Result, Transcript
 from .permissions import IsCourseLecturer
 from .serializers import BulkScoreEntrySerializer, ResultSerializer, ResultWorkflowActionSerializer
 from .services.gpa import GPAService
 from .services.grading import GradingService
 from .services.graduation import GraduationService
 from .services.progress import AcademicProgressService
+from .services.transcript import TranscriptService
+from .services.documents import build_transcript_pdf
 from .services.workflow import ResultWorkflowService
 
 
@@ -429,21 +434,192 @@ def submit_results_for_review_view(request, course_id):
     )
 
     if request.method == "POST":
-        submitted, failed = 0, 0
+        submitted, permission_failed, other_failed = 0, 0, 0
         for result in draft_results:
             try:
                 ResultWorkflowService.transition(result, "submit", actor=request.user)
                 submitted += 1
-            except (ValidationError, PermissionDenied):
-                failed += 1
+            except PermissionDenied:
+                permission_failed += 1
+            except ValidationError:
+                other_failed += 1
 
         if submitted:
             messages.success(request, f"{submitted} result(s) submitted for HOD review.")
-        if failed:
-            messages.error(request, f"{failed} result(s) could not be submitted — check your permissions.")
+        if permission_failed:
+            messages.error(
+                request,
+                f"{permission_failed} result(s) could not be submitted — you're not the assigned "
+                f"lecturer for this course/session/semester, and don't hold the 'Can submit results "
+                f"for HOD review' permission either. Contact an administrator if this seems wrong."
+            )
+        if other_failed:
+            messages.error(request, f"{other_failed} result(s) could not be submitted — see details and try again.")
 
         return redirect("results:lecturer_my_courses")
 
     return render(request, "results/lecturer/confirm_submit.html", {
         "course": course, "draft_count": draft_results.count(),
     })
+
+
+# ---------------------------------------------------------------------------
+# Approval queue — HOD / Dean / Registrar / Publish.
+#
+# One page adapts to whichever stage(s) the logged-in user has permission
+# to act on, rather than four separate near-identical pages. Bulk-select
+# + bulk-action, backed by ResultWorkflowService.bulk_transition (already
+# built) so the state machine and permission rules live in exactly one
+# place — this view never decides what's a valid transition.
+# ---------------------------------------------------------------------------
+
+APPROVAL_STAGES = [
+    {
+        "key": "hod", "status": Result.Status.SUBMITTED, "perm": "results.approve_result_hod",
+        "action": "approve_hod", "label": "HOD Review", "verb": "Approve (HOD)",
+    },
+    {
+        "key": "dean", "status": Result.Status.HOD_APPROVED, "perm": "results.approve_result_dean",
+        "action": "approve_dean", "label": "Dean Review", "verb": "Approve (Dean)",
+    },
+    {
+        "key": "registrar", "status": Result.Status.DEAN_APPROVED, "perm": "results.approve_result_registrar",
+        "action": "approve_registrar", "label": "Registrar Review", "verb": "Approve (Registrar)",
+    },
+    {
+        "key": "publish", "status": Result.Status.REGISTRAR_APPROVED, "perm": "results.publish_result",
+        "action": "publish", "label": "Ready to Publish", "verb": "Publish",
+    },
+]
+
+
+@login_required
+def approval_queue_view(request):
+    accessible_stages = [s for s in APPROVAL_STAGES if request.user.has_perm(s["perm"])]
+    if not accessible_stages:
+        return render(request, "errors/403.html", {
+            "message": "You don't hold any result-approval permission (HOD/Dean/Registrar)."
+        })
+
+    active_key = request.GET.get("stage", accessible_stages[0]["key"])
+    active_stage = next((s for s in accessible_stages if s["key"] == active_key), accessible_stages[0])
+
+    results_qs = Result.objects.filter(status=active_stage["status"]).select_related(
+        "student__user", "course", "session", "semester"
+    ).order_by("course__course_code", "student__user__last_name")
+
+    course_id = request.GET.get("course") or ""
+    if course_id:
+        results_qs = results_qs.filter(course_id=course_id)
+
+    courses_in_queue = Course.objects.filter(
+        results__status=active_stage["status"]
+    ).distinct().order_by("course_code")
+
+    return render(request, "results/approval_queue.html", {
+        "accessible_stages": accessible_stages,
+        "active_stage": active_stage,
+        "results": results_qs,
+        "courses_in_queue": courses_in_queue,
+        "selected_course": course_id,
+    })
+
+
+@login_required
+@require_POST
+def approval_action_view(request):
+    action = request.POST.get("action")
+    stage_key = request.POST.get("stage", "")
+    result_ids = request.POST.getlist("result_ids")
+    remarks = request.POST.get("remarks", "")
+
+    redirect_url = f"{reverse('results:approval_queue')}?stage={stage_key}"
+
+    if not result_ids:
+        messages.error(request, "No results were selected.")
+        return redirect(redirect_url)
+
+    results_qs = Result.objects.filter(id__in=result_ids)
+    try:
+        updated = ResultWorkflowService.bulk_transition(results_qs, action, actor=request.user, remarks=remarks)
+        verb = "returned for correction" if action == "return" else "updated"
+        messages.success(request, f"{len(updated)} result(s) {verb}.")
+    except PermissionDenied as e:
+        messages.error(request, str(e))
+    except ValidationError as e:
+        messages.error(request, str(e))
+
+    return redirect(redirect_url)
+
+
+# ---------------------------------------------------------------------------
+# Transcript — full academic statement + deliberate, auditable generation.
+# ---------------------------------------------------------------------------
+
+@login_required
+def my_transcript_view(request):
+    """Student's own transcript preview, with a button to generate an
+    unofficial (watermarked) copy for their own use."""
+    student = getattr(request.user, "student", None)
+    if not student:
+        return render(request, "errors/403.html", {"message": "Student profile required."})
+
+    statement = TranscriptService.build_statement(student)
+    latest_transcript = Transcript.objects.filter(student=student).first()
+
+    return render(request, "results/student/transcript.html", {
+        "student": student,
+        "statement": statement,
+        "latest_transcript": latest_transcript,
+        "is_staff_view": False,
+    })
+
+
+@login_required
+@require_POST
+def generate_my_transcript_view(request):
+    """Student self-service — always UNOFFICIAL. An official transcript
+    requires deliberate registrar action (staff_generate_transcript_view)."""
+    student = getattr(request.user, "student", None)
+    if not student:
+        return render(request, "errors/403.html", {"message": "Student profile required."})
+
+    transcript = TranscriptService.generate_transcript(student, generated_by=request.user, is_official=False)
+    return redirect("results:transcript_pdf", transcript_id=transcript.id)
+
+
+@login_required
+@permission_required("results.generate_official_transcript", raise_exception=True)
+def staff_generate_transcript_view(request, matric_number):
+    from students.models import Student
+    student = get_object_or_404(Student, matric_number=matric_number)
+
+    if request.method == "POST":
+        transcript = TranscriptService.generate_transcript(student, generated_by=request.user, is_official=True)
+        messages.success(request, f"Official transcript generated for {student.get_full_name()}.")
+        return redirect("results:transcript_pdf", transcript_id=transcript.id)
+
+    statement = TranscriptService.build_statement(student)
+    return render(request, "results/student/transcript.html", {
+        "student": student,
+        "statement": statement,
+        "latest_transcript": Transcript.objects.filter(student=student).first(),
+        "is_staff_view": True,
+    })
+
+
+@login_required
+def transcript_pdf_view(request, transcript_id):
+    transcript = get_object_or_404(Transcript.objects.select_related("student__user"), pk=transcript_id)
+
+    student = getattr(request.user, "student", None)
+    is_owner = student is not None and student.id == transcript.student_id
+    if not is_owner and not request.user.has_perm("results.generate_official_transcript"):
+        return render(request, "errors/403.html", {"message": "Not permitted to view this transcript."})
+
+    statement = TranscriptService.build_statement(transcript.student)
+    pdf_bytes = build_transcript_pdf(transcript.student, transcript, statement)
+
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="transcript_{transcript.student.matric_number}.pdf"'
+    return response

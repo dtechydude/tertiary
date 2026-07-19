@@ -65,4 +65,26 @@ urlpatterns = [
     path("payments/pending/", views.pending_payments_view, name="pending_payments"),
     path("payments/<int:payment_id>/approve/", views.approve_payment_view, name="approve_payment"),
     path("payments/<int:payment_id>/reject/", views.reject_payment_view, name="reject_payment"),
+
+    # =============================================================================
+# ADDITIONS to finance/urls.py — append these entries inside the existing
+# `urlpatterns = [ ... ]` list (e.g. right before the closing `]`).
+# Every existing path stays exactly as it is.
+# =============================================================================
+
+    # --- Registrar/Bursary: Accounting Report + Debtors List (portal) ---
+    path("reports/", views.finance_reports_dashboard_view, name="reports_dashboard"),
+    path("reports/export/collection.csv", views.finance_collection_csv_view, name="collection_report_csv"),
+    path("reports/export/debtors.csv", views.debtors_csv_view, name="debtors_csv"),
+
+    # --- Wallet: student-facing ---
+    path("wallet/", views.wallet_dashboard_view, name="wallet_dashboard"),
+    path("wallet/fund/", views.fund_wallet_view, name="fund_wallet"),
+    path("wallet/apply/", views.apply_wallet_view, name="apply_wallet"),
+
+    # --- Wallet funding: staff approve/reject (shown on the existing
+    #     pending_payments.html page, alongside the existing payment claims) ---
+    path("wallet/funding/<int:request_id>/approve/", views.approve_wallet_funding_view, name="approve_wallet_funding"),
+    path("wallet/funding/<int:request_id>/reject/", views.reject_wallet_funding_view, name="reject_wallet_funding"),
+
 ]

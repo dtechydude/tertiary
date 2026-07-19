@@ -285,3 +285,82 @@ class PaymentAllocation(models.Model):
 
     def __str__(self):
         return f"{self.payment.reference} → {self.payment_item}: {self.amount}"
+
+
+
+# =============================================================================
+# ADDITION — append these two classes to the END of finance/models.py.
+# Nothing above this line in your existing models.py needs to change.
+# `Sum` is already imported at the top of models.py (from django.db.models
+# import Q, Sum), so no new imports are needed for this file.
+# =============================================================================
+
+
+class Wallet(models.Model):
+    """
+    A student's spendable balance, separate from the Payment/PaymentItem
+    ledger. Funded via WalletFundingRequest (staff-approved, exactly like
+    any other payment claim); spent by creating a normal
+    Payment(method=WALLET) against one or more PaymentItems — so a
+    wallet-funded bill payment flows through the exact same
+    pending -> approve/reject screen bursary staff already use for every
+    other payment method.
+    """
+    student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name="wallet")
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Student Wallet"
+        verbose_name_plural = "Student Wallets"
+
+    def __str__(self):
+        return f"{self.student.matric_number} — ₦{self.balance}"
+
+    @property
+    def reserved_balance(self) -> Decimal:
+        """Sum of this student's PENDING wallet-method payments — money
+        already earmarked for a bill awaiting staff confirmation, so it
+        can't be spent twice while awaiting review."""
+        total = Payment.objects.filter(
+            student=self.student, method=Payment.Method.WALLET, status=Payment.Status.PENDING,
+        ).aggregate(total=Sum("amount"))["total"]
+        return total or Decimal("0.00")
+
+    @property
+    def available_balance(self) -> Decimal:
+        return self.balance - self.reserved_balance
+
+
+class WalletFundingRequest(models.Model):
+    """
+    A student's claim of having funded their wallet (e.g. a bank transfer
+    to one of the school's SchoolBankDetail accounts) — awaiting bursary
+    confirmation before the amount is actually credited to
+    Wallet.balance. Mirrors the same pending-claim pattern Payment
+    already uses, just for topping up the wallet rather than paying a
+    specific bill directly.
+    """
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SUCCESSFUL = "successful", "Successful"
+        REJECTED = "rejected", "Rejected"
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="wallet_funding_requests")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reference = models.CharField(max_length=100, help_text="Bank teller/transfer reference the student is claiming.")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Wallet Funding Request"
+        verbose_name_plural = "Wallet Funding Requests"
+
+    def __str__(self):
+        return f"{self.student.matric_number} — ₦{self.amount} ({self.status})"

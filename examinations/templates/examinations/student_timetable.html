@@ -1,0 +1,88 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>My Exam Timetable</title>
+{% endblock title %}
+
+{% block favicon %}
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    @media print {
+        .no-print { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles no-print">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active"><a href="javascript:void(0)">Examinations</a></li>
+                <li class="breadcrumb-item"><a href="javascript:void(0)">My Timetable</a></li>
+            </ol>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+            <div>
+                <h3 class="fw-bold mb-1">My Exam Timetable</h3>
+                <p class="text-muted mb-0">
+                    {{ student.get_full_name }} ({{ student.matric_number }}) &middot;
+                    {{ current_session|default:"No active session" }}{% if current_semester %} — {{ current_semester }}{% endif %}
+                </p>
+            </div>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-print me-1"></i> Print
+            </button>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Date</th>
+                            <th>Time</th>
+                            <th>Course</th>
+                            <th>Venue</th>
+                            <th class="text-center">Eligible</th>
+                            <th class="pe-3">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr class="{% if not row.is_eligible %}table-danger{% endif %}">
+                            <td class="ps-3">{{ row.schedule.exam_date|date:"D, M j, Y" }}</td>
+                            <td>{{ row.schedule.start_time|time:"H:i" }} – {{ row.schedule.end_time|time:"H:i" }}</td>
+                            <td>{{ row.schedule.course.course_code }} — {{ row.schedule.course.title }}</td>
+                            <td>{{ row.schedule.venue|default:"TBA" }}</td>
+                            <td class="text-center">
+                                {% if row.is_eligible %}
+                                <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                <span class="badge bg-danger">No</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-3 small text-muted">
+                                {{ row.schedule.instructions }}
+                                {% if not row.is_eligible %}
+                                <br>{% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No exams have been scheduled for your registered courses yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="text-muted small mt-3 no-print">
+            Rows marked <strong>No</strong> under Eligible have outstanding fees and/or a registration
+            pending validation — resolve these before the exam date to be admitted.
+        </p>
+    </div>
+</div>
+{% endblock content_body %}

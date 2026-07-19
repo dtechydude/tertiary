@@ -24,6 +24,8 @@ urlpatterns = [
     path('ai_center/', include('ai_center.urls', namespace='ai_center')),
     path('elearning/', include('elearning.urls', namespace='elearning')),
     path('results/', include('results.urls')),
+    path('examinations/', include('examinations.urls', namespace='examinations')),
+
 
     
     path('api/results/', include(('results.urls', 'results'), namespace='results-api')),     

@@ -91,11 +91,89 @@
 
         .qr-block { text-align: center; margin-top: 30px; }
         .qr-block small { display: block; color: #94a3b8; margin-top: 6px; }
+        /* QRCode.js can render a <canvas>, an <img>, or (older-browser
+           fallback) a <table> — the last of which is block-level and
+           ignores an ancestor's text-align, which is why centering wasn't
+           reliably working. Flexbox on the direct container centers
+           whatever element the library actually inserts. */
+        .qr-canvas {
+            display: flex;
+            justify-content: center;
+        }
+        .qr-canvas canvas, .qr-canvas img, .qr-canvas table {
+            margin: 0 auto;
+        }
+
+        @page {
+            size: A4;
+            margin: 10mm 12mm;
+        }
 
         @media print {
             .no-print { display: none !important; }
             body { background: #fff; padding-bottom: 0; }
-            .letter-paper { box-shadow: none !important; padding: 20px; margin: 0 auto; }
+            .letter-page { padding-top: 0; }
+            .letter-paper {
+                box-shadow: none !important;
+                padding: 22px 34px;
+                margin: 0 auto;
+                max-width: 100%;
+            }
+
+            /* Tightened spacing/line-height so each individual letter fits
+               its own page before the forced page-break to the next
+               student — otherwise the same per-letter overflow as the
+               single-letter view just repeats across every entry in the
+               batch. Screen/filter-panel view above is untouched. */
+            .letterhead {
+                margin-bottom: 16px;
+                padding-bottom: 10px;
+                page-break-inside: avoid;
+            }
+            .letterhead img.logo { width: 52px; height: 52px; }
+            .letterhead h3 { font-size: 1.05rem; }
+            .letterhead .school-meta { font-size: 0.72rem; }
+
+            .letter-ref-row { margin-bottom: 16px; }
+
+            .letter-title {
+                margin: 14px 0;
+                font-size: 1.05rem;
+            }
+
+            .letter-body p {
+                line-height: 1.45;
+                font-size: 0.92rem;
+                margin-bottom: 0.55rem;
+            }
+
+            .matric-highlight {
+                padding: 6px 12px;
+                margin: 6px 0;
+            }
+
+            .conditions-list li {
+                margin-bottom: 4px;
+                line-height: 1.35;
+                font-size: 0.88rem;
+            }
+
+            .signature-block {
+                margin-top: 30px;
+                page-break-inside: avoid;
+            }
+            .signature-column img.signature-img { max-height: 44px; }
+            .signature-line { margin-top: 26px; padding-top: 4px; }
+
+            .qr-block {
+                margin-top: 14px;
+                page-break-inside: avoid;
+            }
+            .qr-block canvas, .qr-block img, .qr-block table {
+                width: 65px !important;
+                height: 65px !important;
+            }
+
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -168,7 +246,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
         document.querySelectorAll('.qr-canvas').forEach(function (el) {
-            new QRCode(el, { text: el.dataset.verifyUrl, width: 100, height: 100 });
+            new QRCode(el, { text: el.dataset.verifyUrl, width: 80, height: 80 });
         });
     </script>
 </body>

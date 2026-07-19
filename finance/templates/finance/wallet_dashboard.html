@@ -1,0 +1,283 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>My Wallet</title>
+{% endblock title %}
+
+{% block favicon %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    :root {
+        --portal-accent: #3b5fe2;
+        --portal-accent-2: #6a4fd9;
+        --portal-gold: #c5a059;
+    }
+    .content-body { padding-bottom: 5rem; }
+    @media (max-width: 767px) { .content-body { padding-bottom: 8rem; } }
+
+    .wallet-hero {
+        background: linear-gradient(135deg, var(--portal-accent) 0%, var(--portal-accent-2) 100%);
+        border-radius: 1rem;
+        color: #fff;
+        padding: 1.75rem 2rem;
+    }
+    .wallet-hero .balance-figure { font-size: 2.2rem; font-weight: 800; }
+    .wallet-hero .balance-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; color: rgba(255,255,255,0.85); }
+    .wallet-hero .btn-hero {
+        background: #fff;
+        color: var(--portal-accent);
+        border: none;
+        font-weight: 600;
+        border-radius: 50px;
+        padding: 0.4rem 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .wallet-hero .btn-hero:hover { color: var(--portal-accent-2); }
+
+    @media (max-width: 575px) {
+        .wallet-hero { padding: 1.35rem 1.25rem; text-align: center; }
+        .wallet-hero .balance-figure { font-size: 1.75rem; }
+        .wallet-hero .d-flex { flex-direction: column; align-items: center !important; }
+        .wallet-hero .btn-hero { width: 100%; }
+    }
+
+    .info-card { border: none; border-radius: 0.85rem; }
+    .info-card .card-header h5,
+    .info-card .card-header h6 { display: flex; align-items: center; }
+
+    .status-pill { font-size: 0.72rem; padding: 0.25em 0.65em; border-radius: 50px; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+    .status-pill.pending { background: #fff3cd; color: #7a5b00; }
+    .status-pill.successful { background: #d1f5df; color: #0f6b33; }
+    .status-pill.rejected, .status-pill.failed { background: #fde2e1; color: #9c1f1a; }
+
+    /* Scrollable table wrapper: vertical AND horizontal overflow both
+       handled, so a table never gets visually cut off or forces the
+       page itself to overflow horizontally on narrow screens. */
+    .scroll-table-wrap {
+        max-height: 300px;
+        overflow-y: auto;
+        overflow-x: auto;
+        border: 1px solid #eef0f4;
+        border-radius: 0.5rem;
+    }
+    .scroll-table-wrap table { margin-bottom: 0; min-width: 100%; }
+    .scroll-table-wrap thead th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fc;
+        z-index: 1;
+        white-space: nowrap;
+    }
+
+    /* History cards sit side-by-side on md+ screens; match their height
+       so neither one looks like it's trailing off shorter/taller than
+       its neighbour regardless of row count. */
+    .history-card { height: 100%; }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- Wallet balance hero -->
+        <div class="wallet-hero mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-4">
+                <div>
+                    <div class="balance-label">Wallet Balance</div>
+                    <div class="balance-figure">₦{{ wallet.balance|floatformat:2 }}</div>
+                    {% if wallet.reserved_balance > 0 %}
+                    <div class="small opacity-75 mt-1">
+                        ₦{{ wallet.reserved_balance|floatformat:2 }} reserved for pending confirmations &middot;
+                        <strong>₦{{ wallet.available_balance|floatformat:2 }}</strong> available to spend
+                    </div>
+                    {% endif %}
+                </div>
+                <button type="button" class="btn btn-hero" data-bs-toggle="modal" data-bs-target="#fundWalletModal">
+                    <i class="fas fa-plus me-1"></i> Fund Wallet
+                </button>
+            </div>
+        </div>
+
+        <!-- Apply wallet to bills: full width, its own row, so the
+             table has room to breathe instead of being squeezed into a
+             narrow column. -->
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="card info-card shadow-sm">
+                    <div class="card-header border-0 pb-0">
+                        <h5 class="card-title mb-0"><i class="fas fa-hand-holding-dollar text-primary me-2"></i>Apply Wallet Balance to Bills</h5>
+                        <p class="text-muted small mt-1">
+                            Select bills and enter how much of your <strong>₦{{ wallet.available_balance|floatformat:2 }}</strong>
+                            available balance to apply. This is submitted for bursary confirmation — your registration/exam
+                            eligibility updates automatically once approved.
+                        </p>
+                    </div>
+                    <div class="card-body">
+                        {% if outstanding_items %}
+                        <form method="post" action="{% url 'finance:apply_wallet' %}">
+                            {% csrf_token %}
+                            <div class="table-responsive scroll-table-wrap mb-3">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th>Bill</th>
+                                            <th class="text-end">Balance</th>
+                                            <th style="width: 140px;">Amount to Apply</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in outstanding_items %}
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="form-check-input apply-toggle" data-target="#amount-{{ item.id }}">
+                                            </td>
+                                            <td>
+                                                {% if item.fee_assignment_id %}
+                                                    {{ item.fee_assignment.category.name }}
+                                                {% else %}
+                                                    {{ item.course_registration.course.course_code }} (course fee)
+                                                {% endif %}
+                                                <div class="text-muted small">{{ item.session }} &middot; {{ item.semester }}</div>
+                                            </td>
+                                            <td class="text-end">₦{{ item.balance|floatformat:2 }}</td>
+                                            <td>
+                                                <input type="number" step="0.01" min="0" max="{{ item.balance }}"
+                                                       class="form-control form-control-sm" id="amount-{{ item.id }}"
+                                                       name="apply_{{ item.id }}" placeholder="0.00" disabled>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i> Submit for Confirmation
+                            </button>
+                        </form>
+                        {% else %}
+                        <p class="text-muted small mb-0">You have no outstanding bills right now.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History: two equal-width cards side by side on md+ screens,
+             stacking naturally on mobile. Each gets its own full-width
+             card instead of both being crammed into one narrow column. -->
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card info-card shadow-sm history-card">
+                    <div class="card-header border-0 pb-0">
+                        <h6 class="card-title mb-0"><i class="fas fa-clock-rotate-left text-primary me-2"></i>Funding History</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive scroll-table-wrap">
+                            <table class="table table-sm">
+                                <thead><tr><th>Date</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    {% for req in funding_history %}
+                                    <tr>
+                                        <td>{{ req.created_at|date:"M j, Y" }}</td>
+                                        <td class="text-end">₦{{ req.amount|floatformat:2 }}</td>
+                                        <td><span class="status-pill {{ req.status }}">{{ req.get_status_display }}</span></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="3" class="text-center text-muted">No funding requests yet.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card info-card shadow-sm history-card">
+                    <div class="card-header border-0 pb-0">
+                        <h6 class="card-title mb-0"><i class="fas fa-receipt text-primary me-2"></i>Wallet Payments Submitted</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive scroll-table-wrap">
+                            <table class="table table-sm">
+                                <thead><tr><th>Date</th><th class="text-end">Amount</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    {% for payment in wallet_payments %}
+                                    <tr>
+                                        <td>{{ payment.created_at|date:"M j, Y" }}</td>
+                                        <td class="text-end">₦{{ payment.amount|floatformat:2 }}</td>
+                                        <td><span class="status-pill {{ payment.status }}">{{ payment.get_status_display }}</span></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="3" class="text-center text-muted">No wallet payments submitted yet.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fund Wallet Modal -->
+<div class="modal fade" id="fundWalletModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'finance:fund_wallet' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-wallet text-primary me-2"></i>Fund Your Wallet</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Transfer to one of the school's official accounts (see
+                        <a href="{% url 'finance:bank-detail' %}" target="_blank">Bank Details</a>), then submit the
+                        amount and your transfer reference below. Your wallet is credited once bursary confirms it.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Amount (₦)</label>
+                        <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Transfer / Teller Reference</label>
+                        <input type="text" name="reference" class="form-control" placeholder="e.g. teller number or transfer reference" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit for Confirmation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.apply-toggle').forEach(function (checkbox) {
+        checkbox.addEventListener('change', function () {
+            var target = document.querySelector(this.dataset.target);
+            target.disabled = !this.checked;
+            if (!this.checked) { target.value = ''; }
+        });
+    });
+</script>
+{% endblock content_body %}
+
+{% block footer %}
+{% endblock footer %}

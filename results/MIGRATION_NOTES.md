@@ -44,13 +44,23 @@
 
 After migrating, assign these via Django admin (`Groups`) to your existing role groups, e.g.:
 
-- **Lecturer** group → `submit_result`
+- **Lecturer** group → `submit_result` *(optional — see note below)*
 - **Head of Department** group → `approve_result_hod`, `return_result`
 - **Dean** group → `approve_result_dean`, `return_result`
 - **Registrar** group → `approve_result_registrar`, `publish_result`, `return_result`
 
 `ResultWorkflowService.transition()` checks these with `actor.has_perm(...)` — nothing in the code
 checks `request.user.groups.filter(name="HOD")` or any other hardcoded role string.
+
+**`submit_result` is a fallback, not a requirement.** A lecturer can submit a course's results
+without holding this permission at all, as long as they're the `CourseAssignment` owner for that
+exact course/session/semester (which the submit view already verifies before it ever reaches the
+workflow check) — being assigned to teach the course is itself sufficient authorization to submit
+its scores. The Django permission still works as an override for edge cases (e.g. a coordinator
+submitting on behalf of a lecturer who isn't formally assigned yet), but you no longer need to
+remember to grant it to every lecturer just for the common case to work. HOD/Dean/Registrar/Publish/
+Return remain strictly permission-gated, since those are genuinely separate roles not tied to
+teaching a specific course.
 
 ## Migrating existing data
 

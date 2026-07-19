@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pending Payments — Finance</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
     body { background: #f1f3f5; }
     .page-wrap { max-width: 1100px; margin: 2rem auto; }
@@ -14,14 +13,9 @@
 <body>
 <div class="container page-wrap">
 
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h4 class="mb-0" style="color:green;"><i class="fas fa-hourglass-half me-2"></i>Pending Payments</h4>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">Pending Payments</h4>
         <span class="badge bg-secondary">{{ pending_payments|length }} awaiting review</span>
-    </div>
-    <div class="mb-4">
-        <a href="{% url 'finance:reports_dashboard' %}" class="small">
-            <i class="fas fa-chart-pie me-1"></i> Go to Finance Reports
-        </a>
     </div>
 
     {% if messages %}
@@ -96,54 +90,6 @@
     {% empty %}
     <div class="text-center text-muted py-5">
         No payments are currently awaiting review.
-    </div>
-    {% endfor %}
-
-    <!-- ============================================================
-         ADDED: Wallet Funding Requests — a separate queue from the
-         payment claims above (top-ups to a student's wallet balance,
-         rather than a payment against a specific bill). Approving one
-         only credits Wallet.balance; it does not touch any PaymentItem.
-         ============================================================ -->
-    <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-        <h4 class="mb-0" style="color:blue;"><i class="fas fa-wallet me-2"></i>Wallet Funding Requests</h4>
-        <span class="badge bg-secondary">{{ pending_wallet_funding|length }} awaiting review</span>
-    </div>
-
-    {% for req in pending_wallet_funding %}
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                    <h5 class="mb-1">{{ req.student.get_full_name }} <span class="text-muted">({{ req.student.matric_number }})</span></h5>
-                    <div class="text-muted small">
-                        Reference: <strong>{{ req.reference }}</strong> &middot;
-                        Submitted {{ req.created_at|date:"M j, Y g:i A" }}
-                    </div>
-                </div>
-                <div class="text-end">
-                    <div class="fs-5 fw-bold text-success">₦{{ req.amount|floatformat:2 }}</div>
-                    <div class="text-muted small">to be credited to wallet</div>
-                </div>
-            </div>
-
-            <div class="d-flex gap-2 mt-3">
-                <form method="post" action="{% url 'finance:approve_wallet_funding' req.id %}" onsubmit="return confirm('Credit ₦{{ req.amount|floatformat:2 }} to this student\'s wallet?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="fa fa-check"></i> Approve &amp; Credit Wallet
-                    </button>
-                </form>
-                <form method="post" action="{% url 'finance:reject_wallet_funding' req.id %}" onsubmit="return confirm('Reject this wallet funding request?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm">Reject</button>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="text-center text-muted py-5">
-        No wallet funding requests are currently awaiting review.
     </div>
     {% endfor %}
 

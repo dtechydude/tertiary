@@ -1,0 +1,138 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Academic Transcript | {{ student.matric_number }}</title>
+{% endblock title %}
+
+{% block favicon %}
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        /* The sidebar/navbar/footer come from the base theme template and
+           can't be targeted individually from here — so instead of trying
+           to hide each of them, hide EVERYTHING by default and then
+           re-reveal only the transcript container, unpinned from whatever
+           margin/width the theme's layout was applying. */
+        body * { visibility: hidden; }
+        #printable-transcript, #printable-transcript * { visibility: visible; }
+        #printable-transcript {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 1cm;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid" id="printable-transcript">
+        <div class="row page-titles no-print">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active"><a href="javascript:void(0)">Results</a></li>
+                <li class="breadcrumb-item"><a href="javascript:void(0)">Transcript</a></li>
+            </ol>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2 no-print">
+            <div>
+                <h3 class="fw-bold mb-1">{{ student.get_full_name }}</h3>
+                <p class="text-muted mb-0">{{ student.matric_number }} &middot; {{ student.programme }} &middot; {{ student.department.name }}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                {% if is_staff_view %}
+                <form method="post" action="{% url 'results:staff_generate_transcript' student.matric_number %}"
+                      onsubmit="return confirm('Generate an OFFICIAL transcript for {{ student.get_full_name }}?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-certificate me-1"></i> Generate Official Transcript
+                    </button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'results:generate_my_transcript' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-download me-1"></i> Download My Transcript (Unofficial)
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if latest_transcript %}
+        <div class="alert alert-secondary border-0 small no-print">
+            Last generated: {{ latest_transcript.generated_at|date:"M j, Y g:i A" }}
+            ({% if latest_transcript.is_official %}Official{% else %}Unofficial{% endif %}) —
+            <a href="{% url 'results:transcript_pdf' latest_transcript.id %}" target="_blank">View PDF</a>
+        </div>
+        {% endif %}
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body text-center">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h2 class="fw-bold text-primary mb-0">{{ statement.cgpa }}</h2>
+                        <small class="text-muted">Cumulative GPA</small>
+                    </div>
+                    <div class="col-md-4">
+                        <h2 class="fw-bold mb-0">{{ statement.total_units }}</h2>
+                        <small class="text-muted">Total Units Completed</small>
+                    </div>
+                    <div class="col-md-4">
+                        {% if statement.evaluation and statement.evaluation.is_eligible_to_graduate %}
+                        <h5 class="fw-bold text-success mb-0">{{ statement.evaluation.classification|default:"Eligible" }}</h5>
+                        <small class="text-muted">Graduation Status</small>
+                        {% else %}
+                        <h5 class="fw-bold text-secondary mb-0">In Progress</h5>
+                        <small class="text-muted">Graduation Status</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% for group in statement.semesters %}
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">{{ group.session }} — {{ group.semester }}</h6>
+                <span class="badge bg-light text-dark border">Semester GPA: {{ group.gpa }} &middot; {{ group.units }} Units</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Code</th>
+                            <th>Title</th>
+                            <th class="text-center">Units</th>
+                            <th class="text-center">Score</th>
+                            <th class="text-center">Grade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in group.results %}
+                        <tr>
+                            <td class="ps-3">{{ result.course.course_code }}</td>
+                            <td>{{ result.course.title }}</td>
+                            <td class="text-center">{{ result.credit_unit }}</td>
+                            <td class="text-center">{{ result.total_score }}</td>
+                            <td class="text-center"><span class="badge bg-info">{{ result.grade }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-secondary text-center py-5">No published results yet.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content_body %}

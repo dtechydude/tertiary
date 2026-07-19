@@ -1,0 +1,257 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Finance Reports</title>
+{% endblock title %}
+
+{% block favicon %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    :root {
+        --portal-accent: #3b5fe2;
+        --portal-accent-2: #6a4fd9;
+        --portal-gold: #c5a059;
+    }
+    .content-body { padding-bottom: 5rem; }
+    @media (max-width: 767px) { .content-body { padding-bottom: 8rem; } }
+
+    .report-hero {
+        background: linear-gradient(135deg, var(--portal-accent) 0%, var(--portal-accent-2) 100%);
+        border-radius: 1rem;
+        color: #fff;
+        padding: 1.75rem 2rem;
+    }
+
+    .stat-card {
+        border: none;
+        border-left: 4px solid var(--stat-accent, #3b5fe2);
+        border-radius: 0.75rem;
+    }
+    .stat-card .stat-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 0.6rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: color-mix(in srgb, var(--stat-accent, #3b5fe2) 12%, white);
+        color: var(--stat-accent, #3b5fe2);
+        font-size: 1.1rem;
+    }
+
+    .filter-card { border: none; border-radius: 0.85rem; }
+
+    .scroll-table-wrap {
+        max-height: 420px;
+        overflow-y: auto;
+        border: 1px solid #eef0f4;
+        border-radius: 0.5rem;
+    }
+    .scroll-table-wrap table { margin-bottom: 0; }
+    .scroll-table-wrap thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+
+        <div class="report-hero mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h4 class="mb-1 fw-bold"><i class="fas fa-chart-pie me-2"></i>Finance Reports</h4>
+                    <p class="mb-0 opacity-75">Collection accounting &amp; debtors overview</p>
+                </div>
+                <a href="{% url 'finance:pending_payments' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-inbox me-1"></i> Pending Payments &amp; Wallet Funding
+                </a>
+            </div>
+        </div>
+
+        <!-- Filter form -->
+        <div class="card filter-card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Session</label>
+                        <select name="session" class="form-select">
+                            <option value="">All Sessions</option>
+                            {% for s in sessions %}
+                            <option value="{{ s.id }}" {% if selected_session.id == s.id %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Semester</label>
+                        <select name="semester" class="form-select">
+                            <option value="">All Semesters</option>
+                            {% for sem in semesters %}
+                            <option value="{{ sem.id }}" {% if selected_semester.id == sem.id %}selected{% endif %}>{{ sem }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Department</label>
+                        <select name="department" class="form-select">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}" {% if selected_department.id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card stat-card shadow-sm h-100" style="--stat-accent:#198754;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="stat-icon"><i class="fas fa-sack-dollar"></i></div>
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Total Collected</div>
+                            <div class="fw-bold fs-5">₦{{ grand_total|floatformat:2 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card shadow-sm h-100" style="--stat-accent:#d32f2f;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Total Outstanding</div>
+                            <div class="fw-bold fs-5">₦{{ total_outstanding|floatformat:2 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card shadow-sm h-100" style="--stat-accent:#c5a059;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="stat-icon"><i class="fas fa-user-clock"></i></div>
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Students Owing</div>
+                            <div class="fw-bold fs-5">{{ debtor_count }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs: Collection Report / Debtors List -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <ul class="nav nav-tabs flex-nowrap overflow-auto mb-3">
+                    <li class="nav-item"><a href="#collection" data-bs-toggle="tab" class="nav-link active show text-nowrap"><i class="fas fa-receipt me-1"></i> Collection Report</a></li>
+                    <li class="nav-item"><a href="#debtors" data-bs-toggle="tab" class="nav-link text-nowrap"><i class="fas fa-user-clock me-1"></i> Debtors List</a></li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Collection Report -->
+                    <div id="collection" class="tab-pane fade active show">
+                        <div class="d-flex justify-content-end mb-2">
+                            <a href="{% url 'finance:collection_report_csv' %}?session={{ selected_session.id|default:'' }}&semester={{ selected_semester.id|default:'' }}&department={{ selected_department.id|default:'' }}"
+                               class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-file-csv me-1"></i> Export CSV
+                            </a>
+                        </div>
+
+                        <h6 class="text-primary">By Fee Category</h6>
+                        <div class="table-responsive scroll-table-wrap mb-4">
+                            <table class="table table-sm table-striped">
+                                <thead><tr><th>Category</th><th class="text-end">Total Collected</th></tr></thead>
+                                <tbody>
+                                    {% for row in by_category %}
+                                    <tr><td>{{ row.category_label }}</td><td class="text-end">₦{{ row.total_collected|floatformat:2 }}</td></tr>
+                                    {% empty %}
+                                    <tr><td colspan="2" class="text-center text-muted">No successful payments recorded yet.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6 class="text-primary">By Course</h6>
+                        <div class="table-responsive scroll-table-wrap mb-4">
+                            <table class="table table-sm table-striped">
+                                <thead><tr><th>Code</th><th>Title</th><th class="text-end">Total Collected</th></tr></thead>
+                                <tbody>
+                                    {% for row in by_course %}
+                                    <tr><td>{{ row.course_code }}</td><td>{{ row.course_title }}</td><td class="text-end">₦{{ row.total_collected|floatformat:2 }}</td></tr>
+                                    {% empty %}
+                                    <tr><td colspan="3" class="text-center text-muted">No course fee payments recorded yet.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6 class="text-primary">By Payment Method</h6>
+                        <div class="table-responsive scroll-table-wrap">
+                            <table class="table table-sm table-striped">
+                                <thead><tr><th>Method</th><th class="text-end">Total Collected</th></tr></thead>
+                                <tbody>
+                                    {% for row in by_method %}
+                                    <tr><td class="text-capitalize">{{ row.method }}</td><td class="text-end">₦{{ row.total_collected|floatformat:2 }}</td></tr>
+                                    {% empty %}
+                                    <tr><td colspan="2" class="text-center text-muted">No successful payments recorded yet.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Debtors List -->
+                    <div id="debtors" class="tab-pane fade">
+                        <div class="d-flex justify-content-end mb-2">
+                            <a href="{% url 'finance:debtors_csv' %}?session={{ selected_session.id|default:'' }}&semester={{ selected_semester.id|default:'' }}&department={{ selected_department.id|default:'' }}"
+                               class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-file-csv me-1"></i> Export CSV
+                            </a>
+                        </div>
+                        <div class="table-responsive scroll-table-wrap">
+                            <table class="table table-sm table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Matric Number</th>
+                                        <th>Full Name</th>
+                                        <th>Department</th>
+                                        <th>Level</th>
+                                        <th class="text-end">Total Due</th>
+                                        <th class="text-end">Total Paid</th>
+                                        <th class="text-end">Outstanding</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in debtors %}
+                                    <tr>
+                                        <td>{{ row.student.matric_number }}</td>
+                                        <td>{{ row.student.get_full_name }}</td>
+                                        <td>{{ row.student.department.name|default:"—" }}</td>
+                                        <td>{{ row.student.level.name|default:"—" }}</td>
+                                        <td class="text-end">₦{{ row.total_due|floatformat:2 }}</td>
+                                        <td class="text-end">₦{{ row.total_paid|floatformat:2 }}</td>
+                                        <td class="text-end text-danger fw-bold">₦{{ row.outstanding|floatformat:2 }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="7" class="text-center text-muted">No outstanding balances for the selected filters — everyone's cleared.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock content_body %}
+
+{% block footer %}
+{% endblock footer %}

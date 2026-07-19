@@ -13,12 +13,25 @@
     .status-badge-passed { background: #d1fae5; color: #065f46; }
     .status-badge-failed { background: #fee2e2; color: #991b1b; }
     .status-badge-outstanding { background: #f3f4f6; color: #4b5563; }
+    @media print {
+        .no-print { display: none !important; }
+        body * { visibility: hidden; }
+        #printable-progress, #printable-progress * { visibility: visible; }
+        #printable-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 1cm;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content_body %}
 <div class="content-body">
-    <div class="container-fluid">
+    <div class="container-fluid" id="printable-progress">
         <div class="row page-titles">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item active"><a href="javascript:void(0)">{% if is_staff_view %}Student Records{% else %}My Portal{% endif %}</a></li>
@@ -34,7 +47,7 @@
                     {% if student.level %} &middot; Current Level: {{ student.level.name }}{% endif %}
                 </p>
             </div>
-            <form method="get" class="d-flex align-items-center gap-2">
+            <form method="get" class="d-flex align-items-center gap-2 no-print">
                 <select name="session" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="">All Sessions</option>
                     {% for s in sessions %}
@@ -48,6 +61,14 @@
                     <option value="{{ sem.id }}" {% if selected_semester == sem.id|stringformat:"s" %}selected{% endif %}>{{ sem }}</option>
                     {% endfor %}
                 </select>
+                {% endif %}
+                <button type="button" onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                {% if not is_staff_view %}
+                <a href="{% url 'results:my_transcript' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-file-alt me-1"></i> Full Transcript
+                </a>
                 {% endif %}
             </form>
         </div>

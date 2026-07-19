@@ -67,7 +67,31 @@ class ResultWorkflowService:
 
         target_status, required_perm = move
 
-        if actor is None or not actor.has_perm(required_perm):
+        if actor is None:
+            raise PermissionDenied(f"You do not have permission to '{action}' this result.")
+
+        is_authorized = actor.has_perm(required_perm)
+
+        # "submit" is deliberately relaxed: a lecturer doesn't need a
+        # separately-granted Django permission if they're the actual
+        # assigned lecturer for this exact course/session/semester —
+        # being assigned to teach it is itself sufficient authorization
+        # to submit its results. This avoids a routine, easy-to-forget
+        # setup step (granting `results.submit_result` per lecturer/group)
+        # for what is otherwise just "submit your own course's scores".
+        # HOD/Dean/Registrar/Publish/Return stay strictly permission-gated,
+        # since those are genuinely separate roles, not tied to teaching
+        # a specific course.
+        if not is_authorized and action == "submit":
+            from curriculum.models import CourseAssignment
+            lecturer = getattr(actor, "lecturer", None)
+            if lecturer is not None:
+                is_authorized = CourseAssignment.objects.filter(
+                    lecturer=lecturer, course=result.course,
+                    session=result.session, semester=result.semester,
+                ).exists()
+
+        if not is_authorized:
             raise PermissionDenied(f"You do not have permission to '{action}' this result.")
 
         from_status = result.status

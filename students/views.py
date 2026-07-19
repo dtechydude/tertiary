@@ -1115,6 +1115,683 @@ def _export_course_registrations_csv(queryset):
     return response
 
 
+# @login_required
+# def course_registration_view(request):
+#     from finance.services.payments import FinanceService
+#     from finance.services.exam_eligibility import ExamEligibilityService
+
+#     user = request.user
+#     student = getattr(user, 'student', None)
+#     is_admin = user.is_superuser or user.is_staff
+
+#     if not student and not is_admin:
+#         messages.error(request, "Access denied.")
+#         return redirect("pages:portal-home")
+
+#     current_session = Session.objects.filter(is_current=True).first()
+#     current_semester = Semester.objects.filter(is_current=True).first()
+
+#     # --- REGISTRATION PHASE LOGIC ---
+#     today = timezone.localdate()
+#     reg_phase = "CLOSED"
+#     late_fee = 0
+#     debug_msg = ""
+
+#     if current_semester:
+#         # Priority 1: Manual Override
+#         if current_semester.is_reg_active:
+#             reg_phase = "OPEN"
+#             debug_msg = "Manual override active."
+#         # Priority 2: Date Windows
+#         elif current_semester.reg_start_date and current_semester.reg_end_date:
+#             if today < current_semester.reg_start_date:
+#                 reg_phase = "CLOSED"
+#                 debug_msg = f"Starts {current_semester.reg_start_date}"
+#             elif today <= current_semester.reg_end_date:
+#                 reg_phase = "OPEN"
+#                 debug_msg = "Normal registration period."
+#             elif current_semester.late_reg_end_date and today <= current_semester.late_reg_end_date:
+#                 reg_phase = "LATE"
+#                 late_fee = current_semester.late_reg_fee
+#                 debug_msg = "Late registration period."
+#             else:
+#                 reg_phase = "CLOSED"
+#                 debug_msg = "Deadlines passed."
+#         else:
+#             debug_msg = "Dates not configured."
+
+#     # --- POST HANDLER ---
+#     if request.method == "POST":
+#         if not student:
+#             messages.error(request, "Admins cannot modify records.")
+#             return redirect("students:course-registration")
+
+#         action = request.POST.get("action", "register")
+
+#         # ---------------------------------------------------------
+#         # ACTION 1: Save course registration (unchanged sync pattern)
+#         # ---------------------------------------------------------
+#         if action == "register":
+#             if reg_phase == "CLOSED":
+#                 messages.error(request, "The portal is currently closed.")
+#                 return redirect("students:course-registration")
+
+#             selected_course_ids = [int(c_id) for c_id in request.POST.getlist("courses")]
+
+#             # Enforce the programme/level's unit policy before touching the
+#             # database (curriculum.RegistrationPolicy). MAXIMUM is a hard
+#             # block (a real resource/administrative cap). MINIMUM is a
+#             # warning only, never a block — if the available course list
+#             # for this department/level/semester doesn't even add up to
+#             # the configured minimum, a hard block would make registration
+#             # permanently impossible for every student in that cohort.
+#             if selected_course_ids:
+#                 selected_courses = Course.objects.filter(id__in=selected_course_ids)
+#                 total_units = sum(c.credit_unit for c in selected_courses)
+#                 try:
+#                     policy = resolve_registration_policy(student.level)
+#                     if total_units > policy.max_units_per_semester:
+#                         messages.error(
+#                             request,
+#                             f"You selected {total_units} unit(s), which exceeds the maximum of "
+#                             f"{policy.max_units_per_semester} allowed for your level. "
+#                             f"Please deselect a course and try again."
+#                         )
+#                         return redirect("students:course-registration")
+#                     if total_units < policy.min_units_per_semester:
+#                         messages.warning(
+#                             request,
+#                             f"Note: {total_units} unit(s) is below the recommended minimum of "
+#                             f"{policy.min_units_per_semester} for your level. Your registration "
+#                             f"was still saved — register more courses if/when more become available."
+#                         )
+#                 except ValidationError:
+#                     # No RegistrationPolicy configured yet for this level/programme —
+#                     # don't block registration just because policy setup is incomplete.
+#                     pass
+
+#             try:
+#                 with transaction.atomic():
+#                     # Sync: Delete all existing then recreate
+#                     CourseRegistration.objects.filter(
+#                         student=student, session=current_session, semester=current_semester
+#                     ).delete()
+
+#                     if selected_course_ids:
+#                         new_regs = [
+#                             CourseRegistration(
+#                                 student=student, course_id=c_id,
+#                                 session=current_session, semester=current_semester
+#                             ) for c_id in selected_course_ids
+#                         ]
+#                         created_regs = CourseRegistration.objects.bulk_create(new_regs)
+
+#                         # Bill each newly registered course's fee (finance app) —
+#                         # without this, a course with a nonzero cost would never
+#                         # show up as something the student owes.
+#                         for reg in created_regs:
+#                             FinanceService.ensure_course_fee_item(reg)
+
+#                         messages.success(request, "Course registration updated successfully.")
+#                     else:
+#                         messages.warning(request, "Your registration has been cleared.")
+#                 return redirect("students:course-registration")
+#             except Exception as e:
+#                 messages.error(request, f"System Error: {e}")
+
+#         # ---------------------------------------------------------
+#         # ACTION 2: Submit a payment claim covering one or more
+#         # outstanding items (course fees and/or mandatory fees),
+#         # selected and optionally part-paid by the student.
+#         # ---------------------------------------------------------
+#         elif action == "submit_payment":
+#             from finance.models import PaymentItem
+
+#             reference = request.POST.get("reference", "").strip()
+#             method = request.POST.get("method", "bank_transfer")
+#             selected_item_ids = request.POST.getlist("pay_items")
+
+#             if not reference:
+#                 messages.error(request, "Please provide a payment reference (e.g. your bank transfer reference).")
+#                 return redirect("students:course-registration")
+
+#             if not selected_item_ids:
+#                 messages.error(request, "Select at least one fee to pay for.")
+#                 return redirect("students:course-registration")
+
+#             allocations = {}
+#             total_amount = Decimal("0.00")
+#             for item_id in selected_item_ids:
+#                 item = get_object_or_404(PaymentItem, pk=item_id, student=student)
+#                 raw_amount = request.POST.get(f"amount_{item_id}", "").strip().replace(",", "")
+#                 try:
+#                     amount = Decimal(raw_amount) if raw_amount else item.balance
+#                 except InvalidOperation:
+#                     amount = item.balance
+#                 # Never allow paying more than what's actually owed, and
+#                 # never a non-positive amount.
+#                 amount = min(amount, item.balance)
+#                 if amount > 0:
+#                     allocations[item.id] = amount
+#                     total_amount += amount
+
+#             if not allocations:
+#                 messages.error(request, "Nothing to pay — the selected item(s) are already cleared.")
+#                 return redirect("students:course-registration")
+
+#             try:
+#                 FinanceService.record_payment(
+#                     student=student,
+#                     reference=reference,
+#                     amount=total_amount,
+#                     method=method,
+#                     allocations=allocations,
+#                     mark_successful=False,  # goes to PENDING until a bursary officer approves it
+#                 )
+#                 messages.success(
+#                     request,
+#                     f"Payment of ₦{total_amount:,.2f} submitted for approval. "
+#                     f"You'll be cleared once a bursary officer confirms it."
+#                 )
+#             except ValidationError as e:
+#                 messages.error(request, str(e))
+#             except IntegrityError:
+#                 messages.error(
+#                     request,
+#                     "That payment reference has already been submitted. "
+#                     "If you're re-submitting proof of the same transaction, please contact the bursary office."
+#                 )
+
+#             return redirect("students:course-registration")
+
+#     # --- GET DATA ---
+#     total_cost = float(late_fee)
+#     available_courses = []
+#     registered_course_ids = []
+#     unit_policy = None
+#     fee_clearance = None
+#     outstanding_items = []
+#     recent_payments = []
+#     course_search_debug = ""
+#     profile_incomplete = False
+#     admin_registrations = []
+#     admin_reg_stats = None
+
+#     admin_semesters = Semester.objects.none()
+#     selected_reg_semester = ""
+
+#     if is_admin:
+#         admin_semesters = Semester.objects.filter(session=current_session).order_by('name') if current_session else Semester.objects.none()
+
+#         # Filter by semester — defaults to the current semester, but staff
+#         # can pick any semester within the current session from the dropdown.
+#         selected_reg_semester = request.GET.get('reg_semester', '')
+#         if not selected_reg_semester and current_semester:
+#             selected_reg_semester = str(current_semester.id)
+
+#         admin_qs = CourseRegistration.objects.filter(session=current_session) if current_session else CourseRegistration.objects.none()
+#         if selected_reg_semester:
+#             admin_qs = admin_qs.filter(semester_id=selected_reg_semester)
+#         admin_qs = admin_qs.select_related('student__user', 'course').order_by('-registered_at')
+
+#         total_count = admin_qs.count()
+#         validated_count = admin_qs.filter(is_validated=True).count()
+#         admin_reg_stats = {
+#             'total': total_count,
+#             'validated': validated_count,
+#             'pending': total_count - validated_count,
+#         }
+
+#         # CSV export — same filtered queryset, no pagination applied.
+#         if request.GET.get('export') == 'csv':
+#             return _export_course_registrations_csv(admin_qs)
+
+#         paginator = Paginator(admin_qs, 25)
+#         page_number = request.GET.get('page', 1)
+#         admin_registrations = paginator.get_page(page_number)
+
+#     if student:
+#         if not student.department or not student.level:
+#             # A student without department/level assigned can never match
+#             # any Course filter — show this plainly instead of a blank,
+#             # unexplained grid.
+#             profile_incomplete = True
+#             available_courses = Course.objects.none()
+#         elif current_semester:
+#             # IMPORTANT: match by semester *name* (First/Second/Third), not
+#             # the exact Semester row. A Course's curriculum placement ("this
+#             # is a First Semester course for HND1 Computer Science") is
+#             # stable across academic sessions — but Course.semester is a
+#             # hard FK to one specific Semester row, which itself belongs to
+#             # one specific Session. Filtering on `semester=current_semester`
+#             # therefore goes silently empty the moment the registrar rolls
+#             # over to a new session's Semester row, even though nothing
+#             # about the curriculum actually changed. The CourseRegistration
+#             # itself still correctly ties to the exact
+#             # current_session/current_semester below — only the *available
+#             # courses to choose from* needed this relaxation.
+#             available_courses = Course.objects.filter(
+#                 department=student.department,
+#                 level=student.level,
+#                 semester__name=current_semester.name,
+#             ).select_related('semester', 'department', 'level')
+#             course_search_debug = (
+#                 f"Dept={student.department} | Level={student.level} | "
+#                 f"SemesterName='{current_semester.name}' | Found={available_courses.count()}"
+#             )
+#         else:
+#             available_courses = Course.objects.none()
+#             course_search_debug = "No current semester configured — cannot resolve available courses."
+
+#         regs = CourseRegistration.objects.filter(
+#             student=student, session=current_session, semester=current_semester
+#         ).select_related('course')
+#         registered_course_ids = list(regs.values_list('course_id', flat=True))
+#         for r in regs:
+#             total_cost += float(r.course.cost or 0)
+
+#         # Unit policy shown to the student so the limits aren't a surprise
+#         # only on submit.
+#         try:
+#             unit_policy = resolve_registration_policy(student.level)
+#         except ValidationError:
+#             unit_policy = None
+
+#         # Outstanding mandatory fees (from the finance app) — shown as a
+#         # banner so a student understands *why* a course might not be
+#         # exam-eligible, without needing to leave this page.
+#         if current_session and current_semester:
+#             from finance.models import Payment as FinancePayment
+
+#             try:
+#                 FinanceService.ensure_semester_fee_items(student, current_session, current_semester)
+#                 fee_clearance = ExamEligibilityService.semester_clearance_summary(
+#                     student, current_session, current_semester
+#                 )
+#             except Exception:
+#                 # No FeeAssignment configured yet for this session/semester —
+#                 # don't let that block the registration page from loading.
+#                 fee_clearance = None
+
+#             # Everything the student can choose to pay for right now —
+#             # course fees for whatever they're registered for, plus every
+#             # resolved mandatory/optional fee category.
+#             from students.services.dashboard import build_outstanding_items
+#             outstanding_items = build_outstanding_items(student, current_session, current_semester)
+
+#             recent_payments = FinancePayment.objects.filter(student=student).order_by('-created_at')[:10]
+
+#     return render(request, "students/course_registration.html", {
+#         "available_courses": available_courses,
+#         "registered_course_ids": registered_course_ids,
+#         "total_cost": total_cost,
+#         "reg_phase": reg_phase,
+#         "late_fee": late_fee,
+#         "debug_msg": debug_msg,
+#         "current_session": current_session,
+#         "current_semester": current_semester,
+#         "is_student": student is not None,
+#         "is_admin": is_admin,
+#         "today": today,
+#         "unit_policy": unit_policy,
+#         "fee_clearance": fee_clearance,
+#         "outstanding_items": outstanding_items,
+#         "recent_payments": recent_payments,
+#         "course_search_debug": course_search_debug,
+#         "profile_incomplete": profile_incomplete,
+#         "admin_registrations": admin_registrations,
+#         "admin_reg_stats": admin_reg_stats,
+#         "admin_semesters": admin_semesters,
+#         "selected_reg_semester": selected_reg_semester,
+#     })
+
+
+# @login_required
+# def course_registration_view(request):
+#     from finance.services.payments import FinanceService
+#     from finance.services.exam_eligibility import ExamEligibilityService
+
+#     user = request.user
+#     student = getattr(user, 'student', None)
+#     is_admin = user.is_superuser or user.is_staff
+
+#     if not student and not is_admin:
+#         messages.error(request, "Access denied.")
+#         return redirect("pages:portal-home")
+
+#     current_session = Session.objects.filter(is_current=True).first()
+#     current_semester = Semester.objects.filter(is_current=True).first()
+
+#     # --- REGISTRATION PHASE LOGIC ---
+#     today = timezone.localdate()
+#     reg_phase = "CLOSED"
+#     late_fee = 0
+#     debug_msg = ""
+
+#     if current_semester:
+#         # Priority 1: Manual Override
+#         if current_semester.is_reg_active:
+#             reg_phase = "OPEN"
+#             debug_msg = "Manual override active."
+#         # Priority 2: Date Windows
+#         elif current_semester.reg_start_date and current_semester.reg_end_date:
+#             if today < current_semester.reg_start_date:
+#                 reg_phase = "CLOSED"
+#                 debug_msg = f"Starts {current_semester.reg_start_date}"
+#             elif today <= current_semester.reg_end_date:
+#                 reg_phase = "OPEN"
+#                 debug_msg = "Normal registration period."
+#             elif current_semester.late_reg_end_date and today <= current_semester.late_reg_end_date:
+#                 reg_phase = "LATE"
+#                 late_fee = current_semester.late_reg_fee
+#                 debug_msg = "Late registration period."
+#             else:
+#                 reg_phase = "CLOSED"
+#                 debug_msg = "Deadlines passed."
+#         else:
+#             debug_msg = "Dates not configured."
+
+#     # --- POST HANDLER ---
+#     if request.method == "POST":
+#         if not student:
+#             messages.error(request, "Admins cannot modify records.")
+#             return redirect("students:course-registration")
+
+#         action = request.POST.get("action", "register")
+
+#         # ---------------------------------------------------------
+#         # ACTION 1: Save course registration (unchanged sync pattern)
+#         # ---------------------------------------------------------
+#         if action == "register":
+#             if reg_phase == "CLOSED":
+#                 messages.error(request, "The portal is currently closed.")
+#                 return redirect("students:course-registration")
+
+#             selected_course_ids = [int(c_id) for c_id in request.POST.getlist("courses")]
+
+#             # Enforce the programme/level's unit policy before touching the
+#             # database (curriculum.RegistrationPolicy). MAXIMUM is a hard
+#             # block (a real resource/administrative cap). MINIMUM is a
+#             # warning only, never a block — if the available course list
+#             # for this department/level/semester doesn't even add up to
+#             # the configured minimum, a hard block would make registration
+#             # permanently impossible for every student in that cohort.
+#             if selected_course_ids:
+#                 selected_courses = Course.objects.filter(id__in=selected_course_ids)
+#                 total_units = sum(c.credit_unit for c in selected_courses)
+#                 try:
+#                     policy = resolve_registration_policy(student.level)
+#                     if total_units > policy.max_units_per_semester:
+#                         messages.error(
+#                             request,
+#                             f"You selected {total_units} unit(s), which exceeds the maximum of "
+#                             f"{policy.max_units_per_semester} allowed for your level. "
+#                             f"Please deselect a course and try again."
+#                         )
+#                         return redirect("students:course-registration")
+#                     if total_units < policy.min_units_per_semester:
+#                         messages.warning(
+#                             request,
+#                             f"Note: {total_units} unit(s) is below the recommended minimum of "
+#                             f"{policy.min_units_per_semester} for your level. Your registration "
+#                             f"was still saved — register more courses if/when more become available."
+#                         )
+#                 except ValidationError:
+#                     # No RegistrationPolicy configured yet for this level/programme —
+#                     # don't block registration just because policy setup is incomplete.
+#                     pass
+
+#             try:
+#                 with transaction.atomic():
+#                     # Sync: Delete all existing then recreate
+#                     CourseRegistration.objects.filter(
+#                         student=student, session=current_session, semester=current_semester
+#                     ).delete()
+
+#                     if selected_course_ids:
+#                         new_regs = [
+#                             CourseRegistration(
+#                                 student=student, course_id=c_id,
+#                                 session=current_session, semester=current_semester
+#                             ) for c_id in selected_course_ids
+#                         ]
+#                         CourseRegistration.objects.bulk_create(new_regs)
+
+#                         # Re-fetch instead of trusting bulk_create()'s
+#                         # returned objects to have real PKs. bulk_create()
+#                         # doesn't reliably populate .pk on the instances it
+#                         # hands back across every DB backend/Django version
+#                         # combination — and ensure_course_fee_item() below
+#                         # depends on reg.pk to link the PaymentItem back to
+#                         # this exact registration. Without this, the course
+#                         # fee can silently fail to appear in "Pay Your Fees".
+#                         created_regs = CourseRegistration.objects.filter(
+#                             student=student,
+#                             session=current_session,
+#                             semester=current_semester,
+#                             course_id__in=selected_course_ids,
+#                         )
+
+#                         # Bill each newly registered course's fee (finance app) —
+#                         # without this, a course with a nonzero cost would never
+#                         # show up as something the student owes.
+#                         for reg in created_regs:
+#                             FinanceService.ensure_course_fee_item(reg)
+
+#                         messages.success(request, "Course registration updated successfully.")
+#                     else:
+#                         messages.warning(request, "Your registration has been cleared.")
+#                 return redirect("students:course-registration")
+#             except Exception as e:
+#                 messages.error(request, f"System Error: {e}")
+
+#         # ---------------------------------------------------------
+#         # ACTION 2: Submit a payment claim covering one or more
+#         # outstanding items (course fees and/or mandatory fees),
+#         # selected and optionally part-paid by the student.
+#         # ---------------------------------------------------------
+#         elif action == "submit_payment":
+#             from finance.models import PaymentItem
+
+#             reference = request.POST.get("reference", "").strip()
+#             method = request.POST.get("method", "bank_transfer")
+#             selected_item_ids = request.POST.getlist("pay_items")
+
+#             if not reference:
+#                 messages.error(request, "Please provide a payment reference (e.g. your bank transfer reference).")
+#                 return redirect("students:course-registration")
+
+#             if not selected_item_ids:
+#                 messages.error(request, "Select at least one fee to pay for.")
+#                 return redirect("students:course-registration")
+
+#             allocations = {}
+#             total_amount = Decimal("0.00")
+#             for item_id in selected_item_ids:
+#                 item = get_object_or_404(PaymentItem, pk=item_id, student=student)
+#                 raw_amount = request.POST.get(f"amount_{item_id}", "").strip().replace(",", "")
+#                 try:
+#                     amount = Decimal(raw_amount) if raw_amount else item.balance
+#                 except InvalidOperation:
+#                     amount = item.balance
+#                 # Never allow paying more than what's actually owed, and
+#                 # never a non-positive amount.
+#                 amount = min(amount, item.balance)
+#                 if amount > 0:
+#                     allocations[item.id] = amount
+#                     total_amount += amount
+
+#             if not allocations:
+#                 messages.error(request, "Nothing to pay — the selected item(s) are already cleared.")
+#                 return redirect("students:course-registration")
+
+#             try:
+#                 FinanceService.record_payment(
+#                     student=student,
+#                     reference=reference,
+#                     amount=total_amount,
+#                     method=method,
+#                     allocations=allocations,
+#                     mark_successful=False,  # goes to PENDING until a bursary officer approves it
+#                 )
+#                 messages.success(
+#                     request,
+#                     f"Payment of ₦{total_amount:,.2f} submitted for approval. "
+#                     f"You'll be cleared once a bursary officer confirms it."
+#                 )
+#             except ValidationError as e:
+#                 messages.error(request, str(e))
+#             except IntegrityError:
+#                 messages.error(
+#                     request,
+#                     "That payment reference has already been submitted. "
+#                     "If you're re-submitting proof of the same transaction, please contact the bursary office."
+#                 )
+
+#             return redirect("students:course-registration")
+
+#     # --- GET DATA ---
+#     total_cost = float(late_fee)
+#     available_courses = []
+#     registered_course_ids = []
+#     unit_policy = None
+#     fee_clearance = None
+#     outstanding_items = []
+#     recent_payments = []
+#     course_search_debug = ""
+#     profile_incomplete = False
+#     admin_registrations = []
+#     admin_reg_stats = None
+
+#     admin_semesters = Semester.objects.none()
+#     selected_reg_semester = ""
+
+#     if is_admin:
+#         admin_semesters = Semester.objects.filter(session=current_session).order_by('name') if current_session else Semester.objects.none()
+
+#         # Filter by semester — defaults to the current semester, but staff
+#         # can pick any semester within the current session from the dropdown.
+#         selected_reg_semester = request.GET.get('reg_semester', '')
+#         if not selected_reg_semester and current_semester:
+#             selected_reg_semester = str(current_semester.id)
+
+#         admin_qs = CourseRegistration.objects.filter(session=current_session) if current_session else CourseRegistration.objects.none()
+#         if selected_reg_semester:
+#             admin_qs = admin_qs.filter(semester_id=selected_reg_semester)
+#         admin_qs = admin_qs.select_related('student__user', 'course').order_by('-registered_at')
+
+#         total_count = admin_qs.count()
+#         validated_count = admin_qs.filter(is_validated=True).count()
+#         admin_reg_stats = {
+#             'total': total_count,
+#             'validated': validated_count,
+#             'pending': total_count - validated_count,
+#         }
+
+#         # CSV export — same filtered queryset, no pagination applied.
+#         if request.GET.get('export') == 'csv':
+#             return _export_course_registrations_csv(admin_qs)
+
+#         paginator = Paginator(admin_qs, 25)
+#         page_number = request.GET.get('page', 1)
+#         admin_registrations = paginator.get_page(page_number)
+
+#     if student:
+#         if not student.department or not student.level:
+#             # A student without department/level assigned can never match
+#             # any Course filter — show this plainly instead of a blank,
+#             # unexplained grid.
+#             profile_incomplete = True
+#             available_courses = Course.objects.none()
+#         elif current_semester:
+#             # IMPORTANT: match by semester *name* (First/Second/Third), not
+#             # the exact Semester row. A Course's curriculum placement ("this
+#             # is a First Semester course for HND1 Computer Science") is
+#             # stable across academic sessions — but Course.semester is a
+#             # hard FK to one specific Semester row, which itself belongs to
+#             # one specific Session. Filtering on `semester=current_semester`
+#             # therefore goes silently empty the moment the registrar rolls
+#             # over to a new session's Semester row, even though nothing
+#             # about the curriculum actually changed. The CourseRegistration
+#             # itself still correctly ties to the exact
+#             # current_session/current_semester below — only the *available
+#             # courses to choose from* needed this relaxation.
+#             available_courses = Course.objects.filter(
+#                 department=student.department,
+#                 level=student.level,
+#                 semester__name=current_semester.name,
+#             ).select_related('semester', 'department', 'level')
+#             course_search_debug = (
+#                 f"Dept={student.department} | Level={student.level} | "
+#                 f"SemesterName='{current_semester.name}' | Found={available_courses.count()}"
+#             )
+#         else:
+#             available_courses = Course.objects.none()
+#             course_search_debug = "No current semester configured — cannot resolve available courses."
+
+#         regs = CourseRegistration.objects.filter(
+#             student=student, session=current_session, semester=current_semester
+#         ).select_related('course')
+#         registered_course_ids = list(regs.values_list('course_id', flat=True))
+#         for r in regs:
+#             total_cost += float(r.course.cost or 0)
+
+#         # Unit policy shown to the student so the limits aren't a surprise
+#         # only on submit.
+#         try:
+#             unit_policy = resolve_registration_policy(student.level)
+#         except ValidationError:
+#             unit_policy = None
+
+#         # Outstanding mandatory fees (from the finance app) — shown as a
+#         # banner so a student understands *why* a course might not be
+#         # exam-eligible, without needing to leave this page.
+#         if current_session and current_semester:
+#             from finance.models import Payment as FinancePayment
+
+#             try:
+#                 FinanceService.ensure_semester_fee_items(student, current_session, current_semester)
+#                 fee_clearance = ExamEligibilityService.semester_clearance_summary(
+#                     student, current_session, current_semester
+#                 )
+#             except Exception:
+#                 # No FeeAssignment configured yet for this session/semester —
+#                 # don't let that block the registration page from loading.
+#                 fee_clearance = None
+
+#             # Everything the student can choose to pay for right now —
+#             # course fees for whatever they're registered for, plus every
+#             # resolved mandatory/optional fee category.
+#             from students.services.dashboard import build_outstanding_items
+#             outstanding_items = build_outstanding_items(student, current_session, current_semester)
+
+#             recent_payments = FinancePayment.objects.filter(student=student).order_by('-created_at')[:10]
+
+#     return render(request, "students/course_registration.html", {
+#         "available_courses": available_courses,
+#         "registered_course_ids": registered_course_ids,
+#         "total_cost": total_cost,
+#         "reg_phase": reg_phase,
+#         "late_fee": late_fee,
+#         "debug_msg": debug_msg,
+#         "current_session": current_session,
+#         "current_semester": current_semester,
+#         "is_student": student is not None,
+#         "is_admin": is_admin,
+#         "today": today,
+#         "unit_policy": unit_policy,
+#         "fee_clearance": fee_clearance,
+#         "outstanding_items": outstanding_items,
+#         "recent_payments": recent_payments,
+#         "course_search_debug": course_search_debug,
+#         "profile_incomplete": profile_incomplete,
+#         "admin_registrations": admin_registrations,
+#         "admin_reg_stats": admin_reg_stats,
+#         "admin_semesters": admin_semesters,
+#         "selected_reg_semester": selected_reg_semester,
+#     })
+
+
 @login_required
 def course_registration_view(request):
     from finance.services.payments import FinanceService
@@ -1224,7 +1901,22 @@ def course_registration_view(request):
                                 session=current_session, semester=current_semester
                             ) for c_id in selected_course_ids
                         ]
-                        created_regs = CourseRegistration.objects.bulk_create(new_regs)
+                        CourseRegistration.objects.bulk_create(new_regs)
+
+                        # Re-fetch instead of trusting bulk_create()'s
+                        # returned objects to have real PKs. bulk_create()
+                        # doesn't reliably populate .pk on the instances it
+                        # hands back across every DB backend/Django version
+                        # combination — and ensure_course_fee_item() below
+                        # depends on reg.pk to link the PaymentItem back to
+                        # this exact registration. Without this, the course
+                        # fee can silently fail to appear in "Pay Your Fees".
+                        created_regs = CourseRegistration.objects.filter(
+                            student=student,
+                            session=current_session,
+                            semester=current_semester,
+                            course_id__in=selected_course_ids,
+                        )
 
                         # Bill each newly registered course's fee (finance app) —
                         # without this, a course with a nonzero cost would never
@@ -1390,6 +2082,26 @@ def course_registration_view(request):
         for r in regs:
             total_cost += float(r.course.cost or 0)
 
+        # Self-heal: make sure every course the student is *currently*
+        # registered for has its PaymentItem, regardless of when or how
+        # that registration was created — a registration saved before a
+        # past bug fix, one created by an admin directly, etc. Without
+        # this, ensure_course_fee_item() only ever runs at the moment of
+        # a fresh POST submission, so a pre-existing registration could
+        # permanently show no course fee until the student happened to
+        # re-save. Mirrors ensure_semester_fee_items() below, which
+        # already runs on every GET for exactly the same reason.
+        # Idempotent (get_or_create-based) and cheap for a normal course
+        # load (a handful of rows), so safe to run on every page view.
+        for reg in regs:
+            try:
+                FinanceService.ensure_course_fee_item(reg)
+            except Exception:
+                # Never let a single bad row block the whole page from
+                # loading — same defensive posture as the mandatory-fee
+                # block below.
+                pass
+
         # Unit policy shown to the student so the limits aren't a surprise
         # only on submit.
         try:
@@ -1444,6 +2156,8 @@ def course_registration_view(request):
         "admin_semesters": admin_semesters,
         "selected_reg_semester": selected_reg_semester,
     })
+
+
 
 
 # TERTIARY LOGIC FOR HOSTEL ALLOCATION
@@ -1670,7 +2384,7 @@ def admission_letter_pdf(request, matric_number):
 
 def _render_admission_letter_pdf(student, request):
     """Split out so both PDF entry points share one code path."""
-    from ..students.services.admission_letter_pdf import build_admission_letter_pdf
+    from students.services.admission_letter_pdf import build_admission_letter_pdf
 
     school_identity = get_school_identity_for_department(student.department)
     verify_url = request.build_absolute_uri(

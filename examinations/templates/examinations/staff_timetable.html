@@ -1,0 +1,89 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Exam Timetable</title>
+{% endblock title %}
+
+{% block favicon %}
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row page-titles">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item active"><a href="javascript:void(0)">Examinations</a></li>
+                <li class="breadcrumb-item"><a href="javascript:void(0)">Master Timetable</a></li>
+            </ol>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h3 class="fw-bold mb-0">Exam Timetable</h3>
+            <div class="d-flex gap-2">
+                <form method="get" class="d-flex gap-2">
+                    <select name="session" class="form-select form-select-sm" onchange="this.form.submit()">
+                        {% for s in sessions %}
+                        <option value="{{ s.id }}" {% if selected_session == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="semester" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Semesters</option>
+                        {% for sem in semesters %}
+                        <option value="{{ sem.id }}" {% if selected_semester == sem.id|stringformat:"s" %}selected{% endif %}>{{ sem }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                <a href="/admin/examinations/examschedule/add/" class="btn btn-primary btn-sm" target="_blank">
+                    <i class="fas fa-plus me-1"></i> Schedule Exam
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Date</th>
+                                <th>Time</th>
+                                <th>Course</th>
+                                <th>Venue</th>
+                                <th>Invigilator(s)</th>
+                                <th class="pe-3">Attendance List</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for schedule in schedules %}
+                            <tr>
+                                <td class="ps-3">{{ schedule.exam_date|date:"D, M j, Y" }}</td>
+                                <td>{{ schedule.start_time|time:"H:i" }} – {{ schedule.end_time|time:"H:i" }}</td>
+                                <td>{{ schedule.course.course_code }} — {{ schedule.course.title }}</td>
+                                <td>{{ schedule.venue|default:"TBA" }}</td>
+                                <td>
+                                    {% for inv in schedule.invigilators.all %}
+                                    {{ inv.user.get_full_name|default:inv }}{% if not forloop.last %}, {% endif %}
+                                    {% empty %}
+                                    <span class="text-muted">Unassigned</span>
+                                    {% endfor %}
+                                </td>
+                                <td class="pe-3">
+                                    <a href="{% url 'finance:exam_attendance_list_html' schedule.course.id schedule.session.id schedule.semester.id %}"
+                                       class="btn btn-sm btn-outline-primary" target="_blank">
+                                        View List
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-4">No exams scheduled for this filter yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content_body %}

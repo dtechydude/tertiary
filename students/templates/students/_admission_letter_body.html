@@ -16,8 +16,8 @@ potentially needing a DIFFERENT department-resolved school_info).
         <div>
             <h3>{% if school_info %}{{ school_info.name }}{% else %}School{% endif %}</h3>
             <div class="school-meta">
-                {% if school_info.address %}{{ school_info.address }}<br>{% endif %}
-                {% if school_info.phone %}Tel: {{ school_info.phone }}{% endif %}
+                {% if school_info.address_line_1 %}{{ school_info.address_line_1 }}<br>{% endif %}
+                {% if school_info.phone_1 %}Tel: {{ school_info.phone_1 }}{% endif %}
                 {% if school_info.email %} &bull; {{ school_info.email }}{% endif %}
                 {% if school_info.website %} &bull; {{ school_info.website }}{% endif %}
             </div>

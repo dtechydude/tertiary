@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Sum
 
 from .models import (
@@ -15,7 +15,16 @@ from .models import (
     ClassificationScheme,
     ClassificationBand,
     ProgrammeClassificationScheme,
+    Transcript,
 )
+
+
+@admin.register(Transcript)
+class TranscriptAdmin(admin.ModelAdmin):
+    list_display = ("student", "verification_code", "is_official", "generated_by", "generated_at")
+    list_filter = ("is_official",)
+    search_fields = ("student__matric_number", "verification_code")
+    readonly_fields = ("verification_code", "generated_at")
 
 
 @admin.register(AssessmentComponent)
@@ -90,9 +99,22 @@ class ResultAdmin(admin.ModelAdmin):
         "course__course_code",
         "course__title",
     )
-    readonly_fields = ("total_score", "grade", "grade_point", "remark", "created_at", "updated_at")
+    # status/is_published are intentionally read-only here: editing them
+    # directly skips ResultWorkflowService entirely — no permission check
+    # for the specific stage, no ResultAuditLog entry, and results can
+    # jump straight to "published" without ever passing through HOD/Dean/
+    # Registrar review. Use the actions below (or the front-end approval
+    # queue at /results/approvals/) instead — both go through the same
+    # service, so every transition is checked and logged the same way.
+    readonly_fields = (
+        "total_score", "grade", "grade_point", "remark", "status", "is_published",
+        "created_at", "updated_at",
+    )
     inlines = [ResultScoreInline, ResultAuditLogInline]
-    actions = ["recompute_selected"]
+    actions = [
+        "recompute_selected", "submit_selected", "approve_hod_selected",
+        "approve_dean_selected", "approve_registrar_selected", "publish_selected", "return_selected",
+    ]
     list_select_related = ("student", "course", "session", "semester")
 
     @admin.action(description="Recompute grade from current component scores")
@@ -100,6 +122,52 @@ class ResultAdmin(admin.ModelAdmin):
         from .services.grading import GradingService
         for result in queryset:
             GradingService.compute_result(result)
+
+    def _run_bulk_transition(self, request, queryset, action):
+        from django.core.exceptions import PermissionDenied, ValidationError
+        from .services.workflow import ResultWorkflowService
+
+        succeeded, failed = 0, 0
+        for result in queryset:
+            try:
+                ResultWorkflowService.transition(result, action, actor=request.user)
+                succeeded += 1
+            except (PermissionDenied, ValidationError):
+                failed += 1
+
+        if succeeded:
+            self.message_user(request, f"{succeeded} result(s) updated.", level=messages.SUCCESS)
+        if failed:
+            self.message_user(
+                request,
+                f"{failed} result(s) could not be updated — either not a valid transition from their "
+                f"current status, or you're missing the permission for this stage.",
+                level=messages.ERROR,
+            )
+
+    @admin.action(description="Submit selected (Draft → Submitted)")
+    def submit_selected(self, request, queryset):
+        self._run_bulk_transition(request, queryset, "submit")
+
+    @admin.action(description="Approve as HOD (Submitted → HOD Approved)")
+    def approve_hod_selected(self, request, queryset):
+        self._run_bulk_transition(request, queryset, "approve_hod")
+
+    @admin.action(description="Approve as Dean (HOD Approved → Dean Approved)")
+    def approve_dean_selected(self, request, queryset):
+        self._run_bulk_transition(request, queryset, "approve_dean")
+
+    @admin.action(description="Approve as Registrar (Dean Approved → Registrar Approved)")
+    def approve_registrar_selected(self, request, queryset):
+        self._run_bulk_transition(request, queryset, "approve_registrar")
+
+    @admin.action(description="Publish selected (Registrar Approved → Published)")
+    def publish_selected(self, request, queryset):
+        self._run_bulk_transition(request, queryset, "publish")
+
+    @admin.action(description="Return selected for correction")
+    def return_selected(self, request, queryset):
+        self._run_bulk_transition(request, queryset, "return")
 
 
 @admin.register(GraduationPolicy)

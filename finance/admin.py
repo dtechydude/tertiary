@@ -90,3 +90,47 @@ class PaymentAdmin(admin.ModelAdmin):
             title="Fee Collection Report",
         )
         return TemplateResponse(request, "admin/finance/collection_report.html", context)
+
+
+# =============================================================================
+# ADDITIONS to finance/admin.py
+# =============================================================================
+#
+# 1. Add Wallet, WalletFundingRequest to the existing import line:
+#
+#    Was:
+#      from .models import FeeAssignment, FeeCategory, Payment, PaymentAllocation, PaymentItem, SchoolBankDetail
+#    Becomes:
+#      from .models import (
+#          FeeAssignment, FeeCategory, Payment, PaymentAllocation, PaymentItem,
+#          SchoolBankDetail, Wallet, WalletFundingRequest,
+#      )
+#
+# 2. Append these two registrations anywhere in the file (e.g. at the end):
+
+from django.contrib import admin
+
+from .models import Wallet, WalletFundingRequest
+
+
+@admin.register(Wallet)
+class WalletAdmin(admin.ModelAdmin):
+    list_display = ("student", "balance", "reserved_balance", "available_balance", "updated_at")
+    search_fields = ("student__matric_number",)
+    readonly_fields = ("balance",)  # balance changes only via WalletService, never edited directly
+
+    @admin.display(description="Reserved")
+    def reserved_balance(self, obj):
+        return obj.reserved_balance
+
+    @admin.display(description="Available")
+    def available_balance(self, obj):
+        return obj.available_balance
+
+
+@admin.register(WalletFundingRequest)
+class WalletFundingRequestAdmin(admin.ModelAdmin):
+    list_display = ("student", "amount", "reference", "status", "reviewed_by", "created_at")
+    list_filter = ("status",)
+    search_fields = ("student__matric_number", "reference")
+    readonly_fields = ("reviewed_by", "reviewed_at")

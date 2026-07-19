@@ -447,3 +447,48 @@ class ResultAuditLog(models.Model):
 
     def __str__(self):
         return f"{self.result} [{self.action}] @ {self.timestamp:%Y-%m-%d %H:%M}"
+
+
+class Transcript(models.Model):
+    """
+    A generated transcript record. Creating one is a deliberate action —
+    by the registrar (official), or a student generating their own
+    provisional copy (unofficial) — not an automatic side effect of
+    publishing results. This gives an audit trail (who generated it and
+    when) and a verification code printed on the PDF, matching how real
+    academic transcripts work.
+    """
+    student = models.ForeignKey("students.Student", on_delete=models.CASCADE, related_name="transcripts")
+    verification_code = models.CharField(max_length=20, unique=True, editable=False)
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name="transcripts_generated",
+    )
+    generated_at = models.DateTimeField(auto_now_add=True)
+    is_official = models.BooleanField(
+        default=True,
+        help_text="Official transcripts are registrar-issued and carry no watermark. "
+                   "Unofficial copies (student self-service) are watermarked on the PDF.",
+    )
+
+    class Meta:
+        ordering = ["-generated_at"]
+        verbose_name = "Transcript"
+        verbose_name_plural = "Transcripts"
+        permissions = [
+            ("generate_official_transcript", "Can generate an official transcript for any student"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.verification_code:
+            self.verification_code = self._generate_code()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_code() -> str:
+        import secrets
+        return secrets.token_hex(8).upper()
+
+    def __str__(self):
+        kind = "Official" if self.is_official else "Unofficial"
+        return f"{kind} Transcript {self.verification_code} — {self.student.matric_number}"

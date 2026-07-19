@@ -447,6 +447,7 @@
 						<ul aria-expanded="false">
 							{% if user.is_superuser or user.is_staff %}
 							<li><a href="{% url 'enroll_student' %}">Enroll Student</a></li>
+							<li><a href="{% url 'students:admission-letter-list' %}">Admission Letters</a></li
 							<li><a href="{% url 'students:student-list' %}">All CURRENT Students</a></li>
 							<li><a href="{% url 'students:bulk_student_id_cards' %}">Print Bulk Students ID</a></li>
 							<li><a href="{% url 'students:student-in-class' %}">Class Statistics</a></li>
@@ -475,6 +476,57 @@
 						</ul>
 					</li>
 					{% endif %}
+
+					
+					{% if user.is_superuser or user.is_staff %}
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+							<span class="nav-text">LECTURER/STAFF</span>
+						</a>
+						<ul aria-expanded="false">
+							<li><a href="{% url 'lecturer_signup' %}">Signup Lecturer</a></li>
+							<li><a href="{% url 'staff:lecturer-list' %}">All Lecturers</a></li>
+							<li><a href="{% url 'staff:admin_course_assignments' %}">Lecturer Courses</a></li>
+
+
+							{% comment %} <li><a href="{% url 'staff:lecturer-list' %}">All Lecturers</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li>  {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:teacher_assignments' %}">Teacher's Subj./Classes</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'staff:cbv_all_teachers_student_counts' %}">Lecturer's Students Count</a></li> {% endcomment %}
+							{% comment %} <li><a href="{% url 'curriculum:form_teachers_head' %}">Course Advisors List</a></li> {% endcomment %}
+
+						</ul>
+					</li> 
+					{% endif %}
+
+
+					
+					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+						<i class="flaticon-013-checkmark"></i>
+						<span class="nav-text">CURRICULUM</span>
+					</a>
+					<ul aria-expanded="false">
+						<li><a href="{% url 'curriculum:academic-calendar' %}">Calendar</a></li>
+						<li><a href="{% url 'curriculum:faculty-list' %}">Faculty List</a></li>
+					
+						{% if user.student %}	
+						<li><a href="{% url 'curriculum:my-programme' %}">My Programme</a></li>
+						<li><a href="{% url 'curriculum:course-registration' %}">Registered Courses</a></li>
+						{% endif %}
+
+						{% if user.lecturer %}	
+						<li><a href="{% url 'curriculum:lecturer-courses' %}">My Courses</a></li>
+						<li><a href="{% url 'curriculum:department-dashboard' %}">Departments</a></li>				
+						{% endif %}
+
+						{% if user.is_superuser or user.is_staff %}
+						<li><a href="{% url 'curriculum:session-admin' %}">Set Current Session</a></li>
+						{% comment %} <li><a href="{% url 'curriculum:set-current-semester' %}">Set Current Semester</a></li> {% endcomment %}
+						<li><a href="{% url 'curriculum:pending-registrations' %}">Course Pending Registration</a></li>
+						{% endif %}	
+										
+					</ul> 
+					</li> 	
 
 					{% if user.is_authenticated%}
 					{% if user.is_superuser or user.is_staff or user.lecturer %}
@@ -508,9 +560,11 @@
 						<i class="flaticon-013-checkmark"></i>
 							<span class="nav-text">EXAMS & RESULTS</span>
 						</a>
-						{% comment %} <ul aria-expanded="false">
+						<ul aria-expanded="false">
 							{% if user.is_superuser or user.is_staff %}	
-							<li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>
+							<li><a href="{% url 'results:approval_queue' %}">Result Approval</a></li>	
+
+							{% comment %} <li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>
 							<li><a href="{% url 'results:score_entry' %}">Enter End-Of-Term Scores</a></li>
 							<li><a href="{% url 'results:student_midterm_list' %}">View Mid-Term Results</a></li>
 							<li><a href="{% url 'results:report_card_list' %}">View Termly Results</a></li>
@@ -523,42 +577,25 @@
 							<li><a href="{% url 'results:broadsheet_select' %}">Exam BROADSHEET</a></li>
 							<li><a href="{% url 'students:promote_students' %}">Promote Students (Batch) </a></li>
 							<li><a href="{% url 'students:promote_individual_students' %}">Promote Students (Individual)</a></li>
-							
+							 {% endcomment %}
 							
 							{% elif user.student %}
-							<li><a href="{% url 'results:student_dashboard' %}">Termly/Session Results</a></li>	
-							<li><a href="{% url 'results:student_midterm_list' %}">My Mid-Term Results</a></li>							
+							<li><a href="{% url 'results:academic_progress' %}">My Progress</a></li>	
+							<li><a href="{% url 'results:my_transcript' %}">My Transcript</a></li>	
 
-							{% elif user.teacher %}	
-							<li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>											
+							{% comment %} <li><a href="{% url 'results:student_midterm_list' %}">My Mid-Term Results</a></li>							 {% endcomment %}
+
+							{% elif user.lecturer %}	
+							<li><a href="{% url 'results:lecturer_my_courses' %}">My Courses</a></li>	
+
+							{% comment %} <li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>											
 							<li><a href="{% url 'results:score_entry' %}">Enter CA & Term Scores</a></li>
 							<li><a href="{% url 'results:student_midterm_list' %}">View Mid-Term Results</a></li>
 							<li><a href="{% url 'results:report_card_list' %}">View Termly Results</a></li>
 							<li><a href="{% url 'results:session_report_card_list' %}">view Session Results</a></li>
 							<li><a href="{% url 'results:ranking_list' %}">Student's Exam Ranking</a></li>
- 					
+ 					 {% endcomment %}
 							{% endif %}						
-
-						</ul>
-					</li> {% endcomment %}
-					{% endif %}
-
-					{% if user.is_superuser or user.is_staff %}
-					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
-						<i class="flaticon-013-checkmark"></i>
-							<span class="nav-text">LECTURER/STAFF</span>
-						</a>
-						<ul aria-expanded="false">
-							<li><a href="{% url 'lecturer_signup' %}">Signup Lecturer</a></li>
-							<li><a href="{% url 'staff:lecturer-list' %}">All Lecturers</a></li>
-							<li><a href="{% url 'staff:admin_course_assignments' %}">Lecturer Courses</a></li>
-
-
-							{% comment %} <li><a href="{% url 'staff:lecturer-list' %}">All Lecturers</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'staff:assign_form_teacher' %}">Assign FormTeacher-HEAD</a></li>  {% endcomment %}
-							{% comment %} <li><a href="{% url 'staff:teacher_assignments' %}">Teacher's Subj./Classes</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'staff:cbv_all_teachers_student_counts' %}">Lecturer's Students Count</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'curriculum:form_teachers_head' %}">Course Advisors List</a></li> {% endcomment %}
 
 						</ul>
 					</li> 
@@ -567,38 +604,22 @@
 					{% if user.is_authenticated and user.is_superuser or user.is_staff or user.student or user.lecturer %}
 					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 						<i class="flaticon-013-checkmark"></i>
-							<span class="nav-text">REG. & PAYMENTS</span>
+							<span class="nav-text">FINANCE/REG.</span>
 						</a>					
 						<ul aria-expanded="false"> 
-							{% comment %} 	
+							<li><a href="{% url 'finance:bank-detail' %}">Sch. Bank Details</a></li>
+
 							{% if user.is_superuser or user.is_staff %}	
-							<li><a href="{% url 'finance:bank-detail' %}">Bank Details</a></li>	
-													
-							<li><a href="{% url 'payments:notification-list' %}">Payments Notifications </a></li>
-							<li><a href="{% url 'payments:payment_history' %}">Payments History</a></li>
-							<li><a href="{% url 'payments:total_payments_report' %}">Payments Summary</a></li>
-							<li><a href="{% url 'payments:debtors_report' %}">Debtors List</a></li>	
-							<li><a href="/admin/payments/payment/" target="_blank">Make Payment For Students</a></li>
-							<li><a href="/admin/payments/bankdetail/" target="_blank">Add/Edit BANK INFO</a></li>
-							<li><a href="/admin/payments/paymentcategory/" target="_blank">Add/Edit PAYMENT TYPE</a></li>
-															
-							{% endif %}							 {% endcomment %}
-							{% if user.student or user.is_superuser or user.is_staff or user.lecturer %}	
+							<li><a href="{% url 'finance:reports_dashboard' %}">Finance Dashboard</a></li>	
+							li><a href="{% url 'finance:pending_payments' %}">Pending Payments</a></li>	
+							{% endif %}		
+
+							{% if user.student %}
 							<li><a href="{% url 'students:course-registration' %}">Course Registration</a></li>	
-							<li><a href="{% url 'finance:bank-detail' %}">School Bank Details</a></li>	
-					
-							{% comment %} <li><a href="{% url 'pages:help-center' %}">Payment Instruction</a></li>
-							<li><a href="{% url 'pages:bank-detail' %}">School Account Details</a></li>
-							 {% endcomment %}
-							{% endif %}
-							{% comment %} {% if user.student %}
-							<li><a href="{% url 'payments:student_invoice' %}">My Invoice</a></li>
-							<li><a href="{% url 'payments:payment_history' %}">My Payment History</a></li>	
-							<li><a href="{% url 'payments:notify_payment' %}">Make New Payment</a></li>
-							<li><a href="{% url 'payments:my-notifications' %}">My Payment Notifications</a></li>	
+							<li><a href="{% url 'finance:wallet_dashboard' %}">My Wallet</a></li>
 																			
 							</li>		
-							{% endif %}						 {% endcomment %}
+							{% endif %}						
 							
 						</ul>
 					</li>	 
@@ -654,34 +675,13 @@
 				<li><a href="/admin/elearning/coursematerial/add/" target="_blank">Add Course Material</a></li>
 				<li><a href="/admin/elearning/onlineclasslink/add/" target="_blank">Add Class Link (Classroom/Teams)</a></li>
 
-				{% endif %}
+				{% else %}
+				No Menu Item
+				{% endif %}				
 				</ul>
 				</li>
-					<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
-						<i class="flaticon-013-checkmark"></i>
-						<span class="nav-text">CURRICULUM</span>
-					</a>
-					<ul aria-expanded="false">
-						<li><a href="{% url 'curriculum:academic-calendar' %}">Calendar</a></li>
-						<li><a href="{% url 'curriculum:faculty-list' %}">Faculty List</a></li>
-					
-						{% if user.student %}	
-						<li><a href="{% url 'curriculum:my-programme' %}">My Programme</a></li>
-						<li><a href="{% url 'curriculum:course-registration' %}">Course Registration</a></li>
-						{% endif %}
-						{% if user.lecturer %}	
-						<li><a href="{% url 'curriculum:lecturer-courses' %}">My Courses</a></li>
-						<li><a href="{% url 'curriculum:department-dashboard' %}">Departments</a></li>				
-						{% endif %}
-
-						{% if user.is_superuser or user.is_staff %}
-						<li><a href="{% url 'curriculum:session-admin' %}">Set Current Session</a></li>
-						{% comment %} <li><a href="{% url 'curriculum:set-current-semester' %}">Set Current Semester</a></li> {% endcomment %}
-						<li><a href="{% url 'curriculum:pending-registrations' %}">Pending Registration</a></li>
-						{% endif %}						
-					</ul> 
-					</li>
-						{% endif %}
+				{% endif %}
+			
 
 						{% if user.is_authenticated and user.is_superuser or user.is_staff %}
 						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
@@ -692,7 +692,8 @@
 								<li><a href="#">Integration Page</a></li>								
 							</ul>
 						</li>
-						{% endif %}
+						{% endif %} 
+						
 						{% if user.is_authenticated and user.is_superuser or user.is_staff or user.student or user.teacher %}
 						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 								<i class="flaticon-013-checkmark"></i>
@@ -763,8 +764,35 @@
 							<li><a href="{% url 'tickets:create_ticket' %}">Submit New Ticket</a></li>
 								{% endif %}
 							</ul>							
-					</li>			
+					</li>							
+					{% if user.is_superuser or user.is_staff %}
+						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-013-checkmark"></i>
+								<span class="nav-text">BULK ACTIONS</span>
+							</a>
+							<ul aria-expanded="false">
+								<li><a href="#">Print Students ID</a></li>
+								<li><a href="#">Upload Students Photo</a></li>
+								<li><a href="#">Admission Letters </a></li>
+							</ul>
+					</li>	
+					{% endif %}	
+						{% if user.is_superuser or user.is_staff %}
+						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
+							<i class="flaticon-013-checkmark"></i>
+								<span class="nav-text">INFO & RECORDS</span>
+							</a>
+							<ul aria-expanded="false">
+							<li><a href="{% url 'events:calendar' %}">School Events Calendar</a></li>
+							<li><a href="{% url 'pages:students_email_list' %}">Students Email List</a></li>
+							<li><a href="{% url 'pages:students_phone_list' %}">Students Phone List</a></li>
+							<li><a href="{% url 'pages:lecturer_phone_list' %}">Lecturers Phone List</a></li>
+							<li><a href="{% url 'pages:lecturer_email_list' %}">Lecturers Email List</a></li>
 
+							</ul>
+					</li>
+					{% endif %}							
+							
 					
 						<li><a class="has-arrow " href="javascript:void()" aria-expanded="false">
 							<i class="flaticon-013-checkmark"></i>
