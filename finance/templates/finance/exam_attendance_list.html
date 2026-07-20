@@ -1,9 +1,17 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Exam Attendance List — {{ course.course_code }}</title>
+
+  <!-- FAVICONS ICON -->	
+    {% if school_info and school_info.logo %}
+		<link rel="icon" href="{{ school_info.logo.url }}" type="image/png">
+	{% else %}
+		<link rel="icon" href="{% static 'pages/images/school_logo.jpg' %}" type="image/png">
+	{% endif %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
 <style>
   body { background: #f1f3f5; }

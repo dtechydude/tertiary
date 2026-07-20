@@ -1,0 +1,149 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Student Transcripts</title>
+{% endblock title %}
+
+{% block favicon %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    :root {
+        --portal-accent: #3b5fe2;
+        --portal-accent-2: #6a4fd9;
+    }
+    .content-body { padding-bottom: 5rem; }
+    @media (max-width: 767px) { .content-body { padding-bottom: 8rem; } }
+
+    .transcript-hero {
+        background: linear-gradient(135deg, var(--portal-accent) 0%, var(--portal-accent-2) 100%);
+        border-radius: 1rem;
+        color: #fff;
+        padding: 1.75rem 2rem;
+    }
+    .filter-card { border: none; border-radius: 0.85rem; }
+
+    .scroll-table-wrap {
+        max-height: 520px;
+        overflow-y: auto;
+        border: 1px solid #eef0f4;
+        border-radius: 0.5rem;
+    }
+    .scroll-table-wrap table { margin-bottom: 0; }
+    .scroll-table-wrap thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
+
+    .badge-official { background: #d1f5df; color: #0f6b33; }
+    .badge-unofficial { background: #fff3cd; color: #7a5b00; }
+    .badge-none { background: #f1f3f5; color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+
+        <div class="transcript-hero mb-4">
+            <h4 class="mb-1 fw-bold"><i class="fas fa-scroll me-2"></i>Student Transcripts</h4>
+            <p class="mb-0 opacity-75">Find a student by department, session, and semester to view, generate, or print their transcript.</p>
+        </div>
+
+        <!-- Filter form -->
+        <div class="card filter-card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Department</label>
+                        <select name="department" class="form-select">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}" {% if selected_department_id == dept.id|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Session (Year)</label>
+                        <select name="session" class="form-select">
+                            <option value="">All Sessions</option>
+                            {% for s in sessions %}
+                            <option value="{{ s.id }}" {% if selected_session_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Semester</label>
+                        <select name="semester" class="form-select">
+                            <option value="">All Semesters</option>
+                            {% for sem in semesters %}
+                            <option value="{{ sem.id }}" {% if selected_semester_id == sem.id|stringformat:"s" %}selected{% endif %}>{{ sem }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> Apply</button>
+                    </div>
+                </form>
+                <p class="text-muted small mt-2 mb-0">
+                    Session/Semester filters to students with at least one published result in that term — a
+                    transcript itself always covers a student's <em>full</em> academic history, not just one term.
+                </p>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive scroll-table-wrap">
+                    <table class="table table-sm table-striped table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Matric Number</th>
+                                <th>Full Name</th>
+                                <th>Department</th>
+                                <th>Level</th>
+                                <th>Latest Transcript</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in student_rows %}
+                            <tr>
+                                <td>{{ row.student.matric_number }}</td>
+                                <td>{{ row.student.get_full_name }}</td>
+                                <td>{{ row.student.department.name|default:"—" }}</td>
+                                <td>{{ row.student.level.name|default:"—" }}</td>
+                                <td>
+                                    {% if row.transcript %}
+                                        <span class="badge {% if row.transcript.is_official %}badge-official{% else %}badge-unofficial{% endif %}">
+                                            {% if row.transcript.is_official %}Official{% else %}Unofficial{% endif %}
+                                        </span>
+                                        <span class="text-muted small ms-1">{{ row.transcript.generated_at|date:"M j, Y" }}</span>
+                                    {% else %}
+                                        <span class="badge badge-none">None generated</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'results:staff_generate_transcript' row.student.matric_number %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View / Generate
+                                    </a>
+                                    {% if row.transcript %}
+                                    <a href="{% url 'results:transcript_pdf' row.transcript.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                        <i class="fas fa-print"></i> Print
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-4">No students match the selected filters.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock content_body %}
+
+{% block footer %}
+{% endblock footer %}

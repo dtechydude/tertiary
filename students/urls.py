@@ -23,6 +23,8 @@ urlpatterns = [
     path('hostel/assign-room/', students_views.assign_room, name='assign-room'),
 
     path('students/archive/', students_views.student_archive, name='student_archive'),
+    path('myclassmate/', students_views.my_classmates_view, name='my-classmate'),
+
 
     # Graduates / Alumni
     path('alumni/', students_views.alumni_list_view, name='alumni_list'),
@@ -71,10 +73,5 @@ urlpatterns = [
 # --- New (this round): staff list + bulk print ---
     path('admission-letters/', students_views.admission_letter_list_view, name='admission-letter-list'),
     path('admission-letters/bulk-print/', students_views.admission_letter_bulk_print_view, name='admission-letter-bulk-print'),
-
-
-    # Public — no login required, this is the QR code's target
-    # path('verify/admission/<str:matric_number>/', students_views.verify_admission_letter, name='verify-admission'),
-
 
 ]

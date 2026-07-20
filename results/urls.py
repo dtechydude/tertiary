@@ -28,6 +28,9 @@ urlpatterns = [
     path("transcript/<str:matric_number>/generate/", views.staff_generate_transcript_view, name="staff_generate_transcript"),
     path("transcript/pdf/<int:transcript_id>/", views.transcript_pdf_view, name="transcript_pdf"),
 
+    path("transcripts/", views.staff_transcript_list_view, name="staff_transcript_list"),
+
+
     # --- API v1 ---
     path(
         "api/v1/lecturer/course/<int:course_id>/results/",

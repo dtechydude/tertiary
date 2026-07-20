@@ -623,3 +623,88 @@ def transcript_pdf_view(request, transcript_id):
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="transcript_{transcript.student.matric_number}.pdf"'
     return response
+
+
+
+# =============================================================================
+# NEW VIEW — append to the end of results/views.py.
+# Nothing existing in that file changes: staff_generate_transcript_view and
+# transcript_pdf_view are reused exactly as they already are, unmodified.
+#
+# Requires these imports already present (or add if missing) at the top of
+# results/views.py:
+#   from students.models import Student
+#   from curriculum.models import Department, Session, Semester
+#   from .models import Result, Transcript
+# =============================================================================
+
+@login_required
+@permission_required("results.generate_official_transcript", raise_exception=True)
+def staff_transcript_list_view(request):
+    """
+    Staff-facing list for locating a student's transcript, filterable by
+    department / session ("year") / semester.
+
+    Transcript itself has no session/semester field — it's a deliberate
+    whole-history document (see its docstring: "compiles a student's full
+    academic statement", not a per-term one), so there is nothing on
+    Transcript to filter by session/semester in the first place. What
+    this filters instead is the student population: which students have
+    at least one PUBLISHED Result in the selected session/semester,
+    optionally narrowed by department. That's the well-defined match for
+    "department/semester/year" that actually exists in the schema, rather
+    than inventing fields Transcript doesn't have.
+
+    For each matching student, this surfaces their most recently
+    generated Transcript (if any) so staff can jump straight to
+    View/Generate (staff_generate_transcript_view, unchanged) or Print
+    (transcript_pdf_view, unchanged) without re-deriving any transcript
+    logic here.
+    """
+    from students.models import Student
+    from curriculum.models import Department, Session, Semester
+
+    department_id = request.GET.get("department") or None
+    session_id = request.GET.get("session") or None
+    semester_id = request.GET.get("semester") or None
+
+    result_qs = Result.objects.filter(is_published=True)
+    if session_id:
+        result_qs = result_qs.filter(session_id=session_id)
+    if semester_id:
+        result_qs = result_qs.filter(semester_id=semester_id)
+    student_ids = result_qs.values_list("student_id", flat=True).distinct()
+
+    students = Student.objects.filter(id__in=student_ids).select_related(
+        "department", "level", "programme"
+    )
+    if department_id:
+        students = students.filter(department_id=department_id)
+    students = students.order_by("department__name", "matric_number")
+
+    # Latest Transcript per student, in one query rather than N — keep the
+    # first (most recent, since Transcript.Meta.ordering is -generated_at)
+    # row seen for each student_id.
+    latest_transcripts = {}
+    for t in Transcript.objects.filter(student_id__in=list(student_ids)).select_related("student"):
+        latest_transcripts.setdefault(t.student_id, t)
+
+    # Pre-pair each student with their transcript (if any) here, rather
+    # than doing a dict lookup by variable key in the template — Django
+    # templates can't index a dict by a variable key without a custom
+    # filter, so this keeps the template plain.
+    student_rows = [
+        {"student": student, "transcript": latest_transcripts.get(student.id)}
+        for student in students
+    ]
+
+    context = {
+        "student_rows": student_rows,
+        "departments": Department.objects.all().order_by("name"),
+        "sessions": Session.objects.all().order_by("-id"),
+        "semesters": Semester.objects.all(),
+        "selected_department_id": department_id,
+        "selected_session_id": session_id,
+        "selected_semester_id": semester_id,
+    }
+    return render(request, "results/staff/transcript_list.html", context)

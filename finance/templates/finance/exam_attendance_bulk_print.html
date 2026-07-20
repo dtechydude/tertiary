@@ -1,0 +1,122 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bulk Attendance Lists{% if department %} — {{ department.name }}{% endif %}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    body { background: #f1f3f5; }
+    .top-bar {
+        background: #fff;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 14px 24px;
+        margin-bottom: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .sheet-page { page-break-after: always; }
+    .sheet-page:last-child { page-break-after: auto; }
+    .list-card { max-width: 950px; margin: 0 auto 20px; }
+
+    @media print {
+        .no-print { display: none !important; }
+        body { background: #fff; }
+        .list-card { margin: 0 auto; max-width: none; box-shadow: none !important; border: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<div class="top-bar no-print">
+    <div>
+        <h5 class="fw-bold mb-0">Bulk Attendance Lists</h5>
+        <small class="text-muted">
+            {{ total_count }} course{{ total_count|pluralize }}
+            {% if department %} &bull; {{ department.name }}{% endif %}
+        </small>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-success btn-sm" onclick="window.print()"><i class="fas fa-print me-1"></i> Print All</button>
+        <a href="{% url 'finance:exam_attendance_selector' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-chevron-left me-1"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<div class="container">
+    {% for sheet in sheets %}
+    <div class="sheet-page">
+        <div class="card list-card shadow-sm">
+            <div class="card-body p-4">
+
+                <h4 class="mb-4 no-print">Exam Attendance List</h4>
+
+                <dl class="row mb-3">
+                    <dt class="col-sm-3">Course</dt>
+                    <dd class="col-sm-9">{{ sheet.course.course_code }} — {{ sheet.course.title }}</dd>
+                    <dt class="col-sm-3">Session / Semester</dt>
+                    <dd class="col-sm-9">{{ sheet.session }} / {{ sheet.semester }}</dd>
+                    <dt class="col-sm-3">Eligible to Sit</dt>
+                    <dd class="col-sm-9">{{ sheet.eligible_count }} of {{ sheet.total_count }} registered students</dd>
+                </dl>
+
+                <table class="table table-bordered table-sm align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Matric No.</th>
+                            <th>Name</th>
+                            <th class="text-center">Eligible</th>
+                            <th>Outstanding</th>
+                            <th class="no-print">Signature</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in sheet.rows %}
+                        <tr class="{% if not row.is_eligible %}table-danger{% endif %}">
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ row.student.matric_number }}</td>
+                            <td>{{ row.student.get_full_name }}</td>
+                            <td class="text-center">
+                                {% if row.is_eligible %}
+                                    <span class="badge bg-success">Eligible</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Not Eligible</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for reason in row.reasons %}{{ reason }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                {% if not row.reasons %}—{% endif %}
+                            </td>
+                            <td class="no-print" style="min-width: 120px;"></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted">No students registered for this course/session/semester.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <p class="text-muted small mt-3 mb-0">
+                    Students marked <strong>Not Eligible</strong> have outstanding mandatory fees and should not be
+                    admitted to sit this examination until cleared.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-5 text-muted no-print">
+        <i class="fas fa-inbox fa-2x mb-3 d-block"></i>
+        No courses match the selected filters.
+    </div>
+    {% endfor %}
+</div>
+
+</body>
+</html>

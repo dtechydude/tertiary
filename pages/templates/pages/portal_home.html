@@ -21,9 +21,12 @@
 	<title>{{ school_info.name }} Users Dashboard</title>
 	{% endblock title %}
 	
-	<!-- FAVICONS ICON -->
-	
-	<link rel="shortcut icon" type="image/png" href="{% static 'pages/images/favicon.png' %}" />
+	<!-- FAVICONS ICON -->	
+	{% if school_info and school_info.logo %}
+		<link rel="icon" href="{{ school_info.logo.url }}" type="image/png">
+	{% else %}
+		<link rel="icon" href="{% static 'images/school_logo.jpg' %}" type="image/png">
+	{% endif %}
 
 	{% block favicon %}
 	<link href="{% static 'pages/vendor/jquery-nice-select/css/nice-select.css' %}" rel="stylesheet">
@@ -455,20 +458,16 @@
 							<li><a href="{% url 'students:alumni_list' %}">GRADUATE/ALUMNI List</a></li>
 							
 							{% elif user.lecturer %}		
-							<li><a href="{% url 'staff:lecturer_my_courses' %}">My Courses</a></li>
-							{% comment %} <li><a href="{% url 'staff:my_assignments' %}">My Assigned Classes</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>																	 {% endcomment %}
-							
+							<li><a href="{% url 'staff:lecturer_my_courses' %}">My Assigned Courses</a></li>
+							<li><a href="{% url 'curriculum:lecturer-courses' %}">My Students</a></li>
+														
 							{% elif user.student %}	
 							<li><a href="{% url 'students:admission-letter-self' %}">My Admission Letter</a></li>	
 							<li><a href="{% url 'students:student-self-detail' %}">My Profile</a></li>
-							<li>
-								<a href="{% url 'students:student_id_card' matric_number=request.user.student.matric_number %}"> My ID Card </a></li>
+							<li><a href="{% url 'students:student_id_card' matric_number=request.user.student.matric_number %}"> My ID Card </a></li>
 							<li><a href="{% url 'attendance:attendance_report' %}">Attendance Report</a></li>
+							<li><a href="{% url 'students:my-classmate' %}">My Course Mates</a></li>	
 
-							{% comment %} <li><a href="{% url 'staff:my_teacher_view' %}">My Teacher</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'students:my_classmates' %}">My Class Mates</a></li> {% endcomment %}
-							{% comment %} <li><a href="{% url 'students:hostel_list' %}">Hostel List</a></li>	 {% endcomment %}
 
 							{% else %}
 							<li>No Access</li>
@@ -562,40 +561,20 @@
 						</a>
 						<ul aria-expanded="false">
 							{% if user.is_superuser or user.is_staff %}	
-							<li><a href="{% url 'results:approval_queue' %}">Result Approval</a></li>	
+							<li><a href="{% url 'finance:exam_attendance_selector' %}">Exam Attendance</a></li>
 
-							{% comment %} <li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>
-							<li><a href="{% url 'results:score_entry' %}">Enter End-Of-Term Scores</a></li>
-							<li><a href="{% url 'results:student_midterm_list' %}">View Mid-Term Results</a></li>
-							<li><a href="{% url 'results:report_card_list' %}">View Termly Results</a></li>
-							<li><a href="{% url 'results:session_report_card_list' %}">View Session Results</a></li>
-						
-							<li><a href="{% url 'results:ranking_list' %}">Student's Exam Ranking</a></li>
-							<li><a href="{% url 'results:result_publications_list' %}">PUBLISH TERM RESULTS</a></li>
-							<li><a href="{% url 'results:session_pub_control' %}">PUBLISH SESSION RESULTS</a></li>
-
-							<li><a href="{% url 'results:broadsheet_select' %}">Exam BROADSHEET</a></li>
-							<li><a href="{% url 'students:promote_students' %}">Promote Students (Batch) </a></li>
-							<li><a href="{% url 'students:promote_individual_students' %}">Promote Students (Individual)</a></li>
-							 {% endcomment %}
-							
+							<li><a href="{% url 'results:approval_queue' %}">Result Approval</a></li>
+							<li><a href="{% url 'results:staff_transcript_list' %}">Students Transcripts</a></li>	
+								
 							{% elif user.student %}
 							<li><a href="{% url 'results:academic_progress' %}">My Progress</a></li>	
 							<li><a href="{% url 'results:my_transcript' %}">My Transcript</a></li>	
 
-							{% comment %} <li><a href="{% url 'results:student_midterm_list' %}">My Mid-Term Results</a></li>							 {% endcomment %}
-
 							{% elif user.lecturer %}	
-							<li><a href="{% url 'results:lecturer_my_courses' %}">My Courses</a></li>	
-
-							{% comment %} <li><a href="{% url 'results:midterm_score_selection' %}">Enter Mid-Term Scores</a></li>											
-							<li><a href="{% url 'results:score_entry' %}">Enter CA & Term Scores</a></li>
-							<li><a href="{% url 'results:student_midterm_list' %}">View Mid-Term Results</a></li>
-							<li><a href="{% url 'results:report_card_list' %}">View Termly Results</a></li>
-							<li><a href="{% url 'results:session_report_card_list' %}">view Session Results</a></li>
-							<li><a href="{% url 'results:ranking_list' %}">Student's Exam Ranking</a></li>
- 					 {% endcomment %}
-							{% endif %}						
+							<li><a href="{% url 'results:lecturer_my_courses' %}">My Courses</a></li>
+							<li><a href="{% url 'finance:exam_attendance_selector' %}">Exam Attendance</a></li>
+	
+							{% endif %}				
 
 						</ul>
 					</li> 
@@ -668,7 +647,7 @@
 				<li><a href="{% url 'elearning:dashboard' %}">Learning Center</a></li>
 
 				{% elif user.is_authenticated and user.lecturer %}
-				<li><a href="{% url 'elearning:dashboard' %}">My Courses</a></li>
+				<li><a href="{% url 'elearning:dashboard' %}">E-Learning Courses</a></li>
 
 				{% elif user.is_authenticated and user.is_staff or user.is_authenticated and user.is_superuser %}
 				<li><a href="{% url 'elearning:dashboard' %}">All Courses</a></li>
@@ -1194,32 +1173,28 @@
 
 													<div class="mb-5 mt-4 d-flex align-items-center">
 													<div>
-														<h4 class="mb-3"><a href="javascript:void(0);" class="text-success">You Are Logged In As A STUDENT!</a></h4>
+														<h4 class="mb-3"><a href="javascript:void(0);" class="text-danger">You Are Logged In As A STUDENT!</a></h4>
 														<div class="user-info">															
 															<p style="text-align: justify;">
 
 																<span><strong>Your Profile</strong> <br>
-																You can update your personal information at any time through the profile section. Keeping your details accurate helps with communication and official records.
-																</span> <br>
+																Keep your personal information up to date through the Profile section to ensure accurate academic records and effective communication from the institution.																</span> <br>
 																<span><strong>Password & Security</strong> <br>
-																All users receive a default password at registration. For your security, it is strongly recommended that you change your password immediately after your first login.
-																</span> <br>
+																A default password is provided during account creation. For your security, 
+																change your password immediately after your first login and keep your account credentials confidential.
+															</span> <br>
 																<strong>Help & Support</strong><br>
-																If you encounter any issues or need assistance, please visit the Help Center via the support menu or contact the portal administrator.
-																You can use the internal “Ticket” communication tool to submit complaints, report issues, or request assistance.															</p>
+																If you need assistance or encounter any issues, contact the ICT Support Team through the Help Center or submit a request using the integrated Support Ticket system.
 															</p>
 
 																<!-- For Students -->
 																<p style="text-align: justify;">																
 																<span><strong>Academic Records & Progress</strong> <br>
-																Students can access their grades, transcripts, attendance history, and overall academic performance in real time.
-																</span><br>
-																<span> <strong>E-Learning & CBT Access</strong> <br>
-																The portal provides an e-learning center where students can view class materials, participate in discussions, and access Computer-Based Tests (CBT) when assigned.
-																</span><br>
+																Access your registered courses, published results, GPA/CGPA, academic transcript, and other academic records as they become available in accordance with institutional policies.																</span><br>
+																<span> <strong>E-Learning Resources</strong> <br>
+																Access lecture notes, course materials, TMA instructions, assignments, and other learning resources uploaded by your lecturers to support your studies.																</span><br>
 																<span><strong>Payments & Billing</strong> <br>
-																All required payments can be made directly through the portal. A comprehensive fees chart is available for reference.
-																Please ensure that all payments are made using the correct official school account.
+																View your fee schedule, payment history, and outstanding balances. Make payments only through the approved payment channels provided by the institution.
 																</span>
 															</p>						
 														</div>
@@ -1233,32 +1208,31 @@
 
 													<div class="mb-5 mt-4 d-flex align-items-center">
 													<div>
-														<h4 class="mb-3"><a href="javascript:void(0);" class="text-success">You Are Logged In As A LECTURER!</a></h4>
+														<h4 class="mb-3"><a href="javascript:void(0);" class="text-danger">You Are Logged In As A LECTURER!</a></h4>
 														<div class="user-info">															
 															<p style="text-align: justify;">
 
-																<span><strong>Your Profile / Password & Security </strong> <br>
-																You can update your personal information at any time through the profile section. Keeping your details accurate helps with communication and official records.
-																All users receive a default password at registration. For your security, it is strongly recommended that you change your password immediately after your first login.
+																<span><strong>Profile / Password & Security </strong> <br>
+																Keep your personal information up to date through the Profile section 
+																to ensure accurate institutional records and communication. For security, change the default password issued at account creation after your first login.
 																</span> <br>
 																<strong>Help & Support</strong><br>
-																If you encounter any issues or need assistance, please visit the Help Center via the support menu or contact the portal administrator.
-																You can use the internal “Ticket” communication tool to submit complaints, report issues, or request assistance.															</p>
-															</p>
+																If you need assistance or experience any issues, 
+																contact the ICT Support Team through the Help Center or submit a request using the integrated Support Ticket system.
+																</p>														
 
 																<!-- For lECTURER -->
 																<p style="text-align: justify;">	
-																<span><strong>Result Upload</strong> <br>
-																Lecturers can upload academic results for their assigned subjects and classes, including Continuous Assessment (CA) and examination scores. 
-																Course lecturers can only enter results for the subjects they teach, while form teachers have broader access and may upload results for all students in their class.
+																<span><strong>Score Entry & Result Processing</strong> <br>
+																Lecturers can enter TMA and Examination scores for courses assigned to them. 
+																Submitted scores are processed according to the institution's grading policy and form part of students' academic records, GPA/CGPA calculations, and official transcripts after approval.
 																</span><br>															
-																<span><strong>Attendance Management</strong> <br>
-																Lecturers can take and update daily attendance for their classes using the attendance tools available in the portal.	</span><br>
-																<span> <strong>Student Information Access</strong> <br>
-																The portal allows lecturers to view relevant student details for their assigned classes, enabling better communication and academic support.	</span><br>
-																<span><strong>Upload E-Learning Materials</strong> <br>
-																Lecturers can upload notes, assignments, and other academic resources through the E-Learning menu to support digital learning.
-																</span>
+																<span><strong>Course & Student Records</strong> <br>
+																Access course registrations, class lists, and relevant student academic information for courses assigned to you, supporting effective teaching, assessment, and academic advising.																<span> <strong>Student Information Access</strong> <br>
+																The portal allows lecturers to view relevant student details for their assigned classes, enabling better communication and academic support.
+															</span><br>
+																<span><strong>E-Learning Resources</strong> <br>
+																Upload lecture notes, TMA instructions, assignments, course outlines, and other learning materials to support teaching and enhance students' access to academic resources.																</span>
 															</p>						
 														</div>
 														<a href="{% url 'pages:video-guides' %}" class="btn btn-primary mt-4">

@@ -5,7 +5,15 @@
     <meta charset="UTF-8">
     <title>{{ title }}</title>
 
-    <link rel="shortcut icon" href="{% static 'pages/images/favicon.png' %}">
+    <!-- FAVICONS ICON -->	
+    {% if school_info and school_info.logo %}
+		<link rel="icon" href="{{ school_info.logo.url }}" type="image/png">
+	{% else %}
+		<link rel="icon" href="{% static 'images/school_logo.jpg' %}" type="image/png">
+	{% endif %}
+
+    
+
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>

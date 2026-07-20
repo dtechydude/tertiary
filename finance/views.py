@@ -270,7 +270,9 @@ def payment_receipt_html(request, payment_id):
 
     return render(request, "finance/payment_receipt.html", {"payment": payment, "rows": rows})
 
-
+#--------------------------------------------------------
+# Exams Attendance Logic
+#--------------------------------------------------------
 def exam_attendance_list_html(request, course_id, session_id, semester_id):
     """
     Printable attendance list for a course's exam — the artifact an
@@ -300,29 +302,142 @@ def exam_attendance_list_html(request, course_id, session_id, semester_id):
     })
 
 
+"""
+finance.views — ADDITIONS (exam attendance selector + bulk print)
+=====================================================================
+
+Append to finance/views.py. exam_attendance_list_html itself is
+completely untouched — these are new, additive entry points that sit
+in front of it.
+
+Uses CourseAssignment (not raw Course) as the source of "which courses
+have an attendance list worth viewing this session/semester" — that's
+also exactly what exam_attendance_list_html's own permission check
+already keys off (CourseAssignment.objects.filter(lecturer=...,
+course=..., session=..., semester=...)), so the selector and the
+existing per-course security check can never disagree about who's
+assigned to what.
+
+Add to your imports at the top of finance/views.py, if not already
+present from earlier additions:
+
+    from curriculum.models import Department
+"""
+
+
+def _exam_attendance_permission(request):
+    """Mirrors exactly the same check exam_attendance_list_html already
+    uses per-course, applied here at the list level."""
+    is_staff_viewer = (
+        request.user.is_staff or request.user.is_superuser
+        or request.user.has_perm("finance.view_finance_reports")
+    )
+    lecturer = getattr(request.user, "lecturer", None)
+    return is_staff_viewer, lecturer
+
+
+def _filtered_course_assignments(request, is_staff_viewer, lecturer):
+    session_id = request.GET.get('session')
+    semester_id = request.GET.get('semester')
+    department_id = request.GET.get('department')
+
+    assignments = CourseAssignment.objects.select_related(
+        'course', 'course__department', 'course__level',
+        'lecturer__user', 'session', 'semester',
+    )
+
+    if not is_staff_viewer:
+        assignments = assignments.filter(lecturer=lecturer)
+
+    if session_id:
+        assignments = assignments.filter(session_id=session_id)
+    if semester_id:
+        assignments = assignments.filter(semester_id=semester_id)
+    if department_id:
+        assignments = assignments.filter(course__department_id=department_id)
+
+    assignments = assignments.order_by('course__department__name', 'course__course_code')
+
+    return assignments, session_id, semester_id, department_id
+
+
+@login_required
+def exam_attendance_selector_view(request):
+    """
+    Front-end entry point: lets school staff or a lecturer pick a
+    Department/Session/Semester and jump straight to the printable
+    attendance list for any matching course, instead of needing the
+    course_id/session_id/semester_id URL constructed by hand.
+    """
+    is_staff_viewer, lecturer = _exam_attendance_permission(request)
+    if not is_staff_viewer and not lecturer:
+        return render(request, "errors/403.html", {"message": "Not permitted."}, status=403)
+
+    assignments, session_id, semester_id, department_id = _filtered_course_assignments(
+        request, is_staff_viewer, lecturer
+    )
+
+    rows = []
+    for assignment in assignments:
+        registered_count = CourseRegistration.objects.filter(
+            course=assignment.course, session=assignment.session, semester=assignment.semester
+        ).count()
+        rows.append({'assignment': assignment, 'registered_count': registered_count})
+
+    return render(request, 'finance/exam_attendance_selector.html', {
+        'rows': rows,
+        'sessions': Session.objects.all().order_by('-start_date'),
+        'semesters': Semester.objects.all().order_by('-session__start_date', 'name'),
+        'departments': Department.objects.all().order_by('name'),
+        'selected_session': session_id,
+        'selected_semester': semester_id,
+        'selected_department': department_id,
+        'is_staff_viewer': is_staff_viewer,
+    })
+
+
+@login_required
+def exam_attendance_bulk_print_view(request):
+    """
+    Prints the full attendance list for every course matching the
+    filters — e.g. "every course in the Computer Science department
+    this semester" — in one run, one course per printed page.
+    """
+    is_staff_viewer, lecturer = _exam_attendance_permission(request)
+    if not is_staff_viewer and not lecturer:
+        return render(request, "errors/403.html", {"message": "Not permitted."}, status=403)
+
+    assignments, session_id, semester_id, department_id = _filtered_course_assignments(
+        request, is_staff_viewer, lecturer
+    )
+
+    sheets = []
+    for assignment in assignments:
+        rows = ExamEligibilityService.course_attendance_list(
+            assignment.course, assignment.session, assignment.semester
+        )
+        eligible_count = sum(1 for row in rows if row["is_eligible"])
+        sheets.append({
+            'course': assignment.course,
+            'session': assignment.session,
+            'semester': assignment.semester,
+            'rows': rows,
+            'eligible_count': eligible_count,
+            'total_count': len(rows),
+        })
+
+    department_obj = Department.objects.filter(id=department_id).first() if department_id else None
+
+    return render(request, 'finance/exam_attendance_bulk_print.html', {
+        'sheets': sheets,
+        'department': department_obj,
+        'total_count': len(sheets),
+    })
+
+
 # ---------------------------------------------------------------------------
 # Staff review screen — approve/reject student-submitted payment claims
 # ---------------------------------------------------------------------------
-
-# @login_required
-# @permission_required("finance.record_payment", raise_exception=True)
-# def pending_payments_view(request):
-#     """
-#     Everything a bursary officer needs on one page: every PENDING payment
-#     claim a student has submitted, what it's meant to cover, and one-click
-#     Approve/Reject. No API calls required — this is a plain HTML form.
-#     """
-#     pending_payments = Payment.objects.filter(
-#         status=Payment.Status.PENDING
-#     ).select_related("student").prefetch_related(
-#         "allocations__payment_item__fee_assignment__category",
-#         "allocations__payment_item__course_registration__course",
-#     ).order_by("-created_at")
-
-#     return render(request, "finance/pending_payments.html", {
-#         "pending_payments": pending_payments,
-#     })
-
 
 @login_required
 @permission_required("finance.record_payment", raise_exception=True)

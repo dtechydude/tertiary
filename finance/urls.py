@@ -61,6 +61,21 @@ urlpatterns = [
         name="exam_attendance_list_html",
     ),
 
+    # Add these to finance/urls.py, near your existing exam_attendance_list_html
+    # entry (inside urlpatterns, app_name = "finance" already set — nothing
+    # else changes).
+
+    path(
+        "documents/exam-attendance/",
+        views.exam_attendance_selector_view,
+        name="exam_attendance_selector",
+    ),
+    path(
+        "documents/exam-attendance/bulk-print/",
+        views.exam_attendance_bulk_print_view,
+        name="exam_attendance_bulk_print",
+    ),
+
     # --- Staff: review and approve/reject student-submitted payments ---
     path("payments/pending/", views.pending_payments_view, name="pending_payments"),
     path("payments/<int:payment_id>/approve/", views.approve_payment_view, name="approve_payment"),
