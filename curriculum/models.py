@@ -6,6 +6,7 @@ from django.template.defaultfilters import slugify
 from django.contrib.auth.models import User
 from django.urls import reverse
 import os
+from django.db.models import Q
 from django.utils.html import strip_tags
 from django_ckeditor_5.fields import CKEditor5Field
 from embed_video.fields import EmbedVideoField
@@ -168,6 +169,15 @@ class Session(models.Model):
         self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['is_current'],
+                condition=Q(is_current=True),
+                name='only_one_current_session_can_be_active'
+            )
+        ]
+
 #Semester
 class Semester(models.Model):
     FIRST = "First"
@@ -203,8 +213,17 @@ class Semester(models.Model):
         return f"{self.name} ({self.session.name})"    
 
 
-    def __str__(self):
-        return self.name
+    # def __str__(self):
+    #     return self.name
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['is_current'],
+                condition=Q(is_current=True),
+                name='only_one_current_semester_can_be_active'
+            )
+        ]
  
 # Tertiary Logic
 # Faculty
@@ -215,15 +234,11 @@ class Faculty(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:            
+        verbose_name = "Faculty"
+        verbose_name_plural = "Faculties"
+            
 
-# # Department
-# class Department(models.Model):
-#     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE)
-#     name = models.CharField(max_length=150)
-#     hod = models.ForeignKey("staff.Lecturer", on_delete=models.SET_NULL, null=True, blank=True, related_name="heading_department")
-
-#     def __str__(self):
-#         return self.name
 
 class Department(models.Model):
     faculty = models.ForeignKey(

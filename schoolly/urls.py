@@ -19,7 +19,6 @@ urlpatterns = [
     path('cbt/', include('cbt.urls', namespace='cbt')),
     path('tickets/', include('tickets.urls', namespace='tickets')),
     path('events/', include('events.urls', namespace='events')),
-    path('payments/', include('payments.urls', namespace='payments')),
     path('finance/', include('finance.urls', namespace='finance')),
     path('ai_center/', include('ai_center.urls', namespace='ai_center')),
     path('elearning/', include('elearning.urls', namespace='elearning')),

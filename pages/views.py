@@ -7,7 +7,6 @@ from django.contrib.auth.models import User
 from students.models import Student
 from attendance.models import Attendance
 from staff.models import Lecturer
-from payments.models import BankDetail
 from users.models import Profile
 from curriculum.models import Level, SchoolIdentity, Programme, Faculty
 from students.models import Student

@@ -102,8 +102,8 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(Semester)
 class SemesterAdmin(admin.ModelAdmin):
-    list_display = ('name',)
-    list_filter = ('name',)
+    list_display = ('name', 'session', 'start_date', 'end_date', 'is_current')
+    list_filter = ('name', 'session')
 
 @admin.register(CourseAssignment)
 class CourseAssignmentAdmin(admin.ModelAdmin):

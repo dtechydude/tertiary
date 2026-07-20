@@ -287,50 +287,6 @@ def admin_course_assignments(request):
     })
   
 
-
-# Teachers Student Count In Class
-
-class LecturerStudentCountListView(ListView):
-    model = Lecturer
-    template_name = 'staff/all_teachers_student_counts.html'
-    context_object_name = 'lecturer'
-
-    def get_queryset(self):
-        return super().get_queryset().prefetch_related(
-            'teacher__current_class'
-        ).order_by('user__last_name', 'user__first_name')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        filtered_teachers = []
-
-        for teacher in context['teachers']:
-            # 1. Filter students: Exclude "Alumni"
-            active_students = [
-                s for s in teacher.teacher.all()
-                if s.current_class and s.current_class.name != "Alumni"
-            ]
-
-            # 2. Calculate the Total Count
-            count = len(active_students)
-
-            # 3. ONLY proceed if the teacher has students (is a form teacher)
-            if count > 0:
-                teacher.total_student_count = count
-
-                # 4. Determine the Unique Class Objects
-                unique_classes = {s.current_class for s in active_students}
-
-                # 5. Create the sorted list for badges
-                teacher.class_list = [c.name for c in sorted(list(unique_classes), key=lambda x: x.name)]
-
-                # Add this teacher to our final list
-                filtered_teachers.append(teacher)
-
-        # 6. Replace the context with our filtered list
-        context['teachers'] = filtered_teachers
-        return context
     
 """
 staff.views (PDF export additions)

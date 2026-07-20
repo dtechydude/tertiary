@@ -33,4 +33,4 @@ class Attendance(models.Model):
         ordering = ['-date', 'course', 'student__middle_name']
 
     def __str__(self):
-        return f"{self.student.get_full_name()} - {self.course.code} - {self.date}"
+        return f"{self.student.get_full_name()} - {self.course.course_code} - {self.date}"

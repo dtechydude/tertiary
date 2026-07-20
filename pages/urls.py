@@ -16,8 +16,6 @@ urlpatterns = [
      path('help-center/', page_views.help_center, name='help-center'),
      path('support-info/', page_views.contact_support, name='support_info'),
      path('lock-screen/', page_views.lock_screen, name='lock-screen'),
-     path('bank-detail/', page_views.bank_detail, name='bank-detail'),
-     # path('record-result/', page_views.record_result, name='record-result'),
      path('success-submission/', page_views.success_submission, name='success_submission'),
      path('birthday-list/', page_views.birthday_list, name='birthday_list'),
      path('students-phone-list/', page_views.student_phone_list_view, name='students_phone_list'),
@@ -26,12 +24,7 @@ urlpatterns = [
      path('lecturers-phone-list/', page_views.lecturer_phone_list_view, name='lecturer_phone_list'),
      path('lecturers-email-list/', page_views.lecturer_email_list_view, name='lecturer_email_list'),
 
-#      path('payment-instruction/', page_views.payment_instruction, name='payment_instruction'),
-#      path('payment-chart/', page_views.payment_chart, name='payment_chart'),
      path('video-guides/', page_views.video_guides_view, name='video-guides'),
 
-
-
-#      path('<str:pk>/', views.StudentCardDetailView.as_view(), name='my_idcard'),
 
 ]

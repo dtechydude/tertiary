@@ -21,6 +21,8 @@ class StudentsAdmin(ImportExportModelAdmin):
     list_display = ("matric_number", "get_full_name", "department", "programme", "level", "student_status")
     list_filter = ("department", "programme", "level", "student_status")
     search_fields = ("matric_number", "user__first_name", "user__last_name", "middle_name")
+    raw_id_fields = ('user',)
+
     # autocomplete_fields = ("user", "department", "programme", "level")
 
 @admin.register(GraduationRecord)

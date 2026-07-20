@@ -14,5 +14,6 @@ class LecturerAdmin(ImportExportModelAdmin):
     list_display = ("get_full_name", "department", "position", "gender")
     list_filter = ( "position", "is_active")
     search_fields = ("user__first_name", "user__last_name", "middle_name",)
+    raw_id_fields = ('user',)
     # autocomplete_fields = ("user")
 
