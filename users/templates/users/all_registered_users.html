@@ -49,7 +49,7 @@
                                         <th>Role</th>
                                         <th>Department</th>
                                         <th>Status</th>
-                                        <th>Joined</th>
+                                        <th>Created</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -80,7 +80,7 @@
                                             {% with role=u.profile.user_type %}
                                             <span class="badge badge-sm 
                                                 {% if role == 'student' %}badge-student
-                                                {% elif role == 'teacher' %}badge-teacher
+                                                {% elif role == 'lecturer' %}badge-lecturer
                                                 {% elif role == 'admin' %}badge-admin
                                                 {% else %}badge-light{% endif %}">
                                                 {{ u.profile.get_user_type_display|title }}

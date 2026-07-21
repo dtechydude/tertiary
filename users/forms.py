@@ -58,11 +58,6 @@ class UserTwoUpdateForm(forms.ModelForm):
         fields = [ 'last_name', ]
 
 
-class TeacherEmploymentUpdateForm(forms.ModelForm):
-    pass 
-
-
-
 
 class UserRegistrationForm(forms.ModelForm):
     password = forms.CharField(
@@ -148,43 +143,3 @@ class LecturerEnrollmentForm(forms.ModelForm):
             if not isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.update({'class': 'form-control'})
 
-
-# # Lecturer Enrolment form
-# class LecturerEnrollmentForm(forms.ModelForm):
-#     class Meta:
-#         model = Lecturer
-#         # Removed 'user' and 'staff_id' from fields 
-#         # because these are handled automatically in the view logic
-#         fields = [
-#             'middle_name', 'department', 'position', 
-#             'gender', 'marital_status', 'DOB', 'date_employed', 
-#             'phone', 'address', 'highest_qualification', 'institution', 
-#             'year_obtained', 'professional_body', 'guarantor_name', 
-#             'guarantor_phone', 'next_of_kin_name', 'next_of_kin_phone'
-#         ]
-#         widgets = {
-#             'DOB': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-#             'date_employed': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-#             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-#         }
-
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         # Dynamically add bootstrap classes to all fields
-#         for field_name, field in self.fields.items():
-#             if not isinstance(field.widget, forms.CheckboxInput):
-#                 # We update existing classes or add 'form-control'
-#                 existing_classes = field.widget.attrs.get('class', '')
-#                 if 'form-control' not in existing_classes:
-#                     field.widget.attrs.update({'class': f'{existing_classes} form-control'.strip()})
-
-#     def clean(self):
-#         cleaned_data = super().clean()
-#         password = cleaned_data.get("password")
-#         password2 = cleaned_data.get("password2")
-
-#         if password and password2 and password != password2:
-#             # This attaches the error directly to the second password box
-#             self.add_error('password2', "Passwords do not match.")
-        
-#         return cleaned_data

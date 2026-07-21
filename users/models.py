@@ -18,28 +18,26 @@ class Profile(models.Model):
     bio = models.TextField(max_length=150, blank=True)
 
     select = 'select'
-    teacher = 'teacher'
+    teacher = 'lecturer'
     student = 'student'
     admin = 'admin'   
     other_staff = 'other_staff'    
-    parent = 'parent'  
        
  
 
     user_types = [
         (select, 'select'),
         (student, 'student'),
-        (teacher, 'teacher'),
+        (teacher, 'lecturer'),
         (admin, 'admin'),
         (other_staff, 'other_staff'),        
-        (parent, 'parent'),                   
              
     ]
 
-    user_type = models.CharField(max_length=20, choices=user_types, default=select, blank=True, null=True)
+    user_type = models.CharField(max_length=20, choices=user_types, default=student, blank=True, null=True)
     code = models.CharField(max_length=6, blank=True) 
     recommended_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,  related_name='ref_by' )
-    activate = models.BooleanField(default=False, blank=True, verbose_name='active')   
+    activate = models.BooleanField(default=True, blank=True, verbose_name='active')   
     updated = models.DateTimeField(auto_now=True)
     created = models.DateTimeField(auto_now_add=True)
     
