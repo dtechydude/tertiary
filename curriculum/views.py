@@ -23,7 +23,7 @@ actual field names):
 from datetime import date
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Count, Sum, Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -45,6 +45,14 @@ from .models import (
     Session,
 )
 
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib import messages
+from django.db.models import Count, Q
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+from .models import Course, CourseRegistration, Department, Session, Semester
 
 # =====================================================================
 # Helpers
@@ -660,3 +668,201 @@ def set_current_semester(request, semester_id):
     return redirect('curriculum:session-admin')
 
 
+# =============================================================================
+# NEW VIEWS — append to the end of curriculum/views.py.
+#
+# Portal front-end for validating/revoking course registrations — a
+# two-level drill-down (courses -> student registrations within a course)
+# rather than one giant flat table, since a department/session/semester
+# can easily have thousands of registrations across all its courses.
+#
+# Deliberately mirrors CourseRegistrationAdmin's validate_selected /
+# unvalidate_selected actions exactly (same permission check, same
+# validated_by/validated_at bookkeeping) rather than inventing a second,
+# possibly-diverging way to validate a registration — and reuses
+# FinanceReportService.totals_by_course exactly as the existing
+# registration_report_view already does, rather than recomputing income
+# figures here.
+#
+# Needs these importable in curriculum/views.py (add any missing):
+#   from django.contrib.auth.decorators import login_required, permission_required
+#   from django.contrib import messages
+#   from django.db.models import Count, Q
+#   from django.shortcuts import render, redirect, get_object_or_404
+#   from django.urls import reverse
+#   from django.utils import timezone
+#   from django.views.decorators.http import require_POST
+#   from .models import Course, CourseRegistration, Department, Session, Semester
+# =============================================================================
+
+
+def _resolve_registration_filters(request):
+    """
+    Shared GET-param resolution for the overview + detail views.
+    Session/Semester default to whichever is flagged is_current=True when
+    not explicitly chosen in the querystring — "for the current session
+    and semester" per the brief, while still letting staff look at a
+    past term if they choose one from the filter form.
+    """
+    department_id = request.GET.get("department") or None
+    session_id = request.GET.get("session") or None
+    semester_id = request.GET.get("semester") or None
+
+    session = (
+        Session.objects.filter(pk=session_id).first() if session_id
+        else Session.objects.filter(is_current=True).first()
+    )
+    semester = (
+        Semester.objects.filter(pk=semester_id).first() if semester_id
+        else Semester.objects.filter(is_current=True).first()
+    )
+    department = Department.objects.filter(pk=department_id).first() if department_id else None
+    return session, semester, department
+
+
+@login_required
+@permission_required("curriculum.validate_registration", raise_exception=True)
+def course_registration_overview_view(request):
+    """
+    Level 1: courses within the selected (default: current)
+    session/semester, optionally scoped to a department, with
+    registered/validated/pending counts and (reusing the finance app,
+    not duplicating it) income collected. Each row links through to the
+    actual student-level list where validate/revoke happens.
+    """
+    from finance.services.reports import FinanceReportService
+
+    session, semester, department = _resolve_registration_filters(request)
+
+    qs = CourseRegistration.objects.all()
+    if session:
+        qs = qs.filter(session=session)
+    if semester:
+        qs = qs.filter(semester=semester)
+    if department:
+        qs = qs.filter(course__department=department)
+
+    course_stats = list(
+        qs.values(
+            "course_id", "course__course_code", "course__title", "course__department__name",
+        ).annotate(
+            registered_count=Count("id"),
+            validated_count=Count("id", filter=Q(is_validated=True)),
+        ).order_by("course__course_code")
+    )
+
+    income_by_course = {
+        row["course_code"]: row["total_collected"]
+        for row in FinanceReportService.totals_by_course(session=session, semester=semester, department=department)
+    }
+    for row in course_stats:
+        row["total_collected"] = income_by_course.get(row["course__course_code"], 0)
+        row["pending_count"] = row["registered_count"] - row["validated_count"]
+
+    context = {
+        "course_stats": course_stats,
+        "departments": Department.objects.all().order_by("name"),
+        "sessions": Session.objects.all().order_by("-start_date"),
+        "semesters": Semester.objects.select_related("session").order_by("-session__start_date", "name"),
+        "selected_session": session,
+        "selected_semester": semester,
+        "selected_department": department,
+        "grand_total_registered": sum(r["registered_count"] for r in course_stats),
+        "grand_total_validated": sum(r["validated_count"] for r in course_stats),
+        "grand_total_pending": sum(r["pending_count"] for r in course_stats),
+    }
+    return render(request, "curriculum/staff/registration_overview.html", context)
+
+
+@login_required
+@permission_required("curriculum.validate_registration", raise_exception=True)
+def course_registration_detail_view(request, course_id):
+    """
+    Level 2: every student registration for one course within the
+    selected session/semester — where validate/revoke actually happens,
+    via checkboxes + the two POST views below.
+    """
+    course = get_object_or_404(Course, pk=course_id)
+    session, semester, _ = _resolve_registration_filters(request)
+
+    registrations = CourseRegistration.objects.filter(course=course)
+    if session:
+        registrations = registrations.filter(session=session)
+    if semester:
+        registrations = registrations.filter(semester=semester)
+    registrations = registrations.select_related(
+        "student", "student__level", "validated_by"
+    ).order_by("student__matric_number")
+
+    context = {
+        "course": course,
+        "registrations": registrations,
+        "selected_session": session,
+        "selected_semester": semester,
+    }
+    return render(request, "curriculum/staff/registration_detail.html", context)
+
+
+def _redirect_back_to_detail(course_id, session, semester):
+    url = reverse("curriculum:registration_detail", args=[course_id])
+    params = []
+    if session:
+        params.append(f"session={session.id}")
+    if semester:
+        params.append(f"semester={semester.id}")
+    if params:
+        url += "?" + "&".join(params)
+    return redirect(url)
+
+
+@login_required
+@permission_required("curriculum.validate_registration", raise_exception=True)
+@require_POST
+def validate_course_registrations_view(request):
+    """
+    Bulk-validate selected registrations. Deliberately identical
+    bookkeeping to CourseRegistrationAdmin.validate_selected (same
+    is_validated/validated_by/validated_at fields, same permission) —
+    this is the same action, just reachable from the portal instead of
+    /admin/.
+    """
+    registration_ids = request.POST.getlist("registration_ids")
+    course_id = request.POST.get("course_id")
+    session_id = request.POST.get("session_id") or None
+    semester_id = request.POST.get("semester_id") or None
+
+    if registration_ids:
+        updated = CourseRegistration.objects.filter(pk__in=registration_ids).update(
+            is_validated=True, validated_by=request.user, validated_at=timezone.now()
+        )
+        messages.success(request, f"{updated} registration(s) validated.")
+    else:
+        messages.warning(request, "No registrations were selected.")
+
+    session = Session.objects.filter(pk=session_id).first() if session_id else None
+    semester = Semester.objects.filter(pk=semester_id).first() if semester_id else None
+    return _redirect_back_to_detail(course_id, session, semester)
+
+
+@login_required
+@permission_required("curriculum.validate_registration", raise_exception=True)
+@require_POST
+def revoke_course_registrations_view(request):
+    """Bulk-revoke selected registrations — mirrors
+    CourseRegistrationAdmin.unvalidate_selected exactly."""
+    registration_ids = request.POST.getlist("registration_ids")
+    course_id = request.POST.get("course_id")
+    session_id = request.POST.get("session_id") or None
+    semester_id = request.POST.get("semester_id") or None
+
+    if registration_ids:
+        updated = CourseRegistration.objects.filter(pk__in=registration_ids).update(
+            is_validated=False, validated_by=None, validated_at=None
+        )
+        messages.warning(request, f"{updated} registration(s) had validation revoked.")
+    else:
+        messages.warning(request, "No registrations were selected.")
+
+    session = Session.objects.filter(pk=session_id).first() if session_id else None
+    semester = Semester.objects.filter(pk=semester_id).first() if semester_id else None
+    return _redirect_back_to_detail(course_id, session, semester)

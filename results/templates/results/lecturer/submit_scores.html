@@ -11,6 +11,8 @@
 <style>
     .score-input { width: 70px; }
     .ineligible-row { background: #fff5f5; }
+    .published-row { background: #f1f3f5; }
+    .published-row .score-input { cursor: not-allowed; }
 </style>
 {% endblock %}
 
@@ -36,7 +38,7 @@
 
         {% if messages %}
             {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %}">
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -45,8 +47,10 @@
         <div class="alert alert-secondary border-0 small">
             <i class="fas fa-info-circle me-1"></i>
             Rows shaded red have outstanding mandatory fees and/or a registration pending registrar validation —
-            their <strong>examination</strong> component score cannot be saved until that's resolved. Other
-            components (CA, quiz, etc.) can still be entered normally.
+            their <strong>examination</strong> component score cannot be saved until that's resolved. Rows shaded
+            grey and marked <strong>Published</strong> are final and locked — students can already see these
+            results, and they can no longer be edited from this page. Contact the Registrar if a correction is
+            needed after publication.
         </div>
 
         <form method="post" id="scoreForm">
@@ -70,12 +74,13 @@
                                     {% endfor %}
                                     <th class="text-center">Total</th>
                                     <th class="text-center">Grade</th>
-                                    <th class="pe-3 text-center">Eligible</th>
+                                    <th class="text-center">Eligible</th>
+                                    <th class="pe-3 text-center">Result Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for row in student_rows %}
-                                <tr class="{% if not row.is_exam_eligible %}ineligible-row{% endif %}">
+                                <tr class="{% if not row.is_exam_eligible %}ineligible-row{% endif %} {% if row.is_published %}published-row{% endif %}">
                                     <td class="ps-3">{{ row.student.matric_number }}</td>
                                     <td>{{ row.student.get_full_name }}</td>
                                     {% for cell in row.score_cells %}
@@ -85,7 +90,9 @@
                                             name="score_{{ cell.link.component_id }}_{{ row.student.id }}"
                                             class="form-control form-control-sm score-input d-inline-block"
                                             value="{{ cell.value|unlocalize }}"
-                                            {% if cell.link.component.is_exam_component and not row.is_exam_eligible %}
+                                            {% if row.is_published %}
+                                            disabled title="Published — this result is final and can no longer be edited here"
+                                            {% elif cell.link.component.is_exam_component and not row.is_exam_eligible %}
                                             title="Blocked: outstanding fees or pending validation"
                                             {% endif %}
                                         >
@@ -95,16 +102,25 @@
                                     <td class="text-center">
                                         {% if row.result.grade %}<span class="badge bg-info">{{ row.result.grade }}</span>{% else %}—{% endif %}
                                     </td>
-                                    <td class="pe-3 text-center">
+                                    <td class="text-center">
                                         {% if row.is_exam_eligible %}
                                         <span class="badge bg-success">Yes</span>
                                         {% else %}
                                         <span class="badge bg-danger">No</span>
                                         {% endif %}
                                     </td>
+                                    <td class="pe-3 text-center">
+                                        {% if row.is_published %}
+                                        <span class="badge bg-dark"><i class="fas fa-lock me-1"></i>Published</span>
+                                        {% elif row.result %}
+                                        <span class="badge bg-secondary">{{ row.result.get_status_display }}</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark border">Not Entered</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% empty %}
-                                <tr><td colspan="{{ components|length|add:5 }}" class="text-center text-muted py-4">No students registered for this course/session/semester.</td></tr>
+                                <tr><td colspan="{{ components|length|add:6 }}" class="text-center text-muted py-4">No students registered for this course/session/semester.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>

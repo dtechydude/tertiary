@@ -511,7 +511,9 @@
 						{% if user.is_superuser or user.is_staff %}
 						<li><a href="{% url 'curriculum:faculty-list' %}">Faculty & Depts.</a></li>
 						<li><a href="{% url 'curriculum:session-admin' %}">Set Current Session</a></li>
-						<li><a href="{% url 'curriculum:pending-registrations' %}">Course Pending Registration</a></li>
+						<li><a href="{% url 'curriculum:pending-registrations' %}">Course Pending Validation</a></li>
+						<li><a href="{% url 'curriculum:registration_overview' %}">Manage Course Validation</a></li>
+
 						{% endif %}	
 										
 					</ul> 

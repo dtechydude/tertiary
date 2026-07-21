@@ -6,7 +6,7 @@ from import_export.admin import ImportExportModelAdmin
 # Tertiary Logic
 @admin.register(StaffPosition)
 class StaffPositionAdmin(admin.ModelAdmin):
-    list_display = ("name",)
+    list_display = ("name", "description")
     search_fields = ("name",)
 
 @admin.register(Lecturer)

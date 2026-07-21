@@ -40,4 +40,11 @@ urlpatterns = [
     path("admin/sessions/", views.session_admin_view, name="session-admin"),
     path("admin/sessions/<int:session_id>/set-current/", views.set_current_session, name="set-current-session"),
     path("admin/semesters/<int:semester_id>/set-current/", views.set_current_semester, name="set-current-semester"),
+
+    #Course Frontend validations
+    path("registrations/", views.course_registration_overview_view, name="registration_overview"),
+    path("registrations/course/<int:course_id>/", views.course_registration_detail_view, name="registration_detail"),
+    path("registrations/validate/", views.validate_course_registrations_view, name="validate_registrations"),
+    path("registrations/revoke/", views.revoke_course_registrations_view, name="revoke_registrations"),
+
 ]

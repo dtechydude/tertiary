@@ -308,6 +308,108 @@ def lecturer_my_courses_view(request):
     })
 
 
+# @login_required
+# def lecturer_submit_scores(request, course_id):
+#     lecturer = getattr(request.user, "lecturer", None)
+#     if not lecturer:
+#         return render(request, "errors/403.html", {"message": "Lecturer profile required."})
+
+#     course = get_object_or_404(Course, pk=course_id)
+
+#     current_session = Session.objects.filter(is_current=True).first()
+#     current_semester = Semester.objects.filter(is_current=True).first()
+
+#     # IMPORTANT: scope to the current session/semester specifically — a
+#     # lecturer may have assignments to this same course from past
+#     # sessions, and grabbing "any" assignment risked entering scores
+#     # against the wrong academic period entirely.
+#     assignment = CourseAssignment.objects.filter(
+#         lecturer=lecturer, course=course, session=current_session, semester=current_semester
+#     ).first()
+#     if not assignment:
+#         return render(request, "errors/403.html", {
+#             "message": "You are not assigned to this course for the current session/semester."
+#         })
+
+#     registrations = CourseRegistration.objects.filter(
+#         course=course, session=assignment.session, semester=assignment.semester
+#     ).select_related("student__user")
+
+#     scheme = GradingService.resolve_scheme(course)
+#     components = list(scheme.schemecomponents.select_related("component"))
+#     exam_component_ids = {link.component_id for link in components if link.component.is_exam_component}
+
+#     # Pre-fill existing scores and eligibility, so re-opening this page
+#     # shows what's already been entered instead of a blank grid.
+#     from finance.services.exam_eligibility import ExamEligibilityService
+
+#     existing_results = {
+#         r.student_id: r for r in Result.objects.filter(
+#             course=course, session=assignment.session, semester=assignment.semester
+#         ).prefetch_related("scores")
+#     }
+
+#     student_rows = []
+#     for reg in registrations:
+#         result = existing_results.get(reg.student_id)
+#         existing_scores = {s.component_id: s.raw_score for s in result.scores.all()} if result else {}
+#         is_exam_eligible = ExamEligibilityService.is_course_exam_eligible(
+#             reg.student, course, assignment.session, assignment.semester
+#         )
+#         # Pre-align each component with this student's existing score (if
+#         # any) — Django templates can't do a dynamic dict[key] lookup, so
+#         # this pairing has to happen here, not in the template.
+#         score_cells = [
+#             {"link": link, "value": existing_scores.get(link.component_id, "")}
+#             for link in components
+#         ]
+#         student_rows.append({
+#             "student": reg.student,
+#             "result": result,
+#             "score_cells": score_cells,
+#             "is_exam_eligible": is_exam_eligible,
+#         })
+
+#     if request.method == "POST":
+#         blocked = []
+#         with transaction.atomic():
+#             for row in student_rows:
+#                 student = row["student"]
+#                 component_scores = {
+#                     link.component_id: request.POST.get(f"score_{link.component_id}_{student.id}", 0) or 0
+#                     for link in components
+#                 }
+#                 result, _ = Result.objects.get_or_create(
+#                     student=student, course=course,
+#                     session=assignment.session, semester=assignment.semester,
+#                     defaults={"scheme": scheme, "credit_unit": course.credit_unit},
+#                 )
+#                 try:
+#                     GradingService.record_scores(result, component_scores, actor=request.user)
+#                 except ValidationError as e:
+#                     # Don't let one student's outstanding fees/eligibility
+#                     # stop the rest of the class from being scored.
+#                     blocked.append({"student": student, "reason": str(e)})
+
+#         if blocked:
+#             messages.warning(
+#                 request,
+#                 f"{len(blocked)} student(s) could not be scored for the exam component — see details below."
+#             )
+#         else:
+#             messages.success(request, "Scores saved.")
+
+#         return redirect("results:lecturer_submit_scores", course_id=course_id)
+
+#     return render(request, "results/lecturer/submit_scores.html", {
+#         "student_rows": student_rows,
+#         "course": course,
+#         "assignment": assignment,
+#         "components": components,
+#         "exam_component_ids": exam_component_ids,
+#     })
+
+
 @login_required
 def lecturer_submit_scores(request, course_id):
     lecturer = getattr(request.user, "lecturer", None)
@@ -356,6 +458,12 @@ def lecturer_submit_scores(request, course_id):
         is_exam_eligible = ExamEligibilityService.is_course_exam_eligible(
             reg.student, course, assignment.session, assignment.semester
         )
+        # Once a result is published, students can already see it — a
+        # lecturer must never be able to silently change it from here
+        # again. Everything below (POST handling, template rendering)
+        # keys off this flag.
+        is_published = bool(result and result.is_published)
+
         # Pre-align each component with this student's existing score (if
         # any) — Django templates can't do a dynamic dict[key] lookup, so
         # this pairing has to happen here, not in the template.
@@ -368,13 +476,28 @@ def lecturer_submit_scores(request, course_id):
             "result": result,
             "score_cells": score_cells,
             "is_exam_eligible": is_exam_eligible,
+            "is_published": is_published,
         })
 
     if request.method == "POST":
         blocked = []
+        skipped_published = []
+        saved_count = 0
+
         with transaction.atomic():
             for row in student_rows:
                 student = row["student"]
+
+                if row["is_published"]:
+                    # Hard stop — never touch a published result here,
+                    # regardless of what the submitted form data says.
+                    # The template disables these inputs too, but that's
+                    # only a UX signal; this is the actual enforcement,
+                    # since a disabled attribute doesn't stop a directly
+                    # crafted POST request.
+                    skipped_published.append(student)
+                    continue
+
                 component_scores = {
                     link.component_id: request.POST.get(f"score_{link.component_id}_{student.id}", 0) or 0
                     for link in components
@@ -386,18 +509,26 @@ def lecturer_submit_scores(request, course_id):
                 )
                 try:
                     GradingService.record_scores(result, component_scores, actor=request.user)
+                    saved_count += 1
                 except ValidationError as e:
                     # Don't let one student's outstanding fees/eligibility
                     # stop the rest of the class from being scored.
                     blocked.append({"student": student, "reason": str(e)})
 
+        if skipped_published:
+            messages.info(
+                request,
+                f"{len(skipped_published)} student(s) already have a PUBLISHED result and were left "
+                f"unchanged — published results can no longer be edited from here. Contact the "
+                f"Registrar if a correction is needed."
+            )
         if blocked:
             messages.warning(
                 request,
                 f"{len(blocked)} student(s) could not be scored for the exam component — see details below."
             )
-        else:
-            messages.success(request, "Scores saved.")
+        if saved_count and not blocked:
+            messages.success(request, f"Scores saved for {saved_count} student(s).")
 
         return redirect("results:lecturer_submit_scores", course_id=course_id)
 

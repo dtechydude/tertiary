@@ -1,0 +1,176 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>{{ course.course_code }} — Registrations</title>
+{% endblock title %}
+
+{% block favicon %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    :root {
+        --portal-accent: #3b5fe2;
+        --portal-accent-2: #6a4fd9;
+    }
+    .content-body { padding-bottom: 5rem; }
+    @media (max-width: 767px) { .content-body { padding-bottom: 8rem; } }
+
+    .reg-hero {
+        background: linear-gradient(135deg, var(--portal-accent) 0%, var(--portal-accent-2) 100%);
+        border-radius: 1rem;
+        color: #fff;
+        padding: 1.5rem 2rem;
+    }
+
+    .scroll-table-wrap {
+        max-height: 520px; overflow-y: auto;
+        border: 1px solid #eef0f4; border-radius: 0.5rem;
+    }
+    .scroll-table-wrap table { margin-bottom: 0; }
+    .scroll-table-wrap thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
+
+    .status-validated { background: #d1f5df; color: #0f6b33; }
+    .status-pending { background: #fff3cd; color: #7a5b00; }
+
+    .bulk-action-bar {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        border-top: 1px solid #eef0f4;
+        padding: 0.85rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="reg-hero mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h4 class="mb-1 fw-bold"><i class="fas fa-book-open me-2"></i>{{ course.course_code }} — {{ course.title }}</h4>
+                <p class="mb-0 opacity-75">
+                    {{ course.department.name|default:"—" }}
+                    {% if selected_session %} &middot; {{ selected_session }}{% endif %}
+                    {% if selected_semester %} &middot; {{ selected_semester }}{% endif %}
+                </p>
+            </div>
+            <a href="{% url 'curriculum:registration_overview' %}" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to Courses
+            </a>
+        </div>
+
+        <div class="card shadow-sm">
+            <form method="post" id="registrationsForm">
+                {% csrf_token %}
+                <input type="hidden" name="course_id" value="{{ course.id }}">
+                <input type="hidden" name="session_id" value="{{ selected_session.id|default:'' }}">
+                <input type="hidden" name="semester_id" value="{{ selected_semester.id|default:'' }}">
+
+                <div class="card-body">
+                    <div class="table-responsive scroll-table-wrap">
+                        <table class="table table-sm table-striped table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAll" class="form-check-input"></th>
+                                    <th>Matric Number</th>
+                                    <th>Full Name</th>
+                                    <th>Level</th>
+                                    <th>Registered On</th>
+                                    <th>Status</th>
+                                    <th>Validated By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reg in registrations %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input row-check" name="registration_ids" value="{{ reg.id }}">
+                                    </td>
+                                    <td>{{ reg.student.matric_number }}</td>
+                                    <td>{{ reg.student.get_full_name }}</td>
+                                    <td>{{ reg.student.level.name|default:"—" }}</td>
+                                    <td>{{ reg.registered_at|date:"M j, Y" }}</td>
+                                    <td>
+                                        {% if reg.is_validated %}
+                                            <span class="badge status-validated"><i class="fas fa-check me-1"></i>Validated</span>
+                                        {% else %}
+                                            <span class="badge status-pending"><i class="fas fa-clock me-1"></i>Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted small">
+                                        {% if reg.validated_by %}
+                                            {{ reg.validated_by.get_full_name|default:reg.validated_by.username }}
+                                            <br>{{ reg.validated_at|date:"M j, Y" }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="7" class="text-center text-muted py-4">No registrations for this course in the selected session/semester.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {% if registrations %}
+                <div class="bulk-action-bar">
+                    <span class="text-muted small"><span id="selectedCount">0</span> selected</span>
+                    <div class="d-flex gap-2">
+                        <button type="submit" formaction="{% url 'curriculum:validate_registrations' %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-check me-1"></i> Validate Selected
+                        </button>
+                        <button type="submit" formaction="{% url 'curriculum:revoke_registrations' %}" class="btn btn-outline-danger btn-sm"
+                                onclick="return confirm('Revoke validation on the selected registrations? Affected students will no longer be exam-eligible for this course until re-validated.');">
+                            <i class="fas fa-rotate-left me-1"></i> Revoke Selected
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    (function () {
+        const selectAll = document.getElementById('selectAll');
+        const rowChecks = document.querySelectorAll('.row-check');
+        const selectedCount = document.getElementById('selectedCount');
+
+        function updateCount() {
+            if (!selectedCount) return;
+            selectedCount.textContent = document.querySelectorAll('.row-check:checked').length;
+        }
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                rowChecks.forEach(function (cb) { cb.checked = selectAll.checked; });
+                updateCount();
+            });
+        }
+        rowChecks.forEach(function (cb) { cb.addEventListener('change', updateCount); });
+    })();
+</script>
+{% endblock content_body %}
+
+{% block footer %}
+{% endblock footer %}

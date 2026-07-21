@@ -1,0 +1,187 @@
+{% extends 'pages/portal_home.html' %}
+{% load static %}
+
+{% block title %}
+<title>Course Registration Validation</title>
+{% endblock title %}
+
+{% block favicon %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="{% static 'pages/css/style.css' %}" rel="stylesheet">
+<style>
+    :root {
+        --portal-accent: #3b5fe2;
+        --portal-accent-2: #6a4fd9;
+    }
+    .content-body { padding-bottom: 5rem; }
+    @media (max-width: 767px) { .content-body { padding-bottom: 8rem; } }
+
+    .reg-hero {
+        background: linear-gradient(135deg, var(--portal-accent) 0%, var(--portal-accent-2) 100%);
+        border-radius: 1rem;
+        color: #fff;
+        padding: 1.75rem 2rem;
+    }
+
+    .stat-card { border: none; border-left: 4px solid var(--stat-accent, #3b5fe2); border-radius: 0.75rem; }
+    .stat-card .stat-icon {
+        width: 42px; height: 42px; border-radius: 0.6rem;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--stat-accent, #3b5fe2) 12%, white);
+        color: var(--stat-accent, #3b5fe2); font-size: 1.1rem;
+    }
+
+    .filter-card { border: none; border-radius: 0.85rem; }
+
+    .scroll-table-wrap {
+        max-height: 480px; overflow-y: auto;
+        border: 1px solid #eef0f4; border-radius: 0.5rem;
+    }
+    .scroll-table-wrap table { margin-bottom: 0; }
+    .scroll-table-wrap thead th { position: sticky; top: 0; background: #f8f9fc; z-index: 1; }
+
+    .pending-badge { background: #fff3cd; color: #7a5b00; }
+</style>
+{% endblock %}
+
+{% block content_body %}
+<div class="content-body">
+    <div class="container-fluid">
+
+        <div class="reg-hero mb-4">
+            <h4 class="mb-1 fw-bold"><i class="fas fa-clipboard-check me-2"></i>Course Registration Validation</h4>
+            <p class="mb-0 opacity-75">
+                Review and validate student course registrations
+                {% if selected_session %}for {{ selected_session }}{% endif %}
+                {% if selected_semester %}, {{ selected_semester }}{% endif %}.
+            </p>
+        </div>
+
+        <!-- Filter form -->
+        <div class="card filter-card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Department</label>
+                        <select name="department" class="form-select">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}" {% if selected_department.id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Session</label>
+                        <select name="session" class="form-select">
+                            {% for s in sessions %}
+                            <option value="{{ s.id }}" {% if selected_session.id == s.id %}selected{% endif %}>{{ s }}{% if s.is_current %} (Current){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Semester</label>
+                        <select name="semester" class="form-select">
+                            {% for sem in semesters %}
+                            <option value="{{ sem.id }}" {% if selected_semester.id == sem.id %}selected{% endif %}>{{ sem }}{% if sem.is_current %} (Current){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card stat-card shadow-sm h-100" style="--stat-accent:#3b5fe2;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="stat-icon"><i class="fas fa-user-graduate"></i></div>
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Total Registered</div>
+                            <div class="fw-bold fs-5">{{ grand_total_registered }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card shadow-sm h-100" style="--stat-accent:#198754;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Validated</div>
+                            <div class="fw-bold fs-5">{{ grand_total_validated }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card shadow-sm h-100" style="--stat-accent:#c5a059;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase">Pending Validation</div>
+                            <div class="fw-bold fs-5">{{ grand_total_pending }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course table -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive scroll-table-wrap">
+                    <table class="table table-sm table-striped table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Title</th>
+                                <th>Department</th>
+                                <th class="text-center">Registered</th>
+                                <th class="text-center">Validated</th>
+                                <th class="text-center">Pending</th>
+                                <th class="text-end">Income Collected</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in course_stats %}
+                            <tr>
+                                <td>{{ row.course__course_code }}</td>
+                                <td>{{ row.course__title }}</td>
+                                <td>{{ row.course__department__name|default:"—" }}</td>
+                                <td class="text-center">{{ row.registered_count }}</td>
+                                <td class="text-center">{{ row.validated_count }}</td>
+                                <td class="text-center">
+                                    {% if row.pending_count > 0 %}
+                                        <span class="badge pending-badge">{{ row.pending_count }}</span>
+                                    {% else %}
+                                        <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">₦{{ row.total_collected|floatformat:2 }}</td>
+                                <td>
+                                    <a href="{% url 'curriculum:registration_detail' row.course_id %}?session={{ selected_session.id|default:'' }}&semester={{ selected_semester.id|default:'' }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-list-check"></i> Manage
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="8" class="text-center text-muted py-4">No registrations found for the selected filters.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock content_body %}
+
+{% block footer %}
+{% endblock footer %}

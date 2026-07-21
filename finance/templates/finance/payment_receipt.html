@@ -1,9 +1,17 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Payment Receipt — {{ payment.reference }}</title>
+<!-- FAVICONS ICON -->	
+    {% if school_info and school_info.logo %}
+		<link rel="icon" href="{{ school_info.logo.url }}" type="image/png">
+	{% else %}
+		<link rel="icon" href="{% static 'pages/images/school_logo.jpg' %}" type="image/png">
+	{% endif %}
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
 <style>
   body { background: #f1f3f5; }
@@ -68,7 +76,7 @@
       </table>
 
       <p class="text-muted small mt-3 mb-0">
-        This is a system-generated receipt. Keep it for your records.
+       <img src="{{ school_info.logo.url }}" style="width:20px; height:auto;"><strong> {{ school_info.name}}</strong> - <br> This is a system-generated receipt. Keep it for your records.
       </p>
     </div>
   </div>
