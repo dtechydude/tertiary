@@ -128,7 +128,8 @@ class QuizAdmin(admin.ModelAdmin):
 
     search_fields = [
         'examination__name',
-        'course__name',
+        'course__course_code',
+        'course__title',
     ]
 
     readonly_fields = ['is_currently_available']
@@ -171,7 +172,8 @@ class QuizAdmin(admin.ModelAdmin):
     get_exam_name.short_description = 'Exam Name'
 
     def get_course_name(self, obj):
-        return obj.course.name if obj.course else "No course Linked"
+        # return obj.course.name if obj.course else "No course Linked"
+        return str(obj.course) if obj.course else "No Course Linked"
     get_course_name.short_description = 'course Name'
 
 
@@ -263,8 +265,9 @@ class QuizResultAdmin(ImportExportModelAdmin):
     )
 
     search_fields = (
-        'user__username',
-        'quiz__course__name'
+        'user__username',     
+        'quiz__course__course_code',
+        'quiz__course__title',
     )
 
     list_editable = ('cancelled',)
@@ -330,7 +333,8 @@ class QuizAttemptAdmin(admin.ModelAdmin):
         'user__username',
         'user__first_name',
         'user__last_name',
-        'quiz__course__name',
+        'quiz__course__course_code',
+        'quiz__course__title',
     )
 
     actions = ['cancel_attempts']

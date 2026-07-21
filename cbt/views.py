@@ -375,6 +375,125 @@ def admin_add_quiz(request):
 # Lecturer question-bank management
 # =====================================================================
 
+# @login_required
+# def lecturer_add_question(request, quiz_id=None):
+#     """
+#     Lecturers see a filterable list of quizzes for courses they're assigned
+#     to and add questions to them. Staff/superusers may manage any quiz.
+#     """
+#     user = request.user
+#     lecturer = _get_lecturer_or_none(user)
+
+#     # 1) No quiz_id -> show quiz selection page
+#     if not quiz_id:
+#         if user.is_staff or user.is_superuser:
+#             quizzes = Quiz.objects.select_related('course', 'level', 'examination').all()
+#         elif lecturer:
+#             assigned_course_ids = _assigned_course_ids(lecturer)
+#             quizzes = Quiz.objects.select_related(
+#                 'course', 'level', 'examination'
+#             ).filter(course_id__in=assigned_course_ids)
+#         else:
+#             messages.error(request, "Access Denied.")
+#             return redirect('cbt:main-view')
+
+#         level_id = request.GET.get('level')
+#         course_id = request.GET.get('course')
+#         semester = request.GET.get('semester')
+
+#         if level_id:
+#             quizzes = quizzes.filter(level_id=level_id)
+#         if course_id:
+#             quizzes = quizzes.filter(course_id=course_id)
+#         if semester:
+#             quizzes = quizzes.filter(semester=semester)
+
+#         levels = Level.objects.all()
+#         courses = (
+#             Course.objects.all()
+#             if (user.is_staff or user.is_superuser)
+#             else Course.objects.filter(id__in=_assigned_course_ids(lecturer))
+#         )
+#         semesters = Quiz._meta.get_field('semester').choices
+
+#         return render(request, 'cbt/lecturer_select_quiz.html', {
+#             'quizzes': quizzes,
+#             'levels': levels,
+#             'courses': courses,
+#             'semesters': semesters,
+#         })
+
+#     # 2) quiz_id provided -> go to add-question form
+#     quiz = get_object_or_404(Quiz, id=quiz_id)
+
+#     if not _lecturer_is_authorized_for_quiz(user, quiz, lecturer=lecturer):
+#         messages.error(request, "Access Denied: You are not assigned to this course.")
+#         return redirect('cbt:main-view')
+
+#     if request.method == 'POST':
+#         form = QuestionForm(request.POST)
+#         if form.is_valid():
+#             question = form.save(commit=False)
+#             question.quiz = quiz
+#             question.save()
+
+#             Quiz.objects.filter(id=quiz.id).update(
+#                 number_of_questions=F('number_of_questions') + 1
+#             )
+
+#             messages.success(request, "Question added successfully!")
+
+#             if 'add_another' in request.POST:
+#                 return redirect('cbt:lecturer-add-question-quiz', quiz_id=quiz.id)
+
+#             return redirect('cbt:lecturer-view-questions-quiz', quiz_id=quiz.id)
+#     else:
+#         form = QuestionForm()
+
+#     return render(request, 'cbt/lecturer_add_question.html', {
+#         'form': form,
+#         'quiz': quiz,
+#     })
+
+"""
+Drop-in replacement for lecturer_add_question in your cbt views.py.
+
+What changed and why:
+
+1. Quiz.session exists but was never used to filter or disambiguate the
+   list — every session's "First Semester" / "Second Semester" quizzes
+   were shown mixed together with no way to tell which year they
+   belonged to. The list now defaults to the ACTIVE session (Session
+   with is_current=True), with an explicit "All Sessions" option if
+   someone genuinely needs to browse past ones.
+
+2. Quiz.session is nullable (null=True, blank=True) — any quiz created
+   without one is now treated the same as "not the current session"
+   rather than silently slipping through as if it were fine. Worth a
+   data-cleanup pass in admin if any exist.
+
+3. A NEW hard, server-side check in the quiz_id branch: a lecturer
+   (not staff/superuser) can no longer open the add-question form for a
+   quiz belonging to a session other than the current one, even via a
+   direct/bookmarked URL — not just hidden from the list. Staff keep
+   full access, since they may legitimately need to fix historical data.
+
+Nothing about _get_lecturer_or_none / _assigned_course_ids /
+_lecturer_is_authorized_for_quiz was touched — this is purely additive
+on top of whatever those already do.
+"""
+
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
+from django.db.models import F
+
+# Assumes these already exist in this views.py / are imported the same
+# way as in your current file — Quiz, Level, Course, Session,
+# QuestionForm, _get_lecturer_or_none, _assigned_course_ids,
+# _lecturer_is_authorized_for_quiz.
+
+
 @login_required
 def lecturer_add_question(request, quiz_id=None):
     """
@@ -383,15 +502,18 @@ def lecturer_add_question(request, quiz_id=None):
     """
     user = request.user
     lecturer = _get_lecturer_or_none(user)
+    is_staff_or_super = user.is_staff or user.is_superuser
+
+    current_session = Session.objects.filter(is_current=True).first()
 
     # 1) No quiz_id -> show quiz selection page
     if not quiz_id:
-        if user.is_staff or user.is_superuser:
-            quizzes = Quiz.objects.select_related('course', 'level', 'examination').all()
+        if is_staff_or_super:
+            quizzes = Quiz.objects.select_related('course', 'level', 'examination', 'session').all()
         elif lecturer:
             assigned_course_ids = _assigned_course_ids(lecturer)
             quizzes = Quiz.objects.select_related(
-                'course', 'level', 'examination'
+                'course', 'level', 'examination', 'session'
             ).filter(course_id__in=assigned_course_ids)
         else:
             messages.error(request, "Access Denied.")
@@ -401,26 +523,41 @@ def lecturer_add_question(request, quiz_id=None):
         course_id = request.GET.get('course')
         semester = request.GET.get('semester')
 
+        # Session filter: defaults to the active session when the filter
+        # form hasn't been submitted at all (first page load / "Clear").
+        # An explicit empty selection ("All Sessions") is honoured as a
+        # deliberate choice to see everything, not silently overridden.
+        if 'session' in request.GET:
+            session_id = request.GET.get('session')
+        else:
+            session_id = str(current_session.id) if current_session else ""
+
         if level_id:
             quizzes = quizzes.filter(level_id=level_id)
         if course_id:
             quizzes = quizzes.filter(course_id=course_id)
         if semester:
             quizzes = quizzes.filter(semester=semester)
+        if session_id:
+            quizzes = quizzes.filter(session_id=session_id)
 
         levels = Level.objects.all()
         courses = (
             Course.objects.all()
-            if (user.is_staff or user.is_superuser)
+            if is_staff_or_super
             else Course.objects.filter(id__in=_assigned_course_ids(lecturer))
         )
         semesters = Quiz._meta.get_field('semester').choices
+        sessions = Session.objects.all().order_by('-start_date')
 
         return render(request, 'cbt/lecturer_select_quiz.html', {
-            'quizzes': quizzes,
+            'quizzes': quizzes.order_by('-session__start_date', 'semester', 'course__course_code'),
             'levels': levels,
             'courses': courses,
             'semesters': semesters,
+            'sessions': sessions,
+            'current_session': current_session,
+            'selected_session_id': session_id,
         })
 
     # 2) quiz_id provided -> go to add-question form
@@ -429,6 +566,18 @@ def lecturer_add_question(request, quiz_id=None):
     if not _lecturer_is_authorized_for_quiz(user, quiz, lecturer=lecturer):
         messages.error(request, "Access Denied: You are not assigned to this course.")
         return redirect('cbt:main-view')
+
+    # Hard gate: a lecturer cannot add questions to a quiz outside the
+    # active session, even by navigating straight to its URL. Staff are
+    # exempt, since they may need to correct historical data.
+    if not is_staff_or_super:
+        if not current_session or quiz.session_id != current_session.id:
+            messages.error(
+                request,
+                "This quiz belongs to a past (or unset) academic session — only quizzes for the "
+                "active session can be edited here. Contact an administrator if this needs to change."
+            )
+            return redirect('cbt:lecturer-add-question')
 
     if request.method == 'POST':
         form = QuestionForm(request.POST)

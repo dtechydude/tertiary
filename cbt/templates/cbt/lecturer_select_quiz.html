@@ -6,65 +6,92 @@
 <div class="container mt-4">
     <div class="card shadow">
 
-        <div class="card-header bg-success text-white">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0">Select a Quiz (Exam) to Add Questions</h5>
+            {% if current_session %}
+            <span class="badge bg-light text-success">Active Session: {{ current_session.name }}</span>
+            {% else %}
+            <span class="badge bg-warning text-dark">No active session is set</span>
+            {% endif %}
         </div>
 
         <div class="card-body p-3">
 
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
             <!-- FILTER SECTION -->
-            <form method="GET" class="row g-3 mb-4">
+            <form method="GET" class="mb-4">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Session</label>
+                        <select name="session" class="form-select">
+                            <option value="">All Sessions</option>
+                            {% for s in sessions %}
+                            <option value="{{ s.id }}" {% if selected_session_id == s.id|stringformat:"s" %}selected{% endif %}>
+                                {{ s.name }}{% if s.is_current %} (Current){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Level</label>
-                    <select name="level" class="form-select">
-                        <option value="">All Levels</option>
-                        {% for l in levels %}
-                        <option value="{{ l.id }}"
-                            {% if request.GET.level == l.id|stringformat:"i" %}selected{% endif %}>
-                            {{ l.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Level</label>
+                        <select name="level" class="form-select">
+                            <option value="">All Levels</option>
+                            {% for l in levels %}
+                            <option value="{{ l.id }}"
+                                {% if request.GET.level == l.id|stringformat:"i" %}selected{% endif %}>
+                                {{ l.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Course</label>
+                        <select name="course" class="form-select">
+                            <option value="">All Courses</option>
+                            {% for c in courses %}
+                            <option value="{{ c.id }}"
+                                {% if request.GET.course == c.id|stringformat:"i" %}selected{% endif %}>
+                                {{ c.course_code }} - {{ c.title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Semester</label>
+                        <select name="semester" class="form-select">
+                            <option value="">All Semesters</option>
+                            {% for value, label in semesters %}
+                            <option value="{{ value }}"
+                                {% if request.GET.semester == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Course</label>
-                    <select name="course" class="form-select">
-                        <option value="">All Courses</option>
-                        {% for c in courses %}
-                        <option value="{{ c.id }}"
-                            {% if request.GET.course == c.id|stringformat:"i" %}selected{% endif %}>
-                            {{ c.course_code }} - {{ c.title }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                <div class="row g-2 mt-1">
+                    <div class="col-12 d-flex gap-2">
+                        <button type="submit" class="btn btn-dark px-3">
+                            Filter
+                        </button>
+                        <a href="{% url 'cbt:lecturer-add-question' %}"
+                           class="btn btn-outline-secondary px-3">
+                            Reset to Active Session
+                        </a>
+                    </div>
                 </div>
-
-                <div class="col-md-3">
-                    <label class="form-label fw-bold">Semester</label>
-                    <select name="semester" class="form-select">
-                        <option value="">All Semesters</option>
-                        {% for value, label in semesters %}
-                        <option value="{{ value }}"
-                            {% if request.GET.semester == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-3 d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-dark px-3">
-                        Filter
-                    </button>
-
-                    <a href="{% url 'cbt:lecturer-add-question' %}"
-                       class="btn btn-outline-secondary px-3">
-                        Clear
-                    </a>
-                </div>
-
             </form>
 
             <!-- QUIZ LIST -->
@@ -80,14 +107,23 @@
                                            {{ quiz.course.course_code }} - {{ quiz.examination }}
                                         </h6>
                                         <p class="card-text text-muted mb-2" style="font-size: 0.875rem;">
-                                            <span class="badge bg-info text-dark me-1">
-                                                Questions: {{ quiz.number_of_questions }}
+                                            {% if quiz.session %}
+                                            <span class="badge bg-primary text-white me-1">
+                                                {{ quiz.session.name }}
                                             </span>
+                                            {% else %}
+                                            <span class="badge bg-danger text-white me-1" title="No session set on this quiz — data needs review">
+                                                Session Not Set
+                                            </span>
+                                            {% endif %}
                                             <span class="badge bg-warning text-dark me-1">
                                                 Semester: {{ quiz.semester }}
                                             </span>
-                                            <span class="badge bg-secondary text-white">
+                                            <span class="badge bg-secondary text-white me-1">
                                                 Level: {{ quiz.level.name }}
+                                            </span>
+                                            <span class="badge bg-info text-dark">
+                                                Questions: {{ quiz.number_of_questions }}
                                             </span>
                                         </p>
                                     </div>

@@ -839,3 +839,308 @@ def staff_transcript_list_view(request):
         "selected_semester_id": semester_id,
     }
     return render(request, "results/staff/transcript_list.html", context)
+
+
+"""
+Views for the result approval workflow (/results/approvals/...).
+
+Merge these into your existing results/views.py (or keep this as
+results/views_approvals.py and add `from .views_approvals import *`
+to views.py — either works, just pick one so urls.py has one place to
+import from).
+
+Access model:
+  * The whole approvals section requires request.user.is_staff (or
+    is_superuser, which implies is_staff-level access via the decorator
+    below) — this is the "who can even open the page" gate.
+  * Within the page, which ACTIONS a given user can take is governed
+    entirely by the granular Result permissions (submit_result,
+    approve_result_hod, ...) via has_perm — never by role name, never
+    hardcoded. Grant those permissions to the relevant Groups (HOD,
+    Dean, Registrar, ...) in Django admin.
+  * Every transition is executed through ResultWorkflowService (via
+    services/approvals.py), exactly like ResultAdmin's actions —
+    so permission checks and ResultAuditLog entries are identical
+    regardless of whether the change came from /admin/ or this UI.
+"""
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+
+from .forms import ApprovalFilterForm, BulkActionForm, ReturnReasonForm
+from .models import Result
+from .services.approvals import (
+    ACTION_LABELS,
+    ACTION_PERMISSIONS,
+    get_available_actions,
+    bulk_transition,
+    apply_transition,
+)
+
+
+def staff_required(view_func):
+    """
+    Gate for the approvals section itself. Deliberately separate from
+    the per-action permission checks below — is_staff just says "you're
+    allowed into the approvals workspace", it says nothing about which
+    transitions you're allowed to perform once you're in it.
+    """
+    return login_required(
+        user_passes_test(lambda u: u.is_active and u.is_staff)(view_func)
+    )
+
+
+def _base_queryset():
+    return (
+        Result.objects.select_related(
+            "student", "student__user", "course", "session", "semester", "submitted_by",
+        )
+        .order_by("-session", "semester", "course__course_code", "student__matric_number")
+    )
+
+
+def _apply_filters(qs, form: ApprovalFilterForm, request):
+    if form.is_valid():
+        status = form.cleaned_data.get("status")
+        session = form.cleaned_data.get("session")
+        semester = form.cleaned_data.get("semester")
+        course = form.cleaned_data.get("course")
+        q = form.cleaned_data.get("q")
+
+        if status:
+            qs = qs.filter(status=status)
+        elif "status" not in request.GET:
+            # Default view: hide drafts (a lecturer's unsubmitted working
+            # copy) unless someone explicitly asks to see them via the
+            # Draft tab/filter.
+            qs = qs.exclude(status=Result.Status.DRAFT)
+
+        if session:
+            qs = qs.filter(session=session)
+        if semester:
+            qs = qs.filter(semester=semester)
+        if course:
+            qs = qs.filter(course=course)
+        if q:
+            qs = qs.filter(
+                Q(student__matric_number__icontains=q)
+                | Q(student__user__first_name__icontains=q)
+                | Q(student__user__last_name__icontains=q)
+                | Q(course__course_code__icontains=q)
+                | Q(course__title__icontains=q)
+            )
+    return qs
+
+
+@staff_required
+def approval_queue(request):
+    """
+    Main approval workspace: filterable, paginated table of results with
+    a status tab strip and a permission-scoped bulk-action toolbar.
+    """
+    form = ApprovalFilterForm(request.GET or None)
+    qs = _apply_filters(_base_queryset(), form, request)
+
+    # Counts per status for the tab strip — one aggregate query, not one
+    # query per tab.
+    status_counts = {row["status"]: row["count"] for row in Result.objects.values("status").annotate(count=Count("id"))}
+
+    def _tab_url(status_value):
+        qs = request.GET.copy()
+        qs.pop("page", None)
+        if status_value:
+            qs["status"] = status_value
+        else:
+            qs.pop("status", None)
+        encoded = qs.urlencode()
+        base = reverse("results:approval_queue")
+        return f"{base}?{encoded}" if encoded else base
+
+    non_draft_count = sum(count for status, count in status_counts.items() if status != Result.Status.DRAFT)
+    status_tabs = [
+        {
+            "value": "",
+            "label": "All (excl. Drafts)",
+            "count": non_draft_count,
+            "active": "status" not in request.GET,
+            "url": _tab_url(""),
+        }
+    ]
+    status_tabs += [
+        {
+            "value": value,
+            "label": label,
+            "count": status_counts.get(value, 0),
+            "active": request.GET.get("status") == value,
+            "url": _tab_url(value),
+        }
+        for value, label in Result.Status.choices
+    ]
+
+    paginator = Paginator(qs, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    rows = [
+        {"result": result, "actions": get_available_actions(result, request.user)}
+        for result in page_obj.object_list
+    ]
+
+    # Only offer bulk actions the user actually holds permission for
+    # anywhere — the per-row check still applies when the action runs.
+    available_bulk_actions = [
+        (key, label) for key, label in ACTION_LABELS.items() if request.user.has_perm(ACTION_PERMISSIONS[key])
+    ]
+
+    # Preserve current filters across pagination / bulk-action redirects.
+    querystring = request.GET.copy()
+    querystring.pop("page", None)
+
+    context = {
+        "filter_form": form,
+        "status_tabs": status_tabs,
+        "page_obj": page_obj,
+        "rows": rows,
+        "available_bulk_actions": available_bulk_actions,
+        "querystring": querystring.urlencode(),
+    }
+    return render(request, "results/approval_queue.html", context)
+
+
+@staff_required
+@require_POST
+def approval_bulk_action(request):
+    """
+    Applies one action to every checked result on the queue page, then
+    redirects back preserving the current filters/page.
+    """
+    result_ids = request.POST.getlist("result_ids")
+    form = BulkActionForm(
+        {
+            "action": request.POST.get("action"),
+            "result_ids": result_ids,
+            "note": request.POST.get("note", ""),
+        }
+    )
+    redirect_qs = request.POST.get("querystring", "")
+    redirect_url = reverse("results:approval_queue")
+    if redirect_qs:
+        redirect_url = f"{redirect_url}?{redirect_qs}"
+
+    if not result_ids:
+        messages.warning(request, "Select at least one result before choosing a bulk action.")
+        return redirect(redirect_url)
+
+    if not form.is_valid():
+        for error_list in form.errors.values():
+            for error in error_list:
+                messages.error(request, error)
+        return redirect(redirect_url)
+
+    action = form.cleaned_data["action"]
+    if not request.user.has_perm(ACTION_PERMISSIONS[action]):
+        messages.error(request, f"You don't have permission to {ACTION_LABELS[action].lower()}.")
+        return redirect(redirect_url)
+
+    queryset = form.cleaned_data["result_ids"]
+    succeeded, failed = bulk_transition(queryset, action, actor=request.user, note=form.cleaned_data.get("note", ""))
+
+    if succeeded:
+        messages.success(request, f"{len(succeeded)} result(s) updated: {ACTION_LABELS[action]}.")
+    if failed:
+        messages.error(
+            request,
+            f"{len(failed)} result(s) could not be updated — either not a valid transition from their "
+            f"current status, or a rule in the workflow blocked it.",
+        )
+
+    return redirect(redirect_url)
+
+
+@staff_required
+def approval_detail(request, pk):
+    """
+    Single-result view: full score breakdown, workflow position, audit
+    trail, and the same permission-scoped actions as the queue — useful
+    when an approver wants to actually look at a result before acting on
+    it rather than approving blind from the table.
+    """
+    result = get_object_or_404(
+        Result.objects.select_related(
+            "student", "student__user", "course", "session", "semester", "submitted_by", "scheme",
+        ),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        note = request.POST.get("note", "")
+
+        if action not in ACTION_PERMISSIONS:
+            messages.error(request, "Unknown action.")
+        elif not request.user.has_perm(ACTION_PERMISSIONS[action]):
+            messages.error(request, f"You don't have permission to {ACTION_LABELS[action].lower()}.")
+        elif action == "return" and not note:
+            messages.error(request, "Please add a note explaining what needs correcting.")
+        else:
+            try:
+                apply_transition(result, action, actor=request.user, note=note)
+                messages.success(request, f"Done: {ACTION_LABELS[action]}.")
+            except Exception as exc:  # PermissionDenied / ValidationError from the service
+                messages.error(request, str(exc) or "That transition isn't valid right now.")
+
+        return redirect("results:approval_detail", pk=result.pk)
+
+    scores = list(result.scores.select_related("component").all())
+    # ResultScore doesn't carry its own max — that lives on the
+    # GradingSchemeComponent link for this result's scheme snapshot
+    # (see ResultScore.clean()). Attach it here for display only; this
+    # doesn't touch the database.
+    try:
+        from .models import GradingSchemeComponent  # adjust import path if this lives elsewhere
+        max_by_component = {
+            link.component_id: link.max_raw_score
+            for link in GradingSchemeComponent.objects.filter(scheme=result.scheme)
+        }
+        for score in scores:
+            score.max_raw_score = max_by_component.get(score.component_id)
+    except ImportError:
+        for score in scores:
+            score.max_raw_score = None
+    # Related name assumed as `audit_logs` — adjust if ResultAuditLog
+    # uses a different related_name on its FK to Result. This is purely
+    # a display convenience; nothing above depends on it existing.
+    audit_logs = getattr(result, "audit_logs", None)
+    audit_logs = audit_logs.all().order_by("-created_at") if audit_logs is not None else []
+
+    workflow_stages = [
+        Result.Status.SUBMITTED,
+        Result.Status.HOD_APPROVED,
+        Result.Status.DEAN_APPROVED,
+        Result.Status.REGISTRAR_APPROVED,
+        Result.Status.PUBLISHED,
+    ]
+    current_index = workflow_stages.index(result.status) if result.status in workflow_stages else -1
+    stepper = [
+        {"label": Result.Status(stage).label, "done": i <= current_index, "current": i == current_index}
+        for i, stage in enumerate(workflow_stages)
+    ]
+
+    available_actions = [
+        {"key": action, "label": ACTION_LABELS[action]}
+        for action in get_available_actions(result, request.user)
+    ]
+
+    context = {
+        "result": result,
+        "scores": scores,
+        "audit_logs": audit_logs,
+        "stepper": stepper,
+        "is_returned": result.status == Result.Status.RETURNED,
+        "available_actions": available_actions,
+        "return_form": ReturnReasonForm(),
+    }
+    return render(request, "results/approval_detail.html", context)

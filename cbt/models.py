@@ -66,9 +66,12 @@ class Quiz(models.Model):
     def exam_name(self):
         return self.examination.name if self.examination else "Unnamed Exam"
 
+ 
     @property
     def course_name(self):
-        return self.course.name if self.course else "Unnamed Course"
+        if self.course:
+            return f"{self.course.course_code} - {self.course.title}"
+        return "Unnamed Course"
 
     # @property
     # def level_name(self):

@@ -30,6 +30,12 @@ urlpatterns = [
 
     path("transcripts/", views.staff_transcript_list_view, name="staff_transcript_list"),
 
+    # Approvals Again, Check above for the working one
+    path("approvals/", views.approval_queue, name="approval_queue"),
+    path("approvals/bulk-action/", views.approval_bulk_action, name="approval_bulk_action"),
+    path("approvals/<int:pk>/", views.approval_detail, name="approval_detail"),
+
+
 
     # --- API v1 ---
     path(
