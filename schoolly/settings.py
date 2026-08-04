@@ -28,6 +28,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+#disables for production
+# ALLOWED_HOSTS = ["localhost", "portal.impressivegroupofschools.com.ng", "www.portal.impressivegroupofschools.com.ng"]
+# CSRF_TRUSTED_ORIGINS = ["https://portal.impressivegroupofschools.com.ng"]
+
 
 # Application definition
 
@@ -55,9 +59,6 @@ INSTALLED_APPS = [
     'elearning.apps.ElearningConfig',
     'examinations.apps.ExaminationsConfig',
 
-    
-
-
 
     # Installed Apps
     'django_ckeditor_5',
@@ -79,6 +80,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Added For Cpanel Depoloyment
+    # "whitenoise.middleware.WhiteNoiseMiddleware",  # add right after SecurityMiddleware
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -158,6 +162,9 @@ USE_THOUSAND_SEPARATOR = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
+#--------------------------------------------
+#Active workign for localhost 
+#-------------------------------------------
 STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [
@@ -168,6 +175,16 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+
+#----------------------------------------------------------
+# Added For Cpanel Deployment
+#--------------------------------------------------------
+# STATIC_URL = "/static/"
+# STATIC_ROOT = BASE_DIR / "staticfiles"
+# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
